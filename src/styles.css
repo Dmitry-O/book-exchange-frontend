@@ -1,0 +1,147 @@
+:root {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #13212b;
+  background:
+    radial-gradient(circle at top, rgba(91, 140, 120, 0.18), transparent 35%),
+    linear-gradient(180deg, #f6f4ee 0%, #f0efe8 100%);
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.page-shell {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 48px 0 64px;
+}
+
+.hero {
+  padding: 32px;
+  border: 1px solid rgba(19, 33, 43, 0.08);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 50px rgba(30, 47, 61, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.eyebrow {
+  display: inline-flex;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #dfe9dc;
+  color: #24473a;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  margin: 16px 0 12px;
+  font-size: clamp(2.6rem, 6vw, 4.4rem);
+  line-height: 0.94;
+  letter-spacing: -0.06em;
+}
+
+.hero-copy {
+  max-width: 680px;
+  margin: 0;
+  font-size: 1.05rem;
+  color: #415664;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.stat-card,
+.feature-card {
+  border-radius: 22px;
+  border: 1px solid rgba(19, 33, 43, 0.08);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.stat-card {
+  padding: 18px 20px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.stat-label {
+  display: block;
+  margin-top: 6px;
+  color: #556b79;
+}
+
+.roadmap {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.feature-card {
+  padding: 24px;
+}
+
+.feature-card h2 {
+  margin: 0 0 14px;
+  font-size: 1.25rem;
+}
+
+.feature-card ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #425664;
+}
+
+.feature-card li + li {
+  margin-top: 8px;
+}
+
+@media (max-width: 800px) {
+  .page-shell {
+    width: min(100% - 20px, 1120px);
+    padding-top: 20px;
+  }
+
+  .hero {
+    padding: 24px;
+  }
+
+  .hero-grid,
+  .roadmap {
+    grid-template-columns: 1fr;
+  }
+}
