@@ -92,7 +92,7 @@ export function PublicBookPage() {
 function DetailStat({ label, value }) {
   return (
     <div className="meta-stat">
-      <strong>{value || "Not available"}</strong>
+      <strong>{value === null || value === undefined || value === "" ? "Not available" : value}</strong>
       <span>{label}</span>
     </div>
   );

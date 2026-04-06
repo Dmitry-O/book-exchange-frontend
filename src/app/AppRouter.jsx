@@ -10,6 +10,13 @@ import {
   ResetPasswordPage,
   VerifyEmailPage
 } from "../features/auth/pages";
+import {
+  CreateBookPage,
+  EditBookPage,
+  ExchangedBooksPage,
+  MyBookDetailsPage,
+  MyBooksPage
+} from "../features/books/pages";
 import { CatalogPage } from "../features/catalog/CatalogPage";
 import { PublicBookPage } from "../features/catalog/PublicBookPage";
 import { AppLayout, PublicLayout } from "../features/shell/layouts";
@@ -21,34 +28,6 @@ import { UpdatesPage } from "../features/profile/UpdatesPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 
 const appPlaceholderRoutes = [
-  {
-    path: "my-books",
-    title: "My Books",
-    summary: "Create, edit, archive, and review the books you own.",
-    checks: [
-      "Page should call GET /book/user with pagination.",
-      "Next slice will add create, edit, and delete flows.",
-      "Book cards already have version data for optimistic locking."
-    ]
-  },
-  {
-    path: "my-books/new",
-    title: "Create Book",
-    summary: "Form for POST /book/user, including gift mode and contact details.",
-    checks: [
-      "Owner-facing book creation UI will live here.",
-      "The backend contract is ready for photoBase64 and contactDetails."
-    ]
-  },
-  {
-    path: "my-books/exchanged",
-    title: "Exchanged Books",
-    summary: "Read-only list of books already exchanged by the current user.",
-    checks: [
-      "This page will use GET /book/history.",
-      "Version fields are already available in returned books."
-    ]
-  },
   {
     path: "exchanges/requests",
     title: "My Requests",
@@ -209,6 +188,11 @@ export function AppRouter() {
         <Route path="security" element={<SecurityPage />} />
         <Route path="updates" element={<UpdatesPage />} />
         <Route path="my-reports" element={<MyReportsPage />} />
+        <Route path="my-books" element={<MyBooksPage />} />
+        <Route path="my-books/new" element={<CreateBookPage />} />
+        <Route path="my-books/exchanged" element={<ExchangedBooksPage />} />
+        <Route path="my-books/:bookId" element={<MyBookDetailsPage />} />
+        <Route path="my-books/:bookId/edit" element={<EditBookPage />} />
         {appPlaceholderRoutes.map((route) => (
           <Route
             key={route.path}

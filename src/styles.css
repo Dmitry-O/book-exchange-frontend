@@ -298,6 +298,11 @@ dl {
   font-weight: 600;
 }
 
+.field-hint {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
 .field-control {
   width: 100%;
   min-height: 48px;
@@ -316,6 +321,12 @@ dl {
 .field-control-textarea {
   min-height: 140px;
   resize: vertical;
+}
+
+.field-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
 }
 
 .inline-message {
