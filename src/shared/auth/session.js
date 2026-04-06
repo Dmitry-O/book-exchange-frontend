@@ -1,4 +1,5 @@
 const SESSION_STORAGE_KEY = "book-exchange/session";
+const POST_LOGOUT_REDIRECT_KEY = "book-exchange/post-logout";
 
 export function readStoredSession() {
   if (typeof window === "undefined") {
@@ -38,4 +39,28 @@ export function clearStoredSession() {
   }
 
   window.localStorage.removeItem(SESSION_STORAGE_KEY);
+}
+
+export function markPostLogoutRedirect() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.setItem(POST_LOGOUT_REDIRECT_KEY, "1");
+}
+
+export function hasPostLogoutRedirect() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.sessionStorage.getItem(POST_LOGOUT_REDIRECT_KEY) === "1";
+}
+
+export function clearPostLogoutRedirect() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.removeItem(POST_LOGOUT_REDIRECT_KEY);
 }

@@ -3,6 +3,10 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { apiRequest } from "../../shared/api/http";
 import { useAuth } from "../../shared/auth/AuthContext";
+import {
+  clearPostLogoutRedirect,
+  hasPostLogoutRedirect
+} from "../../shared/auth/session";
 import { trimFormPayload } from "../../shared/lib/format";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
@@ -10,6 +14,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated } = useAuth();
+  const [postLogoutRedirect] = useState(() => hasPostLogoutRedirect());
   const [form, setForm] = useState({
     email: "",
     password: ""
@@ -17,7 +22,9 @@ export function LoginPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
 
-  const nextPath = location.state?.from?.pathname || "/app/profile";
+  const nextPath = postLogoutRedirect
+    ? "/app/profile"
+    : location.state?.from?.pathname || "/app/profile";
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -32,6 +39,7 @@ export function LoginPage() {
 
     try {
       await login(trimFormPayload(form));
+      clearPostLogoutRedirect();
       navigate(nextPath, { replace: true });
     } catch (nextError) {
       setError(nextError);
