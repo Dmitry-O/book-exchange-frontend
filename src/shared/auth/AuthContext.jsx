@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, configureApiAuth } from "../api/http";
 import {
   clearStoredSession,
+  markPostLogoutRedirect,
   readStoredSession,
   writeStoredSession
 } from "./session";
@@ -35,7 +36,7 @@ export function AuthProvider({ children }) {
 
   const clearSession = useCallback(() => {
     applySession(null);
-    queryClient.removeQueries({ queryKey: ["auth", "me"] });
+    queryClient.clear();
   }, [applySession, queryClient]);
 
   useEffect(() => {
@@ -82,6 +83,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     const activeSession = sessionRef.current;
+    markPostLogoutRedirect();
 
     try {
       if (activeSession?.refreshToken) {

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../shared/api/config";
@@ -78,6 +79,12 @@ export function UpdatesPage() {
                   <dd>{item.version}</dd>
                 </div>
               </dl>
+
+              <div className="card-actions">
+                <Link className="button button-secondary" to={resolveUpdateTarget(item)}>
+                  Open details
+                </Link>
+              </div>
             </article>
           ))}
         </section>
@@ -92,4 +99,14 @@ export function UpdatesPage() {
       ) : null}
     </section>
   );
+}
+
+function resolveUpdateTarget(item) {
+  if (item.status === "PENDING") {
+    return item.userExchangeRole === "RECEIVER"
+      ? `/app/exchanges/offers/${item.id}`
+      : `/app/exchanges/requests/${item.id}`;
+  }
+
+  return `/app/history/${item.id}`;
 }

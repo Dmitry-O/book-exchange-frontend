@@ -19,6 +19,14 @@ import {
 } from "../features/books/pages";
 import { CatalogPage } from "../features/catalog/CatalogPage";
 import { PublicBookPage } from "../features/catalog/PublicBookPage";
+import {
+  HistoryDetailsPage,
+  HistoryPage,
+  OfferDetailsPage,
+  OffersPage,
+  RequestDetailsPage,
+  RequestsPage
+} from "../features/exchanges/pages";
 import { AppLayout, PublicLayout } from "../features/shell/layouts";
 import { HomePage } from "../features/shell/HomePage";
 import { MyReportsPage } from "../features/profile/MyReportsPage";
@@ -29,57 +37,12 @@ import { NotFoundPage } from "../pages/NotFoundPage";
 
 const appPlaceholderRoutes = [
   {
-    path: "exchanges/requests",
-    title: "My Requests",
-    summary: "Outgoing exchange requests sent by the current user.",
+    path: "exchange-center",
+    title: "Exchange Center",
+    summary: "Requests, offers, and history are now implemented in the current slice.",
     checks: [
-      "Next slice will use GET /request and PATCH /request/{exchangeId}/decline.",
-      "Request rows already include version for direct actions."
-    ]
-  },
-  {
-    path: "exchanges/requests/:exchangeId",
-    title: "Request Details",
-    summary: "Detailed view of a sent exchange request.",
-    checks: [
-      "This screen will use GET /request/{exchangeId}.",
-      "Opening it should clear unread state server-side when relevant."
-    ]
-  },
-  {
-    path: "exchanges/offers",
-    title: "My Offers",
-    summary: "Incoming exchange offers that the current user can approve or decline.",
-    checks: [
-      "Next slice will use GET /offer and mutation endpoints for approve/decline.",
-      "Offer rows already include version for inline decisions."
-    ]
-  },
-  {
-    path: "exchanges/offers/:exchangeId",
-    title: "Offer Details",
-    summary: "Detailed view of an incoming offer with full book payloads.",
-    checks: [
-      "This screen will use GET /offer/{exchangeId}.",
-      "The backend now exposes otherUserId for stable navigation and reporting."
-    ]
-  },
-  {
-    path: "history",
-    title: "Exchange History",
-    summary: "Timeline of completed or resolved exchanges.",
-    checks: [
-      "Next slice will use GET /history with pagination.",
-      "History rows already return version and read state."
-    ]
-  },
-  {
-    path: "history/:exchangeId",
-    title: "History Details",
-    summary: "Exchange detail page with contact details and role-aware context.",
-    checks: [
-      "This screen will use GET /history/{exchangeId}.",
-      "otherUserId is already available for stable links."
+      "Use the sidebar links to open requests, offers, and history.",
+      "Public book pages now support creating requests from your own books."
     ]
   }
 ];
@@ -193,6 +156,12 @@ export function AppRouter() {
         <Route path="my-books/exchanged" element={<ExchangedBooksPage />} />
         <Route path="my-books/:bookId" element={<MyBookDetailsPage />} />
         <Route path="my-books/:bookId/edit" element={<EditBookPage />} />
+        <Route path="exchanges/requests" element={<RequestsPage />} />
+        <Route path="exchanges/requests/:exchangeId" element={<RequestDetailsPage />} />
+        <Route path="exchanges/offers" element={<OffersPage />} />
+        <Route path="exchanges/offers/:exchangeId" element={<OfferDetailsPage />} />
+        <Route path="history" element={<HistoryPage />} />
+        <Route path="history/:exchangeId" element={<HistoryDetailsPage />} />
         {appPlaceholderRoutes.map((route) => (
           <Route
             key={route.path}

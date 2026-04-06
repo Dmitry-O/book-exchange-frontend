@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { apiRequest } from "../../shared/api/http";
+import { RequestCreationCard } from "../exchanges/pages";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
 export function PublicBookPage() {
@@ -68,22 +69,24 @@ export function PublicBookPage() {
           </dl>
         </article>
 
-        <article className="section-card">
-          <h2>Frontend next step</h2>
-          <p>
-            The next slice can use this payload to create exchange requests and open report
-            flows without adding more backend fields.
-          </p>
+        <RequestCreationCard book={book} />
+      </section>
 
-          <div className="card-actions">
-            <Link className="button button-secondary" to="/catalog">
-              Back to catalog
-            </Link>
-            <Link className="button" to="/login">
-              Sign in to continue
-            </Link>
-          </div>
-        </article>
+      <section className="section-card">
+        <h2>Navigation</h2>
+        <p>
+          You can use this public book page as the entry point for creating an exchange request
+          with one of your own books.
+        </p>
+
+        <div className="card-actions">
+          <Link className="button button-secondary" to="/catalog">
+            Back to catalog
+          </Link>
+          <Link className="button button-secondary" to="/app/exchanges/requests">
+            Open my requests
+          </Link>
+        </div>
       </section>
     </section>
   );
