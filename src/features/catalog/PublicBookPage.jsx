@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { apiRequest } from "../../shared/api/http";
 import { RequestCreationCard } from "../exchanges/pages";
+import { ReportActionCard } from "../reports/ReportActionCard";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
 export function PublicBookPage() {
@@ -88,6 +89,8 @@ export function PublicBookPage() {
           </Link>
         </div>
       </section>
+
+      <ReportActionCard book={book} />
     </section>
   );
 }

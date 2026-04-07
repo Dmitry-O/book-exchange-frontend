@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../shared/api/config";
@@ -39,7 +40,7 @@ export function MyReportsPage() {
       {!reportsQuery.isPending && !reportsQuery.error && reports.length === 0 ? (
         <EmptyBlock
           title="No reports created yet"
-          description="Once the report modal is added in the next slice, your own reports will appear here."
+          description="When you send moderation reports from public book pages, they will appear here."
         />
       ) : null}
 
@@ -77,10 +78,10 @@ export function MyReportsPage() {
               </dl>
 
               <p className="book-description">{report.comment}</p>
-              {report.targetUrl ? (
-                <a className="link-inline" href={report.targetUrl} rel="noreferrer" target="_blank">
-                  Open target URL
-                </a>
+              {resolveReportLink(report) ? (
+                <Link className="link-inline" to={resolveReportLink(report)}>
+                  Open reported book
+                </Link>
               ) : null}
             </article>
           ))}
@@ -96,4 +97,12 @@ export function MyReportsPage() {
       ) : null}
     </section>
   );
+}
+
+function resolveReportLink(report) {
+  if (report.targetType === "BOOK") {
+    return `/book/${report.targetId}`;
+  }
+
+  return null;
 }
