@@ -6,6 +6,22 @@ export function buildQueryString(params) {
       return;
     }
 
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return;
+      }
+
+      value.forEach((item) => {
+        if (item === undefined || item === null || item === "") {
+          return;
+        }
+
+        searchParams.append(key, String(item));
+      });
+
+      return;
+    }
+
     searchParams.set(key, String(value));
   });
 

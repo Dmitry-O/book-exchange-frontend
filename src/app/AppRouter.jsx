@@ -27,6 +27,7 @@ import {
   RequestDetailsPage,
   RequestsPage
 } from "../features/exchanges/pages";
+import { AdminUserDetailsPage, AdminUsersPage } from "../features/admin/users/pages";
 import { AppLayout, PublicLayout } from "../features/shell/layouts";
 import { HomePage } from "../features/shell/HomePage";
 import { MyReportsPage } from "../features/profile/MyReportsPage";
@@ -48,24 +49,6 @@ const appPlaceholderRoutes = [
 ];
 
 const adminPlaceholderRoutes = [
-  {
-    path: "users",
-    title: "Admin Users",
-    summary: "Moderation view over user accounts, bans, roles, and soft-deleted users.",
-    checks: [
-      "This screen will use GET /admin/users with filters from metadata.",
-      "List rows already contain version and role data."
-    ]
-  },
-  {
-    path: "users/:userId",
-    title: "Admin User Details",
-    summary: "Detail screen for ban, unban, delete, and role-management actions.",
-    checks: [
-      "This screen will use GET /admin/users/{userId}.",
-      "Mutations already rely on If-Match and version."
-    ]
-  },
   {
     path: "books",
     title: "Admin Books",
@@ -186,6 +169,8 @@ export function AppRouter() {
         }
       >
         <Route index element={<Navigate replace to="users" />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="users/:userId" element={<AdminUserDetailsPage />} />
         {adminPlaceholderRoutes.map((route) => (
           <Route
             key={route.path}
