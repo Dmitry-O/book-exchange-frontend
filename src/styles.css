@@ -420,6 +420,13 @@ dl {
   gap: 18px;
 }
 
+.admin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
 .book-detail-stats {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -449,6 +456,69 @@ dl {
 
 .detail-list-compact {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.checkbox-grid,
+.pill-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-checkbox-card {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.admin-toggle-field {
+  align-content: end;
+}
+
+.admin-summary-box {
+  display: grid;
+  gap: 2px;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid rgba(18, 32, 43, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.admin-summary-box strong {
+  font-size: 1.1rem;
+}
+
+.admin-summary-box span {
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.status-pill-warning {
+  background: rgba(227, 154, 76, 0.18);
+  color: #8a5418;
+}
+
+.status-pill-danger {
+  background: rgba(161, 62, 52, 0.14);
+  color: var(--danger-strong);
 }
 
 .compact-card h2 {
@@ -692,9 +762,11 @@ dl {
   .book-grid,
   .cards-grid-three,
   .meta-grid,
+  .admin-summary-grid,
   .book-detail-stats,
   .filters-grid,
-  .choice-grid {
+  .choice-grid,
+  .checkbox-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -734,9 +806,11 @@ dl {
   .book-grid,
   .cards-grid-three,
   .meta-grid,
+  .admin-summary-grid,
   .book-detail-stats,
   .filters-grid,
-  .detail-list-compact {
+  .detail-list-compact,
+  .checkbox-grid {
     grid-template-columns: 1fr;
   }
 
