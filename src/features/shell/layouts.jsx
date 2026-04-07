@@ -28,6 +28,11 @@ const adminLinks = [
   { to: "/admin/exchanges", label: "Exchanges" }
 ];
 
+const utilityLinks = [
+  { to: "/", label: "Home", end: true },
+  { to: "/catalog", label: "Catalog" }
+];
+
 export function PublicLayout() {
   const metadataQuery = useMetadataQuery();
 
@@ -60,6 +65,9 @@ export function AppLayout({ adminMode = false }) {
 
   const navigationLinks = adminMode ? adminLinks : appLinks;
   const unreadCount = unreadQuery.data?.totalElements ?? 0;
+  const headerLinks = adminMode
+    ? [...utilityLinks, { to: "/app/profile", label: "Workspace" }]
+    : utilityLinks;
 
   return (
     <div className="dashboard-shell">
@@ -107,9 +115,19 @@ export function AppLayout({ adminMode = false }) {
 
       <div className="dashboard-main">
         <header className="dashboard-header">
-          <div>
-            <span className="eyebrow">{adminMode ? "Admin mode" : "Signed in"}</span>
-            <h1>{adminMode ? "Moderation Console" : "Frontend Workspace"}</h1>
+          <div className="dashboard-header-copy">
+            <div>
+              <span className="eyebrow">{adminMode ? "Admin mode" : "Signed in"}</span>
+              <h1>{adminMode ? "Moderation Console" : "Frontend Workspace"}</h1>
+            </div>
+
+            <nav className="topbar-nav dashboard-header-nav">
+              {headerLinks.map((link) => (
+                <HeaderNavLink key={link.to} end={link.end} to={link.to}>
+                  {link.label}
+                </HeaderNavLink>
+              ))}
+            </nav>
           </div>
 
           <div className="user-chip">
@@ -129,6 +147,18 @@ export function AppLayout({ adminMode = false }) {
 function TopNavLink({ children, to }) {
   return (
     <NavLink
+      to={to}
+      className={({ isActive }) => (isActive ? "topbar-link topbar-link-active" : "topbar-link")}
+    >
+      {children}
+    </NavLink>
+  );
+}
+
+function HeaderNavLink({ children, end = false, to }) {
+  return (
+    <NavLink
+      end={end}
       to={to}
       className={({ isActive }) => (isActive ? "topbar-link topbar-link-active" : "topbar-link")}
     >
