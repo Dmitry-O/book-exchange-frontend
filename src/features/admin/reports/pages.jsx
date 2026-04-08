@@ -451,7 +451,7 @@ function resolveReportTargetLink(report) {
     return `/admin/users/${report.targetId}`;
   }
 
-  return `/book/${report.targetId}`;
+  return `/admin/books/${report.targetId}`;
 }
 
 function getReportStatusClassName(status) {
