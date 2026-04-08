@@ -521,6 +521,16 @@ dl {
   color: var(--danger-strong);
 }
 
+.status-pill-success {
+  background: rgba(29, 90, 57, 0.14);
+  color: var(--success-text);
+}
+
+.status-pill-neutral {
+  background: rgba(18, 32, 43, 0.08);
+  color: var(--text-soft);
+}
+
 .compact-card h2 {
   font-size: 1.1rem;
 }

@@ -27,6 +27,7 @@ import {
   RequestDetailsPage,
   RequestsPage
 } from "../features/exchanges/pages";
+import { AdminReportDetailsPage, AdminReportsPage } from "../features/admin/reports/pages";
 import { AdminUserDetailsPage, AdminUsersPage } from "../features/admin/users/pages";
 import { AppLayout, PublicLayout } from "../features/shell/layouts";
 import { HomePage } from "../features/shell/HomePage";
@@ -65,24 +66,6 @@ const adminPlaceholderRoutes = [
     checks: [
       "This screen will use GET /admin/books/{bookId}.",
       "ETag and version are already present."
-    ]
-  },
-  {
-    path: "reports",
-    title: "Admin Reports",
-    summary: "Moderation queue for open, resolved, and rejected reports.",
-    checks: [
-      "This screen will use GET /admin/reports.",
-      "Metadata already exposes reportStatuses."
-    ]
-  },
-  {
-    path: "reports/:reportId",
-    title: "Admin Report Details",
-    summary: "Resolve or reject specific reports with optimistic locking.",
-    checks: [
-      "This screen will use GET /admin/reports/{reportId}.",
-      "Mutations already accept If-Match."
     ]
   },
   {
@@ -171,6 +154,8 @@ export function AppRouter() {
         <Route index element={<Navigate replace to="users" />} />
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="users/:userId" element={<AdminUserDetailsPage />} />
+        <Route path="reports" element={<AdminReportsPage />} />
+        <Route path="reports/:reportId" element={<AdminReportDetailsPage />} />
         {adminPlaceholderRoutes.map((route) => (
           <Route
             key={route.path}
