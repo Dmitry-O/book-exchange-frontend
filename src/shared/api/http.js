@@ -1,4 +1,9 @@
 import { API_BASE_URL } from "./config";
+import {
+  clearStoredSession,
+  readStoredSession,
+  writeStoredSession
+} from "../auth/session";
 
 let authBridge = {
   getSession: () => null,
@@ -53,7 +58,7 @@ export async function apiRequest(
 }
 
 async function performRequest(endpoint, options, canRefresh) {
-  const session = authBridge.getSession();
+  const session = getCurrentSession();
   const requestHeaders = new Headers(options.headers ?? {});
 
   requestHeaders.set("Accept", "application/json");
@@ -71,12 +76,31 @@ async function performRequest(endpoint, options, canRefresh) {
     requestHeaders.set("Authorization", `Bearer ${session.accessToken}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method: options.method,
-    headers: requestHeaders,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    signal: options.signal
-  });
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: options.method,
+      headers: requestHeaders,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      signal: options.signal
+    });
+  } catch (error) {
+    if (options.auth && canRefresh && session?.refreshToken) {
+      try {
+        await refreshAccessToken(session.refreshToken);
+        return performRequest(endpoint, options, false);
+      } catch (refreshError) {
+        if (isAuthTerminalError(refreshError)) {
+          clearAuthSession();
+        }
+
+        throw refreshError;
+      }
+    }
+
+    throw error;
+  }
 
   if (
     response.status === 401 &&
@@ -88,7 +112,7 @@ async function performRequest(endpoint, options, canRefresh) {
       await refreshAccessToken(session.refreshToken);
       return performRequest(endpoint, options, false);
     } catch (error) {
-      authBridge.clearSession();
+      clearAuthSession();
       throw error;
     }
   }
@@ -98,6 +122,10 @@ async function performRequest(endpoint, options, canRefresh) {
   const eTag = parseEtag(response.headers.get("ETag"));
 
   if (!response.ok || payload?.success === false) {
+    if (response.status === 401 && options.auth) {
+      clearAuthSession();
+    }
+
     const apiError = payload?.error ?? {};
 
     throw new ApiClientError({
@@ -147,12 +175,13 @@ async function refreshAccessToken(refreshToken) {
         });
       }
 
-      const currentSession = authBridge.getSession();
+      const currentSession = getCurrentSession();
       const nextSession = {
         accessToken: payload?.data,
         refreshToken: currentSession?.refreshToken ?? refreshToken
       };
 
+      writeStoredSession(nextSession);
       authBridge.setSession(nextSession);
 
       return nextSession;
@@ -162,6 +191,19 @@ async function refreshAccessToken(refreshToken) {
   }
 
   return refreshPromise;
+}
+
+function getCurrentSession() {
+  return authBridge.getSession() ?? readStoredSession();
+}
+
+function clearAuthSession() {
+  clearStoredSession();
+  authBridge.clearSession();
+}
+
+function isAuthTerminalError(error) {
+  return error instanceof ApiClientError;
 }
 
 async function parsePayload(response) {
