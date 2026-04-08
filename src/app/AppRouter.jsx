@@ -28,6 +28,7 @@ import {
   RequestsPage
 } from "../features/exchanges/pages";
 import { AdminBookDetailsPage, AdminBooksPage } from "../features/admin/books/pages";
+import { AdminExchangeDetailsPage, AdminExchangesPage } from "../features/admin/exchanges/pages";
 import { AdminReportDetailsPage, AdminReportsPage } from "../features/admin/reports/pages";
 import { AdminUserDetailsPage, AdminUsersPage } from "../features/admin/users/pages";
 import { AppLayout, PublicLayout } from "../features/shell/layouts";
@@ -50,26 +51,7 @@ const appPlaceholderRoutes = [
   }
 ];
 
-const adminPlaceholderRoutes = [
-  {
-    path: "exchanges",
-    title: "Admin Exchanges",
-    summary: "Operational overview of exchange states and related books/users.",
-    checks: [
-      "This screen will use GET /admin/exchanges.",
-      "Metadata already exposes exchangeStatuses."
-    ]
-  },
-  {
-    path: "exchanges/:exchangeId",
-    title: "Admin Exchange Details",
-    summary: "Detailed moderation or audit view of a single exchange.",
-    checks: [
-      "This screen will use GET /admin/exchanges/{exchangeId}.",
-      "The response already contains sender/receiver books and users."
-    ]
-  }
-];
+const adminPlaceholderRoutes = [];
 
 export function AppRouter() {
   return (
@@ -141,6 +123,8 @@ export function AppRouter() {
         <Route path="books/:bookId" element={<AdminBookDetailsPage />} />
         <Route path="reports" element={<AdminReportsPage />} />
         <Route path="reports/:reportId" element={<AdminReportDetailsPage />} />
+        <Route path="exchanges" element={<AdminExchangesPage />} />
+        <Route path="exchanges/:exchangeId" element={<AdminExchangeDetailsPage />} />
         {adminPlaceholderRoutes.map((route) => (
           <Route
             key={route.path}
