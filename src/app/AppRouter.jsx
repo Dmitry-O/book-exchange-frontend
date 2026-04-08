@@ -27,6 +27,7 @@ import {
   RequestDetailsPage,
   RequestsPage
 } from "../features/exchanges/pages";
+import { AdminBookDetailsPage, AdminBooksPage } from "../features/admin/books/pages";
 import { AdminReportDetailsPage, AdminReportsPage } from "../features/admin/reports/pages";
 import { AdminUserDetailsPage, AdminUsersPage } from "../features/admin/users/pages";
 import { AppLayout, PublicLayout } from "../features/shell/layouts";
@@ -50,24 +51,6 @@ const appPlaceholderRoutes = [
 ];
 
 const adminPlaceholderRoutes = [
-  {
-    path: "books",
-    title: "Admin Books",
-    summary: "Review active and deleted books, with moderation filters.",
-    checks: [
-      "This screen will use GET /admin/books/search.",
-      "Metadata now exposes bookTypes and bookSortFields."
-    ]
-  },
-  {
-    path: "books/:bookId",
-    title: "Admin Book Details",
-    summary: "Restore, update, or soft-delete specific books.",
-    checks: [
-      "This screen will use GET /admin/books/{bookId}.",
-      "ETag and version are already present."
-    ]
-  },
   {
     path: "exchanges",
     title: "Admin Exchanges",
@@ -154,6 +137,8 @@ export function AppRouter() {
         <Route index element={<Navigate replace to="users" />} />
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="users/:userId" element={<AdminUserDetailsPage />} />
+        <Route path="books" element={<AdminBooksPage />} />
+        <Route path="books/:bookId" element={<AdminBookDetailsPage />} />
         <Route path="reports" element={<AdminReportsPage />} />
         <Route path="reports/:reportId" element={<AdminReportDetailsPage />} />
         {adminPlaceholderRoutes.map((route) => (
