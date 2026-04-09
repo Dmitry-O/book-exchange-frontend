@@ -2,19 +2,25 @@ import { useEffect, useState } from "react";
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { useAuth } from "../../shared/auth/AuthContext";
 import { formatDateTime, trimFormPayload } from "../../shared/lib/format";
+import { ImageUploadField } from "../../shared/ui/ImageUploadField";
+import { UserAvatar } from "../../shared/ui/Media";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
 export function ProfilePage() {
   const metadataQuery = useMetadataQuery();
-  const { isLoadingUser, updateProfile, user, userError } = useAuth();
+  const { deleteProfilePhoto, isLoadingUser, updateProfile, user, userError } = useAuth();
   const [form, setForm] = useState({
     nickname: "",
     locale: "en",
-    photoBase64: ""
+    photoBase64: null,
+    photoUrl: ""
   });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [photoPending, setPhotoPending] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [photoMessage, setPhotoMessage] = useState("");
 
   useEffect(() => {
     if (!user) {
@@ -24,7 +30,8 @@ export function ProfilePage() {
     setForm({
       nickname: user.nickname ?? "",
       locale: user.locale ?? metadataQuery.data?.locales?.[0] ?? "en",
-      photoBase64: user.photoBase64 ?? ""
+      photoBase64: null,
+      photoUrl: user.photoUrl ?? ""
     });
   }, [metadataQuery.data, user]);
 
@@ -43,13 +50,46 @@ export function ProfilePage() {
     setSuccessMessage("");
 
     try {
-      const payload = trimFormPayload(form);
+      const payload = toProfilePayload(form);
       const response = await updateProfile(payload, user.__version ?? user.version);
+      setForm((current) => ({
+        ...current,
+        photoBase64: null,
+        photoUrl: response.data?.photoUrl ?? current.photoUrl
+      }));
       setSuccessMessage(response.message || "Profile updated successfully.");
     } catch (nextError) {
       setError(nextError);
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handleDeletePhoto() {
+    const confirmed = window.confirm("Delete your current profile photo?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPhotoPending(true);
+    setPhotoError("");
+    setPhotoMessage("");
+    setError(null);
+    setSuccessMessage("");
+
+    try {
+      const response = await deleteProfilePhoto(user.__version ?? user.version);
+      setForm((current) => ({
+        ...current,
+        photoBase64: null,
+        photoUrl: response.data?.photoUrl ?? ""
+      }));
+      setPhotoMessage(response.message || "Profile photo deleted.");
+    } catch (nextError) {
+      setPhotoError(nextError.message);
+    } finally {
+      setPhotoPending(false);
     }
   }
 
@@ -65,7 +105,13 @@ export function ProfilePage() {
 
       <section className="detail-grid">
         <article className="section-card">
-          <h2>Current backend data</h2>
+          <div className="entity-header">
+            <UserAvatar name={user.nickname || user.email} photoUrl={user.photoUrl} size="lg" />
+            <div>
+              <h2>Current backend data</h2>
+              <p>Photo rendering now comes from `photoUrl`, while updates still send `photoBase64`.</p>
+            </div>
+          </div>
           <dl className="detail-list">
             <div>
               <dt>Email</dt>
@@ -118,17 +164,18 @@ export function ProfilePage() {
                 ))}
               </select>
             </label>
-            <label className="field">
-              <span>Photo base64</span>
-              <textarea
-                className="field-control field-control-textarea"
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, photoBase64: event.target.value }))
-                }
-                rows={6}
-                value={form.photoBase64}
-              />
-            </label>
+            <ImageUploadField
+              error={photoError}
+              entityName={form.nickname || user.email}
+              kind="user"
+              label="Profile photo"
+              message={photoMessage}
+              onChange={(value) => setForm((current) => ({ ...current, photoBase64: value }))}
+              onRemove={handleDeletePhoto}
+              photoBase64={form.photoBase64}
+              photoUrl={form.photoUrl}
+              removePending={photoPending}
+            />
 
             {successMessage ? <p className="inline-message inline-message-success">{successMessage}</p> : null}
             {error ? <p className="inline-message inline-message-error">{error.message}</p> : null}
@@ -150,4 +197,17 @@ function Field({ label, onChange, value }) {
       <input className="field-control" onChange={(event) => onChange(event.target.value)} value={value} />
     </label>
   );
+}
+
+function toProfilePayload(form) {
+  const payload = trimFormPayload({
+    nickname: form.nickname,
+    locale: form.locale
+  });
+
+  if (form.photoBase64 !== null) {
+    payload.photoBase64 = form.photoBase64;
+  }
+
+  return payload;
 }

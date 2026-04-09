@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../shared/api/config";
 import { apiRequest } from "../../shared/api/http";
 import { formatDateTime, formatEnumLabel } from "../../shared/lib/format";
+import { BookCover, UserAvatar } from "../../shared/ui/Media";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
@@ -30,8 +31,8 @@ export function UpdatesPage() {
         <span className="eyebrow">Unread updates</span>
         <h1>Exchange notifications</h1>
         <p>
-          This list proves the frontend can consume your unread exchange update endpoint,
-          including `otherUserId`.
+          This list proves the frontend can consume your unread exchange update endpoint, including
+          `otherUserId`.
         </p>
       </header>
 
@@ -42,8 +43,8 @@ export function UpdatesPage() {
 
       {!updatesQuery.isPending && !updatesQuery.error && items.length === 0 ? (
         <EmptyBlock
-          title="No unread exchange updates"
           description="When request, offer, or history events appear, they will show up here."
+          title="No unread exchange updates"
         />
       ) : null}
 
@@ -51,11 +52,16 @@ export function UpdatesPage() {
         <section className="list-stack">
           {items.map((item) => (
             <article className="section-card compact-card" key={item.id}>
+              <div className="entity-inline entity-inline-spaced">
+                <BookCover size="sm" title={item.otherBookName} />
+                <UserAvatar name={item.otherUserNickname} size="sm" />
+              </div>
+
               <div className="row-between">
                 <div>
                   <h2>{item.otherBookName}</h2>
                   <p className="muted-line">
-                    {item.otherUserNickname} · otherUserId {item.otherUserId}
+                    {item.otherUserNickname} / otherUserId {item.otherUserId}
                   </p>
                 </div>
                 <span className="subtle-chip">{formatEnumLabel(item.status)}</span>
@@ -91,11 +97,7 @@ export function UpdatesPage() {
       ) : null}
 
       {!updatesQuery.isPending && !updatesQuery.error && (updatesQuery.data?.totalPages ?? 0) > 1 ? (
-        <Pagination
-          onChange={setPageIndex}
-          page={pageIndex}
-          totalPages={updatesQuery.data.totalPages}
-        />
+        <Pagination onChange={setPageIndex} page={pageIndex} totalPages={updatesQuery.data.totalPages} />
       ) : null}
     </section>
   );

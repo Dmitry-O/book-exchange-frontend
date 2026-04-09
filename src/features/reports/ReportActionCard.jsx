@@ -5,6 +5,7 @@ import { useMetadataQuery } from "../../shared/api/hooks";
 import { apiRequest } from "../../shared/api/http";
 import { useAuth } from "../../shared/auth/AuthContext";
 import { formatEnumLabel, trimFormPayload } from "../../shared/lib/format";
+import { BookCover, UserAvatar } from "../../shared/ui/Media";
 
 const initialForm = {
   reason: "",
@@ -160,6 +161,7 @@ function ReportModal({ book, onClose }) {
             }}
             type="button"
           >
+            <BookCover photoUrl={book.photoUrl} size="sm" title={book.name} />
             <strong>Report this book</strong>
             <span>{book.name}</span>
           </button>
@@ -172,6 +174,7 @@ function ReportModal({ book, onClose }) {
             }}
             type="button"
           >
+            <UserAvatar name={book.ownerNickname} photoUrl={book.ownerPhotoUrl} size="sm" />
             <strong>Report this user</strong>
             <span>{book.ownerNickname}</span>
           </button>

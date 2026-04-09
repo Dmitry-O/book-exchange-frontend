@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useMetadataQuery, useUnreadUpdatesSummaryQuery } from "../../shared/api/hooks";
 import { useAuth } from "../../shared/auth/AuthContext";
+import { UserAvatar } from "../../shared/ui/Media";
 import { LoadingBlock } from "../../shared/ui/StateBlocks";
 
 const publicLinks = [
@@ -131,8 +132,11 @@ export function AppLayout({ adminMode = false }) {
           </div>
 
           <div className="user-chip">
-            <span>{user?.nickname ?? "Unknown user"}</span>
-            <small>{user?.email ?? "No email"}</small>
+            <UserAvatar name={user?.nickname ?? user?.email} photoUrl={user?.photoUrl} size="sm" />
+            <div>
+              <span>{user?.nickname ?? "Unknown user"}</span>
+              <small>{user?.email ?? "No email"}</small>
+            </div>
           </div>
         </header>
 

@@ -6,6 +6,7 @@ import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
+import { UserAvatar } from "../../../shared/ui/Media";
 import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
@@ -200,9 +201,12 @@ export function AdminUsersPage() {
             return (
               <article className="section-card compact-card" key={user.id}>
                 <div className="row-between">
-                  <div>
+                  <div className="entity-inline">
+                    <UserAvatar name={user.nickname || user.email} photoUrl={user.photoUrl} size="md" />
+                    <div>
                     <h2>{user.nickname || "Unknown user"}</h2>
                     <p className="muted-line">{user.email || "No email available"}</p>
+                    </div>
                   </div>
 
                   <div className="pill-row">
@@ -490,13 +494,20 @@ export function AdminUserDetailsPage() {
     <section className="content-stack">
       <header className="section-card">
         <div className="row-between">
-          <div>
+          <div className="entity-inline">
+            <UserAvatar
+              name={targetUser.nickname || targetUser.email}
+              photoUrl={targetUser.photoUrl}
+              size="lg"
+            />
+            <div>
             <span className="eyebrow">Admin user details</span>
             <h1>{targetUser.nickname || "Unknown user"}</h1>
             <p>
               This page uses `GET /admin/users/{'{userId}'}` and wires in role changes, ban
               management, and soft delete actions.
             </p>
+            </div>
           </div>
 
           <div className="pill-row">
@@ -529,6 +540,10 @@ export function AdminUserDetailsPage() {
             <div>
               <dt>Nickname</dt>
               <dd>{targetUser.nickname || "Not available"}</dd>
+            </div>
+            <div>
+              <dt>Photo URL</dt>
+              <dd>{targetUser.photoUrl || "Not available"}</dd>
             </div>
             <div>
               <dt>Locale</dt>
