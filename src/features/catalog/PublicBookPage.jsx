@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { apiRequest } from "../../shared/api/http";
+import { BookCover, UserAvatar } from "../../shared/ui/Media";
 import { RequestCreationCard } from "../exchanges/pages";
 import { ReportActionCard } from "../reports/ReportActionCard";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
@@ -33,10 +34,19 @@ export function PublicBookPage() {
   return (
     <section className="content-stack">
       <header className="section-card book-detail-hero">
-        <div>
-          <span className="eyebrow">{book.isGift ? "Gift" : "Exchange"}</span>
-          <h1>{book.name}</h1>
-          <p>{book.description || "No public description available for this book."}</p>
+        <div className="book-hero-layout">
+          <BookCover expandable photoUrl={book.photoUrl} size="hero" title={book.name} />
+
+          <div>
+            <span className="eyebrow">{book.isGift ? "Gift" : "Exchange"}</span>
+            <h1>{book.name}</h1>
+            <p>{book.description || "No public description available for this book."}</p>
+
+            <div className="entity-inline entity-inline-spaced">
+              <UserAvatar name={book.ownerNickname} photoUrl={book.ownerPhotoUrl} size="sm" />
+              <span>{book.ownerNickname || "Unknown owner"}</span>
+            </div>
+          </div>
         </div>
 
         <div className="book-detail-stats">
@@ -60,8 +70,16 @@ export function PublicBookPage() {
               <dd>{book.ownerUserId ?? "Not available"}</dd>
             </div>
             <div>
+              <dt>Owner photo URL</dt>
+              <dd>{book.ownerPhotoUrl || "Not available"}</dd>
+            </div>
+            <div>
               <dt>Book id</dt>
               <dd>{book.id}</dd>
+            </div>
+            <div>
+              <dt>Photo URL</dt>
+              <dd>{book.photoUrl || "Not available"}</dd>
             </div>
             <div>
               <dt>Version / ETag</dt>

@@ -5,6 +5,8 @@ import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
+import { ImageUploadField } from "../../../shared/ui/ImageUploadField";
+import { BookCover, UserIdentityInline } from "../../../shared/ui/Media";
 import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
@@ -26,7 +28,8 @@ const emptyBookForm = {
   author: "",
   category: "",
   publicationYear: "",
-  photoBase64: "",
+  photoBase64: null,
+  photoUrl: "",
   city: "",
   contactDetails: "",
   isGift: false
@@ -283,21 +286,25 @@ export function AdminBooksPage() {
       ) : null}
 
       {books.length > 0 ? (
-        <section className="list-stack">
+        <section className="admin-book-grid">
           {books.map((book) => {
             const deleted = isBookDeleted(book);
 
             return (
-              <article className="section-card compact-card" key={book.id}>
+              <article className="section-card compact-card admin-book-list-card" key={book.id}>
+                <Link className="book-card-cover-link" to={`/admin/books/${book.id}`}>
+                  <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
+                </Link>
+
                 <div className="row-between">
-                  <div>
+                  <div className="admin-book-card-copy">
                     <h2>{book.name || "Untitled book"}</h2>
-                    <p className="muted-line">
+                    <p className="muted-line admin-book-subtitle">
                       {book.author || "Unknown author"} / {book.category || "No category"}
                     </p>
                   </div>
 
-                  <div className="pill-row">
+                  <div className="pill-row admin-book-statuses">
                     <span className="subtle-chip">v{book.version}</span>
                     {book.isGift ? <span className="status-pill status-pill-neutral">Gift</span> : null}
                     {book.isExchanged ? (
@@ -307,26 +314,37 @@ export function AdminBooksPage() {
                   </div>
                 </div>
 
-                <dl className="detail-list detail-list-compact">
-                  <div>
-                    <dt>Owner</dt>
-                    <dd>{book.ownerNickname || "Unknown"} (id {book.ownerUserId ?? "n/a"})</dd>
+                  <div className="admin-book-facts">
+                    <div className="admin-book-fact admin-book-fact-owner">
+                      <span className="admin-book-fact-label">Owner</span>
+                      <UserIdentityInline
+                        className="admin-book-owner-inline"
+                        name={book.ownerNickname}
+                        photoUrl={book.ownerPhotoUrl}
+                        size="sm"
+                      >
+                        <strong title={`${book.ownerNickname || "Unknown"} (id ${book.ownerUserId ?? "n/a"})`}>
+                          {book.ownerNickname || "Unknown"} (id {book.ownerUserId ?? "n/a"})
+                        </strong>
+                      </UserIdentityInline>
+                    </div>
+                  <div className="admin-book-fact">
+                    <span className="admin-book-fact-label">City</span>
+                    <strong>{book.city || "Not available"}</strong>
                   </div>
-                  <div>
-                    <dt>City</dt>
-                    <dd>{book.city || "Not available"}</dd>
+                  <div className="admin-book-fact">
+                    <span className="admin-book-fact-label">Publication year</span>
+                    <strong>{renderValue(book.publicationYear)}</strong>
                   </div>
-                  <div>
-                    <dt>Publication year</dt>
-                    <dd>{renderValue(book.publicationYear)}</dd>
+                  <div className="admin-book-fact">
+                    <span className="admin-book-fact-label">Deleted at</span>
+                    <strong>{formatDateTime(book.meta?.deletedAt)}</strong>
                   </div>
-                  <div>
-                    <dt>Deleted at</dt>
-                    <dd>{formatDateTime(book.meta?.deletedAt)}</dd>
-                  </div>
-                </dl>
+                </div>
 
-                <p className="book-description">{book.description || "No description provided."}</p>
+                <p className="book-description admin-book-description">
+                  {book.description || "No description provided."}
+                </p>
 
                 <div className="card-actions">
                   <div className="pill-row">
@@ -339,10 +357,6 @@ export function AdminBooksPage() {
                       Open public page
                     </Link>
                   </div>
-
-                  <Link className="button button-secondary" to={`/admin/books/${book.id}`}>
-                    Open details
-                  </Link>
                 </div>
               </article>
             );
@@ -371,6 +385,9 @@ export function AdminBookDetailsPage() {
   const [editMessage, setEditMessage] = useState("");
   const [moderationError, setModerationError] = useState(null);
   const [moderationMessage, setModerationMessage] = useState("");
+  const [photoPending, setPhotoPending] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [photoMessage, setPhotoMessage] = useState("");
 
   const detailQuery = useQuery({
     queryKey: ["admin-book", String(bookId)],
@@ -392,6 +409,8 @@ export function AdminBookDetailsPage() {
     event.preventDefault();
     setEditError(null);
     setEditMessage("");
+    setPhotoError("");
+    setPhotoMessage("");
 
     const payload = toUpdatePayload(form, initialForm);
 
@@ -497,6 +516,52 @@ export function AdminBookDetailsPage() {
     }
   }
 
+  async function handleDeletePhoto() {
+    const confirmed = window.confirm("Delete the saved photo for this book?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPhotoPending(true);
+    setPhotoError("");
+    setPhotoMessage("");
+    setEditError(null);
+    setEditMessage("");
+
+    try {
+      await apiRequest(`/admin/books/${bookId}/photo`, {
+        method: "DELETE",
+        auth: true,
+        version: detailQuery.data.__version ?? detailQuery.data.version
+      });
+
+      const nextBook = await queryClient.fetchQuery({
+        queryKey: ["admin-book", String(bookId)],
+        queryFn: () => fetchAdminBook(bookId)
+      });
+      const nextPhotoUrl = nextBook.photoUrl ?? "";
+
+      setForm((current) => ({
+        ...current,
+        photoBase64: null,
+        photoUrl: nextPhotoUrl
+      }));
+      setInitialForm((current) => ({
+        ...current,
+        photoBase64: null,
+        photoUrl: nextPhotoUrl
+      }));
+
+      await queryClient.invalidateQueries({ queryKey: ["admin-books"] });
+      setPhotoMessage("Book photo deleted.");
+    } catch (error) {
+      setPhotoError(error.message);
+    } finally {
+      setPhotoPending(false);
+    }
+  }
+
   if (detailQuery.isPending) {
     return <LoadingBlock label="Loading admin book details" />;
   }
@@ -512,13 +577,16 @@ export function AdminBookDetailsPage() {
     <section className="content-stack">
       <header className="section-card">
         <div className="row-between">
-          <div>
+          <div className="entity-inline">
+            <BookCover expandable photoUrl={book.photoUrl} size="hero" title={book.name} />
+            <div>
             <span className="eyebrow">Admin book details</span>
             <h1>{book.name || "Untitled book"}</h1>
             <p>
               This page uses `GET /admin/books/{'{bookId}'}` and wires together edit, delete, and
               restore actions with optimistic locking.
             </p>
+            </div>
           </div>
 
           <div className="pill-row">
@@ -533,11 +601,28 @@ export function AdminBookDetailsPage() {
         <article className="section-card">
           <h2>Book snapshot</h2>
           <dl className="detail-list">
+              <div>
+                <dt>Owner</dt>
+                <dd>
+                  <UserIdentityInline
+                    className="admin-book-owner-inline"
+                    name={book.ownerNickname}
+                    photoUrl={book.ownerPhotoUrl}
+                    size="sm"
+                  >
+                    <strong title={`${book.ownerNickname || "Unknown"} (id ${book.ownerUserId ?? "n/a"})`}>
+                      {book.ownerNickname || "Unknown"} (id {book.ownerUserId ?? "n/a"})
+                    </strong>
+                  </UserIdentityInline>
+                </dd>
+              </div>
             <div>
-              <dt>Owner</dt>
-              <dd>
-                {book.ownerNickname || "Unknown"} (id {book.ownerUserId ?? "n/a"})
-              </dd>
+              <dt>Owner photo URL</dt>
+              <dd>{book.ownerPhotoUrl || "Not available"}</dd>
+            </div>
+            <div>
+              <dt>Photo URL</dt>
+              <dd>{book.photoUrl || "Not available"}</dd>
             </div>
             <div>
               <dt>Publication year</dt>
@@ -630,6 +715,19 @@ export function AdminBookDetailsPage() {
       <section className="section-card">
         <h2>Edit book</h2>
         <form className="content-stack" onSubmit={handleSave}>
+          <ImageUploadField
+            error={photoError}
+            entityName={form.name || "Book cover"}
+            kind="book"
+            label="Book photo"
+            message={photoMessage}
+            onChange={(value) => setForm((current) => ({ ...current, photoBase64: value }))}
+            onRemove={handleDeletePhoto}
+            photoBase64={form.photoBase64}
+            photoUrl={form.photoUrl}
+            removePending={photoPending}
+          />
+
           <div className="filters-grid">
             <Field
               label="Name"
@@ -693,18 +791,6 @@ export function AdminBookDetailsPage() {
             />
           </label>
 
-          <label className="field">
-            <span>Photo base64</span>
-            <textarea
-              className="field-control"
-              onChange={(event) =>
-                setForm((current) => ({ ...current, photoBase64: event.target.value }))
-              }
-              rows={4}
-              value={form.photoBase64}
-            />
-          </label>
-
           {editMessage ? <p className="inline-message inline-message-success">{editMessage}</p> : null}
           {editError ? <ErrorBlock error={editError} title="Book action failed" /> : null}
 
@@ -751,7 +837,8 @@ function fromBookToForm(book) {
     author: book.author ?? "",
     category: book.category ?? "",
     publicationYear: book.publicationYear ? String(book.publicationYear) : "",
-    photoBase64: book.photoBase64 ?? "",
+    photoBase64: null,
+    photoUrl: book.photoUrl ?? "",
     city: book.city ?? "",
     contactDetails: book.contactDetails ?? "",
     isGift: Boolean(book.isGift)
@@ -766,7 +853,6 @@ function toUpdatePayload(form, initialForm) {
     "author",
     "category",
     "publicationYear",
-    "photoBase64",
     "city",
     "contactDetails",
     "isGift"
@@ -788,6 +874,10 @@ function toUpdatePayload(form, initialForm) {
     next[field] = currentValue;
   });
 
+  if (form.photoBase64 !== null) {
+    next.photoBase64 = normalizeImageChange(form.photoBase64);
+  }
+
   return next;
 }
 
@@ -805,6 +895,14 @@ function normalizeComparableValue(field, value) {
   }
 
   return value;
+}
+
+function normalizeImageChange(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
 }
 
 async function fetchAdminBook(bookId) {

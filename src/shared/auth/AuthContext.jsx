@@ -129,6 +129,18 @@ export function AuthProvider({ children }) {
     return response;
   }, [queryClient]);
 
+  const deleteProfilePhoto = useCallback(async (version) => {
+    const response = await apiRequest("/user/photo", {
+      method: "DELETE",
+      auth: true,
+      version
+    });
+
+    await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+
+    return response;
+  }, [queryClient]);
+
   const deleteOwnAccount = useCallback(
     async (version) => {
       const response = await apiRequest("/user", {
@@ -164,6 +176,7 @@ export function AuthProvider({ children }) {
       logout,
       updateProfile,
       changePassword,
+      deleteProfilePhoto,
       deleteOwnAccount,
       clearSession,
       refetchUser: meQuery.refetch
@@ -171,6 +184,7 @@ export function AuthProvider({ children }) {
   }, [
     changePassword,
     clearSession,
+    deleteProfilePhoto,
     deleteOwnAccount,
     login,
     logout,

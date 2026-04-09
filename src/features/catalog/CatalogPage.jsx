@@ -5,6 +5,7 @@ import { DEFAULT_PAGE_SIZE } from "../../shared/api/config";
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { apiRequest } from "../../shared/api/http";
 import { buildQueryString, formatEnumLabel } from "../../shared/lib/format";
+import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
@@ -55,13 +56,13 @@ export function CatalogPage() {
   const totalElements = booksQuery.data?.totalElements ?? 0;
 
   return (
-    <section className="content-stack">
+    <section className="content-stack catalog-page">
       <header className="section-card">
         <span className="eyebrow">Public API</span>
         <h1>Catalog</h1>
         <p>
-          This screen queries your public search endpoint and already uses metadata-driven
-          sorting options.
+          This screen queries your public search endpoint, renders photo URLs from the server, and
+          keeps the filtering contract metadata-driven.
         </p>
       </header>
 
@@ -69,43 +70,35 @@ export function CatalogPage() {
         <div className="filters-grid">
           <Field
             label="Search text"
-            value={filters.searchText}
             onChange={(value) => updateFilter("searchText", value)}
+            value={filters.searchText}
           />
-          <Field
-            label="Author"
-            value={filters.author}
-            onChange={(value) => updateFilter("author", value)}
-          />
+          <Field label="Author" onChange={(value) => updateFilter("author", value)} value={filters.author} />
           <Field
             label="Category"
-            value={filters.category}
             onChange={(value) => updateFilter("category", value)}
+            value={filters.category}
           />
-          <Field
-            label="City"
-            value={filters.city}
-            onChange={(value) => updateFilter("city", value)}
-          />
+          <Field label="City" onChange={(value) => updateFilter("city", value)} value={filters.city} />
           <Field
             label="Publication year"
+            onChange={(value) => updateFilter("publicationYear", value)}
             type="number"
             value={filters.publicationYear}
-            onChange={(value) => updateFilter("publicationYear", value)}
           />
           <SelectField
             label="Gift only"
-            value={filters.isGift}
+            onChange={(value) => updateFilter("isGift", value)}
             options={[
               { label: "All", value: "" },
               { label: "Gift only", value: "true" },
               { label: "Exchange only", value: "false" }
             ]}
-            onChange={(value) => updateFilter("isGift", value)}
+            value={filters.isGift}
           />
           <SelectField
             label="Sort field"
-            value={filters.sortBy}
+            onChange={(value) => updateFilter("sortBy", value)}
             options={[
               { label: "Default", value: "" },
               ...((metadataQuery.data?.bookSortFields ?? []).map((item) => ({
@@ -113,16 +106,16 @@ export function CatalogPage() {
                 value: item
               })))
             ]}
-            onChange={(value) => updateFilter("sortBy", value)}
+            value={filters.sortBy}
           />
           <SelectField
             label="Sort direction"
-            value={filters.sortDirection}
+            onChange={(value) => updateFilter("sortDirection", value)}
             options={[
               { label: "Ascending", value: "ASC" },
               { label: "Descending", value: "DESC" }
             ]}
-            onChange={(value) => updateFilter("sortDirection", value)}
+            value={filters.sortDirection}
           />
         </div>
 
@@ -142,14 +135,12 @@ export function CatalogPage() {
       </section>
 
       {booksQuery.isPending ? <LoadingBlock label="Loading catalog" /> : null}
-      {booksQuery.error ? (
-        <ErrorBlock error={booksQuery.error} title="Catalog request failed" />
-      ) : null}
+      {booksQuery.error ? <ErrorBlock error={booksQuery.error} title="Catalog request failed" /> : null}
 
       {!booksQuery.isPending && !booksQuery.error && books.length === 0 ? (
         <EmptyBlock
-          title="No books found"
           description="Try broader filters or remove sorting and text constraints."
+          title="No books found"
         />
       ) : null}
 
@@ -157,6 +148,10 @@ export function CatalogPage() {
         <section className="book-grid">
           {books.map((book) => (
             <article className="book-card" key={book.id}>
+              <Link className="book-card-cover-link" to={`/book/${book.id}`}>
+                <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
+              </Link>
+
               <div className="book-card-head">
                 <span className="eyebrow">{book.isGift ? "Gift" : "Exchange"}</span>
                 <span className="subtle-chip">{book.city || "No city"}</span>
@@ -164,29 +159,24 @@ export function CatalogPage() {
 
               <h2>{book.name}</h2>
               <p className="book-meta">
-                {book.author} · {book.category} · {book.publicationYear || "Unknown year"}
+                {book.author} / {book.category} / {book.publicationYear || "Unknown year"}
               </p>
               <p className="book-description">
                 {book.description || "No public description provided for this book yet."}
               </p>
 
-              <div className="book-owner">
-                <strong>{book.ownerNickname || "Unknown owner"}</strong>
-                <span>ownerUserId: {book.ownerUserId ?? "n/a"}</span>
-              </div>
-
-              <div className="card-actions">
-                <Link className="button button-secondary" to={`/book/${book.id}`}>
-                  Open details
-                </Link>
-              </div>
+                <div className="book-owner">
+                  <UserIdentityInline name={book.ownerNickname} photoUrl={book.ownerPhotoUrl} size="sm">
+                    <strong>{book.ownerNickname || "Unknown owner"}</strong>
+                  </UserIdentityInline>
+                </div>
             </article>
           ))}
         </section>
       ) : null}
 
       {!booksQuery.isPending && !booksQuery.error && totalPages > 1 ? (
-        <Pagination page={pageIndex} totalPages={totalPages} onChange={setPageIndex} />
+        <Pagination onChange={setPageIndex} page={pageIndex} totalPages={totalPages} />
       ) : null}
     </section>
   );
@@ -210,11 +200,7 @@ function SelectField({ label, onChange, options, value }) {
   return (
     <label className="field">
       <span>{label}</span>
-      <select
-        className="field-control"
-        onChange={(event) => onChange(event.target.value)}
-        value={value}
-      >
+      <select className="field-control" onChange={(event) => onChange(event.target.value)} value={value}>
         {options.map((option) => (
           <option key={`${label}-${option.value}`} value={option.value}>
             {option.label}

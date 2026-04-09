@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../shared/api/config";
 import { apiRequest } from "../../shared/api/http";
+import { ImageUploadField } from "../../shared/ui/ImageUploadField";
+import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
@@ -12,7 +14,8 @@ const emptyBookForm = {
   author: "",
   category: "",
   publicationYear: "",
-  photoBase64: "",
+  photoBase64: null,
+  photoUrl: "",
   city: "",
   contactDetails: "",
   isGift: false
@@ -65,7 +68,7 @@ export function MyBooksPage() {
   const books = booksQuery.data?.content ?? [];
 
   return (
-    <section className="content-stack">
+    <section className="content-stack my-books-page">
       <header className="section-card">
         <span className="eyebrow">My books</span>
         <h1>Manage your inventory</h1>
@@ -100,6 +103,10 @@ export function MyBooksPage() {
         <section className="book-grid">
           {books.map((book) => (
             <article className="book-card" key={book.id}>
+              <Link className="book-card-cover-link" to={`/app/my-books/${book.id}`}>
+                <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
+              </Link>
+
               <div className="book-card-head">
                 <span className="eyebrow">{book.isGift ? "Gift" : "Exchange"}</span>
                 <span className="subtle-chip">v{book.version}</span>
@@ -113,15 +120,7 @@ export function MyBooksPage() {
                 {book.description || "No description provided."}
               </p>
 
-              <div className="book-owner">
-                <strong>{book.isExchanged ? "Already exchanged" : "Active listing"}</strong>
-                <span>ownerUserId: {book.ownerUserId ?? "n/a"}</span>
-              </div>
-
               <div className="card-actions">
-                <Link className="button button-secondary" to={`/app/my-books/${book.id}`}>
-                  Details
-                </Link>
                 <Link className="button button-secondary" to={`/app/my-books/${book.id}/edit`}>
                   Edit
                 </Link>
@@ -248,10 +247,14 @@ export function MyBookDetailsPage() {
   return (
     <section className="content-stack">
       <header className="section-card book-detail-hero">
-        <div>
-          <span className="eyebrow">{book.isGift ? "Gift" : "Exchange"}</span>
-          <h1>{book.name}</h1>
-          <p>{book.description}</p>
+        <div className="book-hero-layout">
+          <BookCover expandable photoUrl={book.photoUrl} size="hero" title={book.name} />
+
+          <div>
+            <span className="eyebrow">{book.isGift ? "Gift" : "Exchange"}</span>
+            <h1>{book.name}</h1>
+            <p>{book.description}</p>
+          </div>
         </div>
 
         <div className="book-detail-stats">
@@ -273,20 +276,16 @@ export function MyBookDetailsPage() {
               <dd>{book.id}</dd>
             </div>
             <div>
-              <dt>Owner user id</dt>
-              <dd>{book.ownerUserId}</dd>
-            </div>
-            <div>
-              <dt>Owner nickname</dt>
-              <dd>{book.ownerNickname}</dd>
-            </div>
-            <div>
               <dt>Publication year</dt>
               <dd>{book.publicationYear}</dd>
             </div>
             <div>
               <dt>Contact details</dt>
               <dd>{book.contactDetails || "Not provided"}</dd>
+            </div>
+            <div>
+              <dt>Photo URL</dt>
+              <dd>{book.photoUrl || "Not available"}</dd>
             </div>
             <div>
               <dt>Gift mode</dt>
@@ -335,6 +334,9 @@ export function EditBookPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
   const [infoMessage, setInfoMessage] = useState("");
+  const [photoPending, setPhotoPending] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [photoMessage, setPhotoMessage] = useState("");
 
   useEffect(() => {
     if (!bookQuery.data) {
@@ -344,7 +346,7 @@ export function EditBookPage() {
     const nextForm = fromBookToForm(bookQuery.data);
     setForm(nextForm);
     setInitialForm(nextForm);
-  }, [bookQuery.data]);
+  }, [bookQuery.data?.id]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -359,6 +361,8 @@ export function EditBookPage() {
     setPending(true);
     setError(null);
     setInfoMessage("");
+    setPhotoError("");
+    setPhotoMessage("");
 
     try {
       await apiRequest(`/book/user/${bookId}`, {
@@ -369,12 +373,61 @@ export function EditBookPage() {
       });
 
       await queryClient.invalidateQueries({ queryKey: ["my-books"] });
-      await queryClient.invalidateQueries({ queryKey: ["my-book", String(bookId)] });
+      await queryClient.fetchQuery({
+        queryKey: ["my-book", String(bookId)],
+        queryFn: () => fetchMyBook(bookId)
+      });
       navigate(`/app/my-books/${bookId}`, { replace: true });
     } catch (nextError) {
       setError(nextError);
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handleDeletePhoto() {
+    const confirmed = window.confirm("Delete the saved photo for this book?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPhotoPending(true);
+    setPhotoError("");
+    setPhotoMessage("");
+    setError(null);
+    setInfoMessage("");
+
+    try {
+      await apiRequest(`/book/user/${bookId}/photo`, {
+        method: "DELETE",
+        auth: true,
+        version: bookQuery.data.__version ?? bookQuery.data.version
+      });
+
+      const nextBook = await queryClient.fetchQuery({
+        queryKey: ["my-book", String(bookId)],
+        queryFn: () => fetchMyBook(bookId)
+      });
+      const nextPhotoUrl = nextBook.photoUrl ?? "";
+
+      setForm((current) => ({
+        ...current,
+        photoBase64: null,
+        photoUrl: nextPhotoUrl
+      }));
+      setInitialForm((current) => ({
+        ...current,
+        photoBase64: null,
+        photoUrl: nextPhotoUrl
+      }));
+
+      await queryClient.invalidateQueries({ queryKey: ["my-books"] });
+      setPhotoMessage("Book photo deleted.");
+    } catch (nextError) {
+      setPhotoError(nextError.message);
+    } finally {
+      setPhotoPending(false);
     }
   }
 
@@ -402,8 +455,12 @@ export function EditBookPage() {
         infoMessage={infoMessage}
         mode="edit"
         onChange={setForm}
+        onDeletePhoto={handleDeletePhoto}
         onSubmit={handleSubmit}
         pending={pending}
+        photoError={photoError}
+        photoMessage={photoMessage}
+        photoPending={photoPending}
         submitLabel="Save changes"
       />
     </section>
@@ -457,6 +514,10 @@ export function ExchangedBooksPage() {
         <section className="book-grid">
           {books.map((book) => (
             <article className="book-card" key={book.id}>
+              <Link className="book-card-cover-link" to={`/app/my-books/${book.id}`}>
+                <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
+              </Link>
+
               <div className="book-card-head">
                 <span className="eyebrow">Exchanged</span>
                 <span className="subtle-chip">v{book.version}</span>
@@ -470,10 +531,14 @@ export function ExchangedBooksPage() {
                 {book.description || "No description stored for this book."}
               </p>
 
-              <div className="book-owner">
-                <strong>{book.ownerNickname || "Unknown owner"}</strong>
-                <span>publication year: {book.publicationYear}</span>
-              </div>
+                <div className="book-owner">
+                  <UserIdentityInline name={book.ownerNickname} photoUrl={book.ownerPhotoUrl} size="sm">
+                    <div>
+                      <strong>{book.ownerNickname || "Unknown owner"}</strong>
+                      <span>publication year: {book.publicationYear}</span>
+                    </div>
+                  </UserIdentityInline>
+                </div>
             </article>
           ))}
         </section>
@@ -496,13 +561,30 @@ function BookForm({
   infoMessage,
   mode,
   onChange,
+  onDeletePhoto,
   onSubmit,
   pending,
+  photoError,
+  photoMessage,
+  photoPending,
   submitLabel
 }) {
   return (
     <section className="section-card">
       <form className="content-stack" onSubmit={onSubmit}>
+        <ImageUploadField
+          error={photoError}
+          entityName={form.name || "Book cover"}
+          kind="book"
+          label="Book photo"
+          message={photoMessage}
+          onChange={(value) => onChange((current) => ({ ...current, photoBase64: value }))}
+          onRemove={onDeletePhoto}
+          photoBase64={form.photoBase64}
+          photoUrl={form.photoUrl}
+          removePending={photoPending}
+        />
+
         <div className="filters-grid">
           <Field
             label="Name"
@@ -576,19 +658,6 @@ function BookForm({
           />
         </label>
 
-        <label className="field">
-          <span>Photo base64</span>
-          <textarea
-            className="field-control"
-            onChange={(event) =>
-              onChange((current) => ({ ...current, photoBase64: event.target.value }))
-            }
-            placeholder="Optional base64 image string"
-            rows={4}
-            value={form.photoBase64}
-          />
-        </label>
-
         {infoMessage ? <p className="inline-message inline-message-success">{infoMessage}</p> : null}
         {error ? <p className="inline-message inline-message-error">{error.message}</p> : null}
 
@@ -633,15 +702,17 @@ function useBookDetails(bookId) {
   return useQuery({
     queryKey: ["my-book", String(bookId)],
     enabled: Boolean(bookId),
-    queryFn: async () => {
-      const response = await apiRequest(`/book/user/${bookId}`, { auth: true });
-
-      return {
-        ...response.data,
-        __version: response.eTag ?? response.data?.version ?? null
-      };
-    }
+    queryFn: () => fetchMyBook(bookId)
   });
+}
+
+async function fetchMyBook(bookId) {
+  const response = await apiRequest(`/book/user/${bookId}`, { auth: true });
+
+  return {
+    ...response.data,
+    __version: response.eTag ?? response.data?.version ?? null
+  };
 }
 
 function fromBookToForm(book) {
@@ -651,7 +722,8 @@ function fromBookToForm(book) {
     author: book.author ?? "",
     category: book.category ?? "",
     publicationYear: book.publicationYear ? String(book.publicationYear) : "",
-    photoBase64: book.photoBase64 ?? "",
+    photoBase64: null,
+    photoUrl: book.photoUrl ?? "",
     city: book.city ?? "",
     contactDetails: book.contactDetails ?? "",
     isGift: Boolean(book.isGift)
@@ -665,7 +737,7 @@ function toCreatePayload(form) {
     author: form.author.trim(),
     category: form.category.trim(),
     publicationYear: Number(form.publicationYear),
-    photoBase64: normalizeOptionalString(form.photoBase64),
+    photoBase64: normalizeOptionalImage(form.photoBase64),
     city: form.city.trim(),
     contactDetails: form.contactDetails.trim(),
     isGift: Boolean(form.isGift)
@@ -680,7 +752,6 @@ function toUpdatePayload(form, initialForm) {
     "author",
     "category",
     "publicationYear",
-    "photoBase64",
     "city",
     "contactDetails",
     "isGift"
@@ -702,8 +773,8 @@ function toUpdatePayload(form, initialForm) {
     next[field] = currentValue;
   });
 
-  if (next.photoBase64 === "") {
-    next.photoBase64 = "";
+  if (form.photoBase64 !== null) {
+    next.photoBase64 = normalizeImageChange(form.photoBase64);
   }
 
   if (next.contactDetails === "") {
@@ -732,4 +803,21 @@ function normalizeComparableValue(field, value) {
 function normalizeOptionalString(value) {
   const trimmed = value.trim();
   return trimmed === "" ? null : trimmed;
+}
+
+function normalizeOptionalImage(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+function normalizeImageChange(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
 }

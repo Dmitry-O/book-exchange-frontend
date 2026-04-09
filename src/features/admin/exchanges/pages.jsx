@@ -5,6 +5,7 @@ import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
+import { BookCover, UserAvatar } from "../../../shared/ui/Media";
 import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
@@ -125,6 +126,19 @@ export function AdminExchangesPage() {
         <section className="list-stack">
           {exchanges.map((exchange) => (
             <article className="section-card compact-card" key={exchange.id}>
+              <div className="exchange-preview-pair">
+                <BookCover
+                  photoUrl={exchange.senderBook?.photoUrl}
+                  size="sm"
+                  title={exchange.senderBook?.name}
+                />
+                <BookCover
+                  photoUrl={exchange.receiverBook?.photoUrl}
+                  size="sm"
+                  title={exchange.receiverBook?.name}
+                />
+              </div>
+
               <div className="row-between">
                 <div>
                   <h2>Exchange #{exchange.id}</h2>
@@ -145,11 +159,25 @@ export function AdminExchangesPage() {
               <dl className="detail-list detail-list-compact">
                 <div>
                   <dt>Sender</dt>
-                  <dd>{renderUserLabel(exchange.senderUser)}</dd>
+                  <dd className="detail-inline-media">
+                    <UserAvatar
+                      name={exchange.senderUser?.nickname || exchange.senderUser?.email}
+                      photoUrl={exchange.senderUser?.photoUrl}
+                      size="sm"
+                    />
+                    <span>{renderUserLabel(exchange.senderUser)}</span>
+                  </dd>
                 </div>
                 <div>
                   <dt>Receiver</dt>
-                  <dd>{renderUserLabel(exchange.receiverUser)}</dd>
+                  <dd className="detail-inline-media">
+                    <UserAvatar
+                      name={exchange.receiverUser?.nickname || exchange.receiverUser?.email}
+                      photoUrl={exchange.receiverUser?.photoUrl}
+                      size="sm"
+                    />
+                    <span>{renderUserLabel(exchange.receiverUser)}</span>
+                  </dd>
                 </div>
                 <div>
                   <dt>Sender read</dt>
@@ -313,15 +341,22 @@ export function AdminExchangeDetailsPage() {
 function UserCard({ title, user }) {
   return (
     <article className="section-card">
-      <h2>{title}</h2>
-      <dl className="detail-list">
+      <div className="entity-header">
+        <UserAvatar name={user?.nickname || user?.email} photoUrl={user?.photoUrl} size="lg" />
         <div>
-          <dt>User</dt>
-          <dd>{renderUserLabel(user)}</dd>
+          <h2>{title}</h2>
+          <p>{renderUserLabel(user)}</p>
         </div>
+      </div>
+
+      <dl className="detail-list">
         <div>
           <dt>Email</dt>
           <dd>{user?.email || "Not available"}</dd>
+        </div>
+        <div>
+          <dt>Photo URL</dt>
+          <dd>{user?.photoUrl || "Not available"}</dd>
         </div>
         <div>
           <dt>Roles</dt>
@@ -355,17 +390,25 @@ function UserCard({ title, user }) {
 function BookCard({ title, book }) {
   return (
     <article className="section-card">
-      <h2>{title}</h2>
+      <div className="entity-header">
+        <BookCover photoUrl={book?.photoUrl} size="md" title={book?.name} />
+        <div>
+          <h2>{title}</h2>
+          <p>{book?.name || "Not available"}</p>
+        </div>
+      </div>
+
       <dl className="detail-list">
         <div>
-          <dt>Name</dt>
-          <dd>{book?.name || "Not available"}</dd>
+          <dt>Owner</dt>
+          <dd className="detail-inline-media">
+            <UserAvatar name={book?.ownerNickname} photoUrl={book?.ownerPhotoUrl} size="sm" />
+            <span>{book?.ownerNickname || "Unknown"} (id {book?.ownerUserId ?? "n/a"})</span>
+          </dd>
         </div>
         <div>
-          <dt>Owner</dt>
-          <dd>
-            {book?.ownerNickname || "Unknown"} (id {book?.ownerUserId ?? "n/a"})
-          </dd>
+          <dt>Photo URL</dt>
+          <dd>{book?.photoUrl || "Not available"}</dd>
         </div>
         <div>
           <dt>Author</dt>

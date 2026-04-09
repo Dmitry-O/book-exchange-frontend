@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../shared/api/config";
 import { apiRequest } from "../../shared/api/http";
 import { formatDateTime, formatEnumLabel } from "../../shared/lib/format";
+import { BookCover, UserAvatar } from "../../shared/ui/Media";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
@@ -33,14 +34,12 @@ export function MyReportsPage() {
       </header>
 
       {reportsQuery.isPending ? <LoadingBlock label="Loading reports" /> : null}
-      {reportsQuery.error ? (
-        <ErrorBlock error={reportsQuery.error} title="Reports could not be loaded" />
-      ) : null}
+      {reportsQuery.error ? <ErrorBlock error={reportsQuery.error} title="Reports could not be loaded" /> : null}
 
       {!reportsQuery.isPending && !reportsQuery.error && reports.length === 0 ? (
         <EmptyBlock
-          title="No reports created yet"
           description="When you send moderation reports from public book pages, they will appear here."
+          title="No reports created yet"
         />
       ) : null}
 
@@ -48,6 +47,14 @@ export function MyReportsPage() {
         <section className="list-stack">
           {reports.map((report) => (
             <article className="section-card compact-card" key={report.id}>
+              <div className="entity-inline entity-inline-spaced">
+                {report.targetType === "BOOK" ? (
+                  <BookCover size="sm" title={`Report ${report.targetId}`} />
+                ) : (
+                  <UserAvatar name={`User ${report.targetId}`} size="sm" />
+                )}
+              </div>
+
               <div className="row-between">
                 <div>
                   <h2>
@@ -89,11 +96,7 @@ export function MyReportsPage() {
       ) : null}
 
       {!reportsQuery.isPending && !reportsQuery.error && (reportsQuery.data?.totalPages ?? 0) > 1 ? (
-        <Pagination
-          onChange={setPageIndex}
-          page={pageIndex}
-          totalPages={reportsQuery.data.totalPages}
-        />
+        <Pagination onChange={setPageIndex} page={pageIndex} totalPages={reportsQuery.data.totalPages} />
       ) : null}
     </section>
   );

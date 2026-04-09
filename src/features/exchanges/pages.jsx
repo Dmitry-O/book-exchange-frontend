@@ -5,6 +5,7 @@ import { DEFAULT_LIST_PAGE_SIZE } from "../../shared/api/config";
 import { apiRequest } from "../../shared/api/http";
 import { useAuth } from "../../shared/auth/AuthContext";
 import { formatEnumLabel } from "../../shared/lib/format";
+import { BookCover, UserAvatar } from "../../shared/ui/Media";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
@@ -105,8 +106,8 @@ export function HistoryPage() {
 
       {!historyQuery.isPending && !historyQuery.error && items.length === 0 ? (
         <EmptyBlock
-          title="No resolved exchanges yet"
           description="Approved and declined exchanges will appear here after the pending flow is resolved."
+          title="No resolved exchanges yet"
         />
       ) : null}
 
@@ -114,6 +115,13 @@ export function HistoryPage() {
         <section className="list-stack">
           {items.map((item) => (
             <article className="section-card compact-card" key={item.id}>
+              <ExchangePreviewPair
+                receiverPhotoUrl={item.receiverBookPhotoUrl}
+                receiverTitle={item.receiverBookName}
+                senderPhotoUrl={item.senderBookPhotoUrl}
+                senderTitle={item.senderBookName}
+              />
+
               <div className="row-between">
                 <div>
                   <h2>Exchange #{item.id}</h2>
@@ -136,11 +144,7 @@ export function HistoryPage() {
       ) : null}
 
       {!historyQuery.isPending && !historyQuery.error && (historyQuery.data?.totalPages ?? 0) > 1 ? (
-        <Pagination
-          onChange={setPageIndex}
-          page={pageIndex}
-          totalPages={historyQuery.data.totalPages}
-        />
+        <Pagination onChange={setPageIndex} page={pageIndex} totalPages={historyQuery.data.totalPages} />
       ) : null}
     </section>
   );
@@ -206,6 +210,7 @@ export function RequestDetailsPage() {
         ) : null
       }
       detailQuery={detailQuery}
+      otherUserPhotoUrl={detailQuery.data?.receiverBook?.ownerPhotoUrl}
       subtitle="This page reads `GET /request/{exchangeId}` and lets the sender decline an active request."
       title="Request details"
     />
@@ -286,6 +291,7 @@ export function OfferDetailsPage() {
         ) : null
       }
       detailQuery={detailQuery}
+      otherUserPhotoUrl={detailQuery.data?.senderBook?.ownerPhotoUrl}
       subtitle="This page reads `GET /offer/{exchangeId}` and lets the receiver approve or decline a pending offer."
       title="Offer details"
     />
@@ -335,7 +341,8 @@ export function HistoryDetailsPage() {
         <span className="eyebrow">History details</span>
         <h1>Exchange #{exchange.id}</h1>
         <p>
-          This page uses `GET /history/{'{exchangeId}'}` and includes role-aware contact details for the completed exchange.
+          This page uses `GET /history/{'{exchangeId}'}` and includes role-aware contact details
+          for the completed exchange.
         </p>
       </header>
 
@@ -349,8 +356,15 @@ export function HistoryDetailsPage() {
             </div>
             <div>
               <dt>Other user</dt>
-              <dd>
-                {exchange.userNickname} (id {exchange.otherUserId})
+              <dd className="detail-inline-media">
+                <UserAvatar
+                  name={exchange.userNickname}
+                  photoUrl={resolveHistoryOtherUserPhotoUrl(exchange)}
+                  size="sm"
+                />
+                <span>
+                  {exchange.userNickname} (id {exchange.otherUserId})
+                </span>
               </dd>
             </div>
             <div>
@@ -519,11 +533,7 @@ export function RequestCreationCard({ book }) {
       <form className="content-stack" onSubmit={handleSubmit}>
         <label className="field">
           <span>Your book</span>
-          <select
-            className="field-control"
-            onChange={(event) => setSenderBookId(event.target.value)}
-            value={senderBookId}
-          >
+          <select className="field-control" onChange={(event) => setSenderBookId(event.target.value)} value={senderBookId}>
             {myBooks.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name} / {item.author} / {item.city}
@@ -565,7 +575,8 @@ function ExchangeListPage({
         <span className="eyebrow">Exchange flow</span>
         <h1>{title}</h1>
         <p>
-          These cards are backed by your pending exchange endpoints and open into the detailed request or offer view.
+          These cards are backed by your pending exchange endpoints and open into the detailed
+          request or offer view.
         </p>
       </header>
 
@@ -573,13 +584,20 @@ function ExchangeListPage({
       {query.error ? <ErrorBlock error={query.error} title={`${title} could not be loaded`} /> : null}
 
       {!query.isPending && !query.error && items.length === 0 ? (
-        <EmptyBlock title={emptyTitle} description={emptyDescription} />
+        <EmptyBlock description={emptyDescription} title={emptyTitle} />
       ) : null}
 
       {items.length > 0 ? (
         <section className="list-stack">
           {items.map((item) => (
             <article className="section-card compact-card" key={item.id}>
+              <ExchangePreviewPair
+                receiverPhotoUrl={item.receiverBookPhotoUrl}
+                receiverTitle={item.receiverBookName}
+                senderPhotoUrl={item.senderBookPhotoUrl}
+                senderTitle={item.senderBookName}
+              />
+
               <div className="row-between">
                 <div>
                   <h2>{itemLabel}</h2>
@@ -608,7 +626,14 @@ function ExchangeListPage({
   );
 }
 
-function ExchangeDetailsPage({ actionError, actions, detailQuery, subtitle, title }) {
+function ExchangeDetailsPage({
+  actionError,
+  actions,
+  detailQuery,
+  otherUserPhotoUrl,
+  subtitle,
+  title
+}) {
   if (detailQuery.isPending) {
     return <LoadingBlock label={`Loading ${title.toLowerCase()}`} />;
   }
@@ -639,8 +664,11 @@ function ExchangeDetailsPage({ actionError, actions, detailQuery, subtitle, titl
             </div>
             <div>
               <dt>Other user</dt>
-              <dd>
-                {exchange.userNickname} (id {exchange.otherUserId})
+              <dd className="detail-inline-media">
+                <UserAvatar name={exchange.userNickname} photoUrl={otherUserPhotoUrl} size="sm" />
+                <span>
+                  {exchange.userNickname} (id {exchange.otherUserId})
+                </span>
               </dd>
             </div>
             <div>
@@ -653,8 +681,8 @@ function ExchangeDetailsPage({ actionError, actions, detailQuery, subtitle, titl
         <article className="section-card">
           <h2>Available actions</h2>
           <p>
-            Pending exchanges can be resolved here. Once approved or declined, the exchange will move
-            into history.
+            Pending exchanges can be resolved here. Once approved or declined, the exchange will
+            move into history.
           </p>
 
           <div className="card-actions">
@@ -674,18 +702,37 @@ function ExchangeDetailsPage({ actionError, actions, detailQuery, subtitle, titl
   );
 }
 
+function ExchangePreviewPair({ receiverPhotoUrl, receiverTitle, senderPhotoUrl, senderTitle }) {
+  return (
+    <div className="exchange-preview-pair">
+      <BookCover photoUrl={senderPhotoUrl} size="sm" title={senderTitle} />
+      <BookCover photoUrl={receiverPhotoUrl} size="sm" title={receiverTitle} />
+    </div>
+  );
+}
+
 function ExchangeBookCard({ book, title }) {
   return (
     <article className="section-card">
-      <h2>{title}</h2>
-      <dl className="detail-list">
+      <div className="entity-header">
+        <BookCover photoUrl={book?.photoUrl} size="md" title={book?.name} />
         <div>
-          <dt>Name</dt>
-          <dd>{book?.name || "Not available"}</dd>
+          <h2>{title}</h2>
+          <p>{book?.name || "Not available"}</p>
         </div>
+      </div>
+
+      <dl className="detail-list">
         <div>
           <dt>Author</dt>
           <dd>{book?.author || "Not available"}</dd>
+        </div>
+        <div>
+          <dt>Owner</dt>
+          <dd className="detail-inline-media">
+            <UserAvatar name={book?.ownerNickname} photoUrl={book?.ownerPhotoUrl} size="sm" />
+            <span>{book?.ownerNickname || "Unknown owner"} (id {book?.ownerUserId ?? "n/a"})</span>
+          </dd>
         </div>
         <div>
           <dt>Category</dt>
@@ -735,4 +782,16 @@ async function invalidateExchangeCollections(queryClient) {
 
 function renderValue(value) {
   return value === null || value === undefined || value === "" ? "Not available" : value;
+}
+
+function resolveHistoryOtherUserPhotoUrl(exchange) {
+  if (exchange?.userExchangeRole === "SENDER") {
+    return exchange.receiverBook?.ownerPhotoUrl;
+  }
+
+  if (exchange?.userExchangeRole === "RECEIVER") {
+    return exchange.senderBook?.ownerPhotoUrl;
+  }
+
+  return "";
 }

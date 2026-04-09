@@ -5,6 +5,7 @@ import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
+import { UserAvatar } from "../../../shared/ui/Media";
 import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
@@ -150,13 +151,20 @@ export function AdminReportsPage() {
           {reports.map((report) => (
             <article className="section-card compact-card" key={report.id}>
               <div className="row-between">
-                <div>
+                <div className="entity-inline">
+                  <UserAvatar
+                    name={report.reporter?.nickname || report.reporter?.email}
+                    photoUrl={report.reporter?.photoUrl}
+                    size="md"
+                  />
+                  <div>
                   <h2>
                     {formatEnumLabel(report.targetType)} report #{report.id}
                   </h2>
                   <p className="muted-line">
                     Reporter: {report.reporter?.nickname || "Unknown"} / target {report.targetId}
                   </p>
+                  </div>
                 </div>
 
                 <div className="pill-row">
@@ -344,7 +352,18 @@ export function AdminReportDetailsPage() {
         </article>
 
         <article className="section-card">
-          <h2>Reporter snapshot</h2>
+          <div className="entity-header">
+            <UserAvatar
+              name={report.reporter?.nickname || report.reporter?.email}
+              photoUrl={report.reporter?.photoUrl}
+              size="lg"
+            />
+            <div>
+              <h2>Reporter snapshot</h2>
+              <p>Reporter media comes from the nested `UserDTO.photoUrl` field.</p>
+            </div>
+          </div>
+
           <dl className="detail-list">
             <div>
               <dt>Reporter id</dt>
@@ -357,6 +376,10 @@ export function AdminReportDetailsPage() {
             <div>
               <dt>Reporter email</dt>
               <dd>{report.reporter?.email || "Not available"}</dd>
+            </div>
+            <div>
+              <dt>Reporter photo URL</dt>
+              <dd>{report.reporter?.photoUrl || "Not available"}</dd>
             </div>
             <div>
               <dt>Reporter roles</dt>
