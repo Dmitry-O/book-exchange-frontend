@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { DEFAULT_PAGE_SIZE } from "../../shared/api/config";
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { apiRequest } from "../../shared/api/http";
+import { useLocale } from "../../shared/i18n/LocaleContext";
 import { buildQueryString, formatEnumLabel } from "../../shared/lib/format";
 import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
 import { Pagination } from "../../shared/ui/Pagination";
@@ -22,6 +23,7 @@ const initialFilters = {
 
 export function CatalogPage() {
   const metadataQuery = useMetadataQuery();
+  const { t } = useLocale();
   const [filters, setFilters] = useState(initialFilters);
   const [pageIndex, setPageIndex] = useState(0);
 
@@ -58,49 +60,46 @@ export function CatalogPage() {
   return (
     <section className="content-stack catalog-page">
       <header className="section-card">
-        <span className="eyebrow">Public API</span>
-        <h1>Catalog</h1>
-        <p>
-          This screen queries your public search endpoint, renders photo URLs from the server, and
-          keeps the filtering contract metadata-driven.
-        </p>
+        <span className="eyebrow">{t("catalog.eyebrow")}</span>
+        <h1>{t("catalog.title")}</h1>
+        <p>{t("catalog.description")}</p>
       </header>
 
       <section className="section-card">
         <div className="filters-grid">
           <Field
-            label="Search text"
+            label={t("catalog.searchText")}
             onChange={(value) => updateFilter("searchText", value)}
             value={filters.searchText}
           />
-          <Field label="Author" onChange={(value) => updateFilter("author", value)} value={filters.author} />
+          <Field label={t("catalog.author")} onChange={(value) => updateFilter("author", value)} value={filters.author} />
           <Field
-            label="Category"
+            label={t("catalog.category")}
             onChange={(value) => updateFilter("category", value)}
             value={filters.category}
           />
-          <Field label="City" onChange={(value) => updateFilter("city", value)} value={filters.city} />
+          <Field label={t("catalog.city")} onChange={(value) => updateFilter("city", value)} value={filters.city} />
           <Field
-            label="Publication year"
+            label={t("catalog.publicationYear")}
             onChange={(value) => updateFilter("publicationYear", value)}
             type="number"
             value={filters.publicationYear}
           />
           <SelectField
-            label="Gift only"
+            label={t("catalog.giftOnly")}
             onChange={(value) => updateFilter("isGift", value)}
             options={[
-              { label: "All", value: "" },
-              { label: "Gift only", value: "true" },
-              { label: "Exchange only", value: "false" }
+              { label: t("catalog.all"), value: "" },
+              { label: t("catalog.giftOnlyOption"), value: "true" },
+              { label: t("catalog.exchangeOnly"), value: "false" }
             ]}
             value={filters.isGift}
           />
           <SelectField
-            label="Sort field"
+            label={t("catalog.sortField")}
             onChange={(value) => updateFilter("sortBy", value)}
             options={[
-              { label: "Default", value: "" },
+              { label: t("catalog.defaultSort"), value: "" },
               ...((metadataQuery.data?.bookSortFields ?? []).map((item) => ({
                 label: formatEnumLabel(item),
                 value: item
@@ -109,11 +108,11 @@ export function CatalogPage() {
             value={filters.sortBy}
           />
           <SelectField
-            label="Sort direction"
+            label={t("catalog.sortDirection")}
             onChange={(value) => updateFilter("sortDirection", value)}
             options={[
-              { label: "Ascending", value: "ASC" },
-              { label: "Descending", value: "DESC" }
+              { label: t("catalog.ascending"), value: "ASC" },
+              { label: t("catalog.descending"), value: "DESC" }
             ]}
             value={filters.sortDirection}
           />
@@ -128,19 +127,19 @@ export function CatalogPage() {
             }}
             type="button"
           >
-            Reset filters
+            {t("catalog.resetFilters")}
           </button>
-          <span className="muted-line">{totalElements} books matched</span>
+          <span className="muted-line">{t("catalog.booksMatched", { count: totalElements })}</span>
         </div>
       </section>
 
-      {booksQuery.isPending ? <LoadingBlock label="Loading catalog" /> : null}
-      {booksQuery.error ? <ErrorBlock error={booksQuery.error} title="Catalog request failed" /> : null}
+      {booksQuery.isPending ? <LoadingBlock label={t("catalog.loading")} /> : null}
+      {booksQuery.error ? <ErrorBlock error={booksQuery.error} title={t("catalog.requestFailed")} /> : null}
 
       {!booksQuery.isPending && !booksQuery.error && books.length === 0 ? (
         <EmptyBlock
-          description="Try broader filters or remove sorting and text constraints."
-          title="No books found"
+          description={t("catalog.noBooksDescription")}
+          title={t("catalog.noBooks")}
         />
       ) : null}
 
@@ -153,21 +152,21 @@ export function CatalogPage() {
               </Link>
 
               <div className="book-card-head">
-                <span className="eyebrow">{book.isGift ? "Gift" : "Exchange"}</span>
-                <span className="subtle-chip">{book.city || "No city"}</span>
+                <span className="eyebrow">{book.isGift ? t("catalog.gift") : t("catalog.exchange")}</span>
+                <span className="subtle-chip">{book.city || t("catalog.noCity")}</span>
               </div>
 
               <h2>{book.name}</h2>
               <p className="book-meta">
-                {book.author} / {book.category} / {book.publicationYear || "Unknown year"}
+                {book.author} / {book.category} / {book.publicationYear || t("catalog.unknownYear")}
               </p>
               <p className="book-description">
-                {book.description || "No public description provided for this book yet."}
+                {book.description || t("catalog.noDescription")}
               </p>
 
                 <div className="book-owner">
                   <UserIdentityInline name={book.ownerNickname} photoUrl={book.ownerPhotoUrl} size="sm">
-                    <strong>{book.ownerNickname || "Unknown owner"}</strong>
+                    <strong>{book.ownerNickname || t("catalog.unknownOwner")}</strong>
                   </UserIdentityInline>
                 </div>
             </article>

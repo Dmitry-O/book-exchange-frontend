@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { useAuth } from "../../shared/auth/AuthContext";
+import { useLocale } from "../../shared/i18n/LocaleContext";
 import { formatDateTime, trimFormPayload } from "../../shared/lib/format";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
 import { UserAvatar } from "../../shared/ui/Media";
@@ -8,10 +9,11 @@ import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
 export function ProfilePage() {
   const metadataQuery = useMetadataQuery();
+  const { locale, setLocale, t } = useLocale();
   const { deleteProfilePhoto, isLoadingUser, updateProfile, user, userError } = useAuth();
   const [form, setForm] = useState({
     nickname: "",
-    locale: "en",
+    locale,
     photoBase64: null,
     photoUrl: ""
   });
@@ -36,11 +38,11 @@ export function ProfilePage() {
   }, [metadataQuery.data, user]);
 
   if (isLoadingUser) {
-    return <LoadingBlock label="Loading profile" />;
+    return <LoadingBlock label={t("profile.title")} />;
   }
 
   if (userError) {
-    return <ErrorBlock error={userError} title="Profile could not be loaded" />;
+    return <ErrorBlock error={userError} title={t("profile.title")} />;
   }
 
   async function handleSubmit(event) {
@@ -57,7 +59,8 @@ export function ProfilePage() {
         photoBase64: null,
         photoUrl: response.data?.photoUrl ?? current.photoUrl
       }));
-      setSuccessMessage(response.message || "Profile updated successfully.");
+      setSuccessMessage(response.message || t("profile.updated"));
+      setLocale(form.locale);
     } catch (nextError) {
       setError(nextError);
     } finally {
@@ -66,7 +69,7 @@ export function ProfilePage() {
   }
 
   async function handleDeletePhoto() {
-    const confirmed = window.confirm("Delete your current profile photo?");
+    const confirmed = window.confirm(t("profile.deletePhotoConfirm"));
 
     if (!confirmed) {
       return;
@@ -85,7 +88,7 @@ export function ProfilePage() {
         photoBase64: null,
         photoUrl: response.data?.photoUrl ?? ""
       }));
-      setPhotoMessage(response.message || "Profile photo deleted.");
+      setPhotoMessage(response.message || t("profile.photoDeleted"));
     } catch (nextError) {
       setPhotoError(nextError.message);
     } finally {
@@ -96,11 +99,9 @@ export function ProfilePage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Profile</span>
-        <h1>Account profile</h1>
-        <p>
-          This page is backed by `GET /user` and `PATCH /user`, including If-Match version handling.
-        </p>
+        <span className="eyebrow">{t("profile.eyebrow")}</span>
+        <h1>{t("profile.title")}</h1>
+        <p>{t("profile.description")}</p>
       </header>
 
       <section className="detail-grid">
@@ -108,53 +109,54 @@ export function ProfilePage() {
           <div className="entity-header">
             <UserAvatar name={user.nickname || user.email} photoUrl={user.photoUrl} size="lg" />
             <div>
-              <h2>Current backend data</h2>
-              <p>Photo rendering now comes from `photoUrl`, while updates still send `photoBase64`.</p>
+              <h2>{t("profile.currentData")}</h2>
+              <p>{t("profile.currentDataDescription")}</p>
             </div>
           </div>
           <dl className="detail-list">
             <div>
-              <dt>Email</dt>
+              <dt>{t("auth.email")}</dt>
               <dd>{user.email}</dd>
             </div>
             <div>
-              <dt>Roles</dt>
-              <dd>{(user.roles ?? []).join(", ") || "No roles"}</dd>
+              <dt>{t("profile.roles")}</dt>
+              <dd>{(user.roles ?? []).join(", ") || t("profile.noRoles")}</dd>
             </div>
             <div>
-              <dt>Locale</dt>
-              <dd>{user.locale || "Not set"}</dd>
+              <dt>{t("auth.locale")}</dt>
+              <dd>{user.locale || t("profile.notSet")}</dd>
             </div>
             <div>
-              <dt>Version / ETag</dt>
-              <dd>{user.__version ?? user.version ?? "Not available"}</dd>
+              <dt>{t("profile.version")}</dt>
+              <dd>{user.__version ?? user.version ?? t("common.notAvailable")}</dd>
             </div>
             <div>
-              <dt>Banned until</dt>
+              <dt>{t("profile.bannedUntil")}</dt>
               <dd>{formatDateTime(user.bannedUntil)}</dd>
             </div>
             <div>
-              <dt>Ban reason</dt>
-              <dd>{user.banReason || "None"}</dd>
+              <dt>{t("profile.banReason")}</dt>
+              <dd>{user.banReason || t("profile.none")}</dd>
             </div>
           </dl>
         </article>
 
         <article className="section-card">
-          <h2>Edit profile</h2>
+          <h2>{t("profile.editTitle")}</h2>
           <form className="content-stack" onSubmit={handleSubmit}>
             <Field
-              label="Nickname"
+              label={t("auth.nickname")}
               value={form.nickname}
               onChange={(value) => setForm((current) => ({ ...current, nickname: value }))}
             />
             <label className="field">
-              <span>Locale</span>
+              <span>{t("auth.locale")}</span>
               <select
                 className="field-control"
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, locale: event.target.value }))
-                }
+                onChange={(event) => {
+                  setLocale(event.target.value);
+                  setForm((current) => ({ ...current, locale: event.target.value }));
+                }}
                 value={form.locale}
               >
                 {(metadataQuery.data?.locales ?? ["en"]).map((locale) => (
@@ -168,7 +170,7 @@ export function ProfilePage() {
               error={photoError}
               entityName={form.nickname || user.email}
               kind="user"
-              label="Profile photo"
+              label={t("profile.profilePhoto")}
               message={photoMessage}
               onChange={(value) => setForm((current) => ({ ...current, photoBase64: value }))}
               onRemove={handleDeletePhoto}
@@ -181,7 +183,7 @@ export function ProfilePage() {
             {error ? <p className="inline-message inline-message-error">{error.message}</p> : null}
 
             <button className="button" disabled={pending} type="submit">
-              {pending ? "Saving..." : "Save profile"}
+              {pending ? t("profile.saving") : t("profile.saveProfile")}
             </button>
           </form>
         </article>

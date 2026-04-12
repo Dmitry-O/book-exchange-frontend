@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, configureApiAuth } from "../api/http";
+import { useLocale } from "../i18n/LocaleContext";
 import {
   clearStoredSession,
   markPostLogoutRedirect,
@@ -20,6 +21,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const queryClient = useQueryClient();
+  const { setLocale } = useLocale();
   const [session, setSession] = useState(() => readStoredSession());
   const sessionRef = useRef(session);
 
@@ -65,6 +67,12 @@ export function AuthProvider({ children }) {
       clearSession();
     }
   }, [clearSession, meQuery.error]);
+
+  useEffect(() => {
+    if (meQuery.data?.locale) {
+      setLocale(meQuery.data.locale);
+    }
+  }, [meQuery.data?.locale, setLocale]);
 
   const login = useCallback(
     async (credentials) => {

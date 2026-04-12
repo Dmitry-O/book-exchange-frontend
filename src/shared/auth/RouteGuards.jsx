@@ -1,9 +1,11 @@
 import { Navigate, useLocation } from "react-router-dom";
+import { useLocale } from "../i18n/LocaleContext";
 import { useAuth } from "./AuthContext";
 import { ErrorBlock, LoadingBlock } from "../ui/StateBlocks";
 
 export function RequireAuth({ children }) {
   const location = useLocation();
+  const { t } = useLocale();
   const { isAuthenticated, isLoadingUser, user, userError } = useAuth();
 
   if (!isAuthenticated) {
@@ -11,19 +13,19 @@ export function RequireAuth({ children }) {
   }
 
   if (isLoadingUser) {
-    return <LoadingBlock label="Loading your workspace" />;
+    return <LoadingBlock label={t("routeGuards.loadingWorkspace")} />;
   }
 
   if (userError?.status === 401) {
-    return <LoadingBlock label="Refreshing your session" />;
+    return <LoadingBlock label={t("routeGuards.refreshingSession")} />;
   }
 
   if (userError) {
-    return <ErrorBlock error={userError} title="Your workspace could not be loaded" />;
+    return <ErrorBlock error={userError} title={t("routeGuards.workspaceError")} />;
   }
 
   if (!user) {
-    return <LoadingBlock label="Refreshing your workspace" />;
+    return <LoadingBlock label={t("routeGuards.refreshingSession")} />;
   }
 
   return children;
@@ -31,6 +33,7 @@ export function RequireAuth({ children }) {
 
 export function RequireAdmin({ children }) {
   const location = useLocation();
+  const { t } = useLocale();
   const { isAuthenticated, isLoadingUser, isAdmin, user, userError } = useAuth();
 
   if (!isAuthenticated) {
@@ -38,19 +41,19 @@ export function RequireAdmin({ children }) {
   }
 
   if (isLoadingUser) {
-    return <LoadingBlock label="Checking admin access" />;
+    return <LoadingBlock label={t("routeGuards.checkingAdmin")} />;
   }
 
   if (userError?.status === 401) {
-    return <LoadingBlock label="Refreshing your admin session" />;
+    return <LoadingBlock label={t("routeGuards.refreshingAdmin")} />;
   }
 
   if (userError) {
-    return <ErrorBlock error={userError} title="Admin access could not be loaded" />;
+    return <ErrorBlock error={userError} title={t("routeGuards.adminError")} />;
   }
 
   if (!user) {
-    return <LoadingBlock label="Refreshing admin access" />;
+    return <LoadingBlock label={t("routeGuards.refreshingAdmin")} />;
   }
 
   if (!isAdmin) {
