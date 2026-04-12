@@ -1,3 +1,5 @@
+import { readStoredLocale } from "../i18n/locale";
+
 export function buildQueryString(params) {
   const searchParams = new URLSearchParams();
 
@@ -34,7 +36,7 @@ export function formatDateTime(value) {
   }
 
   try {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(readStoredLocale(), {
       dateStyle: "medium",
       timeStyle: "short"
     }).format(new Date(value));

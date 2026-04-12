@@ -4,6 +4,7 @@ import {
   readStoredSession,
   writeStoredSession
 } from "../auth/session";
+import { readStoredLocale } from "../i18n/locale";
 
 let authBridge = {
   getSession: () => null,
@@ -46,13 +47,14 @@ export async function apiRequest(
     body,
     headers,
     auth = false,
+    locale,
     version,
     signal
   } = {}
 ) {
   return performRequest(
     endpoint,
-    { method, body, headers, auth, version, signal },
+    { method, body, headers, auth, locale, version, signal },
     true
   );
 }
@@ -62,7 +64,7 @@ async function performRequest(endpoint, options, canRefresh) {
   const requestHeaders = new Headers(options.headers ?? {});
 
   requestHeaders.set("Accept", "application/json");
-  requestHeaders.set("Accept-Language", getPreferredLocale());
+  requestHeaders.set("Accept-Language", options.locale ?? getPreferredLocale());
 
   if (options.body !== undefined) {
     requestHeaders.set("Content-Type", "application/json");
@@ -229,9 +231,5 @@ function parseEtag(eTag) {
 }
 
 function getPreferredLocale() {
-  if (typeof navigator === "undefined") {
-    return "en";
-  }
-
-  return navigator.language || "en";
+  return readStoredLocale();
 }

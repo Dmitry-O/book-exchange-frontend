@@ -1,17 +1,23 @@
-export function LoadingBlock({ label = "Loading" }) {
+import { useLocale } from "../i18n/LocaleContext";
+
+export function LoadingBlock({ label }) {
+  const { t } = useLocale();
+
   return (
     <div className="state-block">
       <div className="spinner" />
-      <p>{label}</p>
+      <p>{label ?? t("common.loading")}</p>
     </div>
   );
 }
 
-export function ErrorBlock({ error, title = "Something went wrong" }) {
+export function ErrorBlock({ error, title }) {
+  const { t } = useLocale();
+
   return (
     <div className="state-block state-block-error">
-      <h3>{title}</h3>
-      <p>{error?.message ?? "Unexpected error"}</p>
+      <h3>{title ?? t("common.somethingWentWrong")}</h3>
+      <p>{error?.message ?? t("common.unexpectedError")}</p>
       {error?.requestId ? <code>Request ID: {error.requestId}</code> : null}
     </div>
   );

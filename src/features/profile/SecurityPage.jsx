@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../shared/auth/AuthContext";
+import { useLocale } from "../../shared/i18n/LocaleContext";
 
 export function SecurityPage() {
   const navigate = useNavigate();
+  const { t } = useLocale();
   const { deleteOwnAccount, changePassword, logout, user } = useAuth();
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -23,7 +25,7 @@ export function SecurityPage() {
 
     try {
       const response = await changePassword(passwordForm, user.__version ?? user.version);
-      setPasswordMessage(response.message || "Password has been changed.");
+      setPasswordMessage(response.message || t("security.changed"));
       setPasswordForm({
         currentPassword: "",
         newPassword: ""
@@ -37,7 +39,7 @@ export function SecurityPage() {
 
   async function handleDeleteAccount() {
     const confirmed = window.confirm(
-      "Delete the current account? This action should call DELETE /user."
+      t("security.deleteConfirm")
     );
 
     if (!confirmed) {
@@ -60,19 +62,17 @@ export function SecurityPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Security</span>
-        <h1>Session and password controls</h1>
-        <p>
-          This page uses `PATCH /user/reset_password`, `PATCH /user/logout`, and `DELETE /user`.
-        </p>
+        <span className="eyebrow">{t("security.eyebrow")}</span>
+        <h1>{t("security.title")}</h1>
+        <p>{t("security.description")}</p>
       </header>
 
       <section className="detail-grid">
         <article className="section-card">
-          <h2>Change password</h2>
+          <h2>{t("security.changePassword")}</h2>
           <form className="content-stack" onSubmit={handlePasswordSubmit}>
             <Field
-              label="Current password"
+              label={t("security.currentPassword")}
               type="password"
               value={passwordForm.currentPassword}
               onChange={(value) =>
@@ -80,7 +80,7 @@ export function SecurityPage() {
               }
             />
             <Field
-              label="New password"
+              label={t("auth.newPassword")}
               type="password"
               value={passwordForm.newPassword}
               onChange={(value) =>
@@ -96,20 +96,20 @@ export function SecurityPage() {
             ) : null}
 
             <button className="button" disabled={passwordPending} type="submit">
-              {passwordPending ? "Updating..." : "Change password"}
+              {passwordPending ? t("security.updating") : t("security.changePassword")}
             </button>
           </form>
         </article>
 
         <article className="section-card">
-          <h2>Session actions</h2>
+          <h2>{t("security.sessionActions")}</h2>
           <p className="muted-line">
-            Current profile version: {user?.__version ?? user?.version ?? "unknown"}
+            {t("security.currentProfileVersion")}: {user?.__version ?? user?.version ?? t("security.unknownVersion")}
           </p>
 
           <div className="content-stack">
             <button className="button button-secondary" onClick={() => void logout()} type="button">
-              Logout current session
+              {t("security.logoutCurrentSession")}
             </button>
             <button
               className="button button-danger"
@@ -117,11 +117,15 @@ export function SecurityPage() {
               onClick={() => void handleDeleteAccount()}
               type="button"
             >
-              {deletePending ? "Deleting account..." : "Delete account"}
+              {deletePending ? t("security.deletingAccount") : t("security.deleteAccount")}
             </button>
             {deleteError ? (
               <p className="inline-message inline-message-error">{deleteError.message}</p>
             ) : null}
+            <p className="muted-line">
+              {t("security.publicDeleteFlowPrefix")}{" "}
+              <Link to="/delete-account-request">{t("security.publicDeleteFlowLink")}</Link>.
+            </p>
           </div>
         </article>
       </section>

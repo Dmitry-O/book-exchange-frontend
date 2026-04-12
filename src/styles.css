@@ -99,6 +99,25 @@ dl {
   gap: 10px;
 }
 
+.locale-picker {
+  display: grid;
+  gap: 6px;
+  min-width: 148px;
+}
+
+.locale-picker span {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.locale-picker-control {
+  min-height: 42px;
+  padding: 8px 12px;
+}
+
 .topbar-link,
 .sidebar-link {
   text-decoration: none;
@@ -287,6 +306,37 @@ dl {
 
 .auth-footer {
   padding-top: 4px;
+}
+
+.auth-helper-card {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(31, 107, 88, 0.08);
+}
+
+.auth-helper-card h2 {
+  font-size: 1.1rem;
+}
+
+.auth-helper-card p {
+  margin-top: 0;
+}
+
+.auth-helper-card-soft {
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.auth-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.auth-inline-form {
+  margin-top: 6px;
 }
 
 .field {

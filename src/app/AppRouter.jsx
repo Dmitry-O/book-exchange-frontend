@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { RequireAdmin, RequireAuth } from "../shared/auth/RouteGuards";
 import { FeaturePlaceholderPage } from "../shared/ui/FeaturePlaceholderPage";
 import {
+  DeleteAccountRequestPage,
   DeleteAccountTokenPage,
   ForgotPasswordPage,
   LoginPage,
@@ -66,6 +67,7 @@ export function AppRouter() {
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="resend-confirmation" element={<ResendConfirmationPage />} />
+        <Route path="delete-account-request" element={<DeleteAccountRequestPage />} />
         <Route path="delete-account-confirm" element={<DeleteAccountTokenPage />} />
       </Route>
 
