@@ -706,7 +706,6 @@ function AuthPanel({ eyebrow, title, description, children, footer }) {
   return (
     <section className="auth-shell">
       <div className="auth-panel">
-        <span className="eyebrow">{eyebrow}</span>
         <h1>{title}</h1>
         <p>{description}</p>
         {children}

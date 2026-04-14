@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { apiRequest } from "../../shared/api/http";
+import { useLocale } from "../../shared/i18n/LocaleContext";
+import { formatBookCategoryLabel } from "../../shared/lib/bookCategory";
 import { BookCover, UserAvatar } from "../../shared/ui/Media";
 import { RequestCreationCard } from "../exchanges/pages";
 import { ReportActionCard } from "../reports/ReportActionCard";
@@ -8,6 +10,7 @@ import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
 export function PublicBookPage() {
   const { bookId } = useParams();
+  const { locale } = useLocale();
 
   const bookQuery = useQuery({
     queryKey: ["public-book", bookId],
@@ -34,11 +37,16 @@ export function PublicBookPage() {
   return (
     <section className="content-stack">
       <header className="section-card book-detail-hero">
+        <div className="book-detail-header-bar">
+          <Link aria-label="Back to catalog" className="back-link" to="/catalog">
+            <ArrowLeftIcon />
+          </Link>
+        </div>
+
         <div className="book-hero-layout">
           <BookCover expandable photoUrl={book.photoUrl} size="hero" title={book.name} />
 
           <div>
-            <span className="eyebrow">{book.isGift ? "Gift" : "Exchange"}</span>
             <h1>{book.name}</h1>
             <p>{book.description || "No public description available for this book."}</p>
 
@@ -51,7 +59,10 @@ export function PublicBookPage() {
 
         <div className="book-detail-stats">
           <DetailStat label="Author" value={book.author} />
-          <DetailStat label="Category" value={book.category} />
+          <DetailStat
+            label="Category"
+            value={formatBookCategoryLabel(book.category, locale, "Not available")}
+          />
           <DetailStat label="Year" value={book.publicationYear} />
           <DetailStat label="City" value={book.city} />
         </div>
@@ -59,53 +70,28 @@ export function PublicBookPage() {
 
       <section className="detail-grid">
         <article className="section-card">
-          <h2>Owner data exposed for frontend actions</h2>
+          <h2>About this book</h2>
           <dl className="detail-list">
             <div>
-              <dt>Owner nickname</dt>
+              <dt>Owner</dt>
               <dd>{book.ownerNickname || "Not available"}</dd>
             </div>
             <div>
-              <dt>Owner user id</dt>
-              <dd>{book.ownerUserId ?? "Not available"}</dd>
+              <dt>Availability</dt>
+              <dd>{book.isGift ? "Gift" : "Exchange"}</dd>
             </div>
             <div>
-              <dt>Owner photo URL</dt>
-              <dd>{book.ownerPhotoUrl || "Not available"}</dd>
+              <dt>Publication year</dt>
+              <dd>{book.publicationYear || "Not available"}</dd>
             </div>
             <div>
-              <dt>Book id</dt>
-              <dd>{book.id}</dd>
-            </div>
-            <div>
-              <dt>Photo URL</dt>
-              <dd>{book.photoUrl || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Version / ETag</dt>
-              <dd>{book.__version ?? book.version ?? "Not available"}</dd>
+              <dt>Location</dt>
+              <dd>{book.city || "Not available"}</dd>
             </div>
           </dl>
         </article>
 
         <RequestCreationCard book={book} />
-      </section>
-
-      <section className="section-card">
-        <h2>Navigation</h2>
-        <p>
-          You can use this public book page as the entry point for creating an exchange request
-          with one of your own books.
-        </p>
-
-        <div className="card-actions">
-          <Link className="button button-secondary" to="/catalog">
-            Back to catalog
-          </Link>
-          <Link className="button button-secondary" to="/app/exchanges/requests">
-            Open my requests
-          </Link>
-        </div>
       </section>
 
       <ReportActionCard book={book} />
@@ -119,5 +105,20 @@ function DetailStat({ label, value }) {
       <strong>{value === null || value === undefined || value === "" ? "Not available" : value}</strong>
       <span>{label}</span>
     </div>
+  );
+}
+
+function ArrowLeftIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M14.75 5.75 8.5 12l6.25 6.25"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
   );
 }

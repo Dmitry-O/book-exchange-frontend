@@ -28,7 +28,6 @@ export function MyReportsPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Reports</span>
         <h1>My reports</h1>
         <p>This page consumes your user-facing report history endpoint and shows real moderation states.</p>
       </header>

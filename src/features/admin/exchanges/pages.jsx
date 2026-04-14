@@ -4,6 +4,8 @@ import { Link, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
+import { useLocale } from "../../../shared/i18n/LocaleContext";
+import { formatBookCategoryLabel } from "../../../shared/lib/bookCategory";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
 import { BookCover, UserAvatar } from "../../../shared/ui/Media";
 import { Pagination } from "../../../shared/ui/Pagination";
@@ -63,7 +65,6 @@ export function AdminExchangesPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Admin exchanges</span>
         <h1>Exchange oversight</h1>
         <p>
           This screen uses `GET /admin/exchanges` and lets you inspect the full exchange graph by
@@ -254,7 +255,6 @@ export function AdminExchangeDetailsPage() {
       <header className="section-card">
         <div className="row-between">
           <div>
-            <span className="eyebrow">Admin exchange details</span>
             <h1>Exchange #{exchange.id}</h1>
             <p>
               This screen uses `GET /admin/exchanges/{'{exchangeId}'}` and gives you the full
@@ -388,6 +388,8 @@ function UserCard({ title, user }) {
 }
 
 function BookCard({ title, book }) {
+  const { locale } = useLocale();
+
   return (
     <article className="section-card">
       <div className="entity-header">
@@ -416,7 +418,7 @@ function BookCard({ title, book }) {
         </div>
         <div>
           <dt>Category</dt>
-          <dd>{book?.category || "Not available"}</dd>
+          <dd>{formatBookCategoryLabel(book?.category, locale, "Not available")}</dd>
         </div>
         <div>
           <dt>City</dt>

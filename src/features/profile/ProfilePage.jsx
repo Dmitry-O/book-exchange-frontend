@@ -1,22 +1,18 @@
 import { useEffect, useState } from "react";
-import { useMetadataQuery } from "../../shared/api/hooks";
 import { useAuth } from "../../shared/auth/AuthContext";
 import { useLocale } from "../../shared/i18n/LocaleContext";
-import { formatDateTime, trimFormPayload } from "../../shared/lib/format";
+import { trimFormPayload } from "../../shared/lib/format";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
-import { UserAvatar } from "../../shared/ui/Media";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
 export function ProfilePage() {
-  const metadataQuery = useMetadataQuery();
-  const { locale, setLocale, t } = useLocale();
-  const { deleteProfilePhoto, isLoadingUser, updateProfile, user, userError } = useAuth();
+  const { locale, t } = useLocale();
+  const { deleteProfilePhoto, isLoadingUser, refetchUser, updateProfile, user, userError } = useAuth();
   const [form, setForm] = useState({
     nickname: "",
-    locale,
-    photoBase64: null,
     photoUrl: ""
   });
+  const [profileVersion, setProfileVersion] = useState(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
@@ -31,11 +27,10 @@ export function ProfilePage() {
 
     setForm({
       nickname: user.nickname ?? "",
-      locale: user.locale ?? metadataQuery.data?.locales?.[0] ?? "en",
-      photoBase64: null,
       photoUrl: user.photoUrl ?? ""
     });
-  }, [metadataQuery.data, user]);
+    setProfileVersion(user.__version ?? user.version ?? null);
+  }, [user]);
 
   if (isLoadingUser) {
     return <LoadingBlock label={t("profile.title")} />;
@@ -45,26 +40,71 @@ export function ProfilePage() {
     return <ErrorBlock error={userError} title={t("profile.title")} />;
   }
 
+  const updateNicknameLabel =
+    locale === "ru" ? "Обновить никнейм" : t("profile.saveProfile");
+  const photoUploadedLabel =
+    locale === "ru" ? "Фото профиля загружено." : t("profile.photoUploaded");
+
   async function handleSubmit(event) {
     event.preventDefault();
     setPending(true);
     setError(null);
     setSuccessMessage("");
+    setPhotoError("");
+    setPhotoMessage("");
 
     try {
-      const payload = toProfilePayload(form);
-      const response = await updateProfile(payload, user.__version ?? user.version);
+      const response = await updateProfile(toProfilePayload(form), profileVersion);
+      const refreshedUser = await refetchUser();
+      const nextUser = refreshedUser.data ?? null;
+
+      setProfileVersion(nextUser?.__version ?? response.eTag ?? response.data?.version ?? profileVersion);
       setForm((current) => ({
         ...current,
-        photoBase64: null,
-        photoUrl: response.data?.photoUrl ?? current.photoUrl
+        nickname: nextUser?.nickname ?? current.nickname,
+        photoUrl: nextUser?.photoUrl ?? response.data?.photoUrl ?? current.photoUrl
       }));
-      setSuccessMessage(response.message || t("profile.updated"));
-      setLocale(form.locale);
+      setSuccessMessage(t("profile.updated"));
     } catch (nextError) {
       setError(nextError);
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handlePhotoUpload(photoBase64) {
+    const previousPhotoUrl = form.photoUrl;
+
+    setPhotoPending(true);
+    setPhotoError("");
+    setPhotoMessage("");
+    setError(null);
+    setSuccessMessage("");
+    setForm((current) => ({
+      ...current,
+      photoUrl: photoBase64
+    }));
+
+    try {
+      const response = await updateProfile({ photoBase64 }, profileVersion);
+      const refreshedUser = await refetchUser();
+      const nextUser = refreshedUser.data ?? null;
+
+      setProfileVersion(nextUser?.__version ?? response.eTag ?? response.data?.version ?? profileVersion);
+      setForm((current) => ({
+        ...current,
+        photoUrl: nextUser?.photoUrl ?? response.data?.photoUrl ?? current.photoUrl
+      }));
+      setPhotoMessage(photoUploadedLabel);
+    } catch (nextError) {
+      setForm((current) => ({
+        ...current,
+        photoUrl: previousPhotoUrl
+      }));
+      setPhotoError(nextError.message);
+      throw nextError;
+    } finally {
+      setPhotoPending(false);
     }
   }
 
@@ -82,11 +122,14 @@ export function ProfilePage() {
     setSuccessMessage("");
 
     try {
-      const response = await deleteProfilePhoto(user.__version ?? user.version);
+      const response = await deleteProfilePhoto(profileVersion);
+      const refreshedUser = await refetchUser();
+      const nextUser = refreshedUser.data ?? null;
+
+      setProfileVersion(nextUser?.__version ?? response.eTag ?? response.data?.version ?? profileVersion);
       setForm((current) => ({
         ...current,
-        photoBase64: null,
-        photoUrl: response.data?.photoUrl ?? ""
+        photoUrl: nextUser?.photoUrl ?? response.data?.photoUrl ?? ""
       }));
       setPhotoMessage(response.message || t("profile.photoDeleted"));
     } catch (nextError) {
@@ -99,92 +142,43 @@ export function ProfilePage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">{t("profile.eyebrow")}</span>
         <h1>{t("profile.title")}</h1>
         <p>{t("profile.description")}</p>
       </header>
 
-      <section className="detail-grid">
-        <article className="section-card">
-          <div className="entity-header">
-            <UserAvatar name={user.nickname || user.email} photoUrl={user.photoUrl} size="lg" />
-            <div>
-              <h2>{t("profile.currentData")}</h2>
-              <p>{t("profile.currentDataDescription")}</p>
-            </div>
-          </div>
-          <dl className="detail-list">
-            <div>
-              <dt>{t("auth.email")}</dt>
-              <dd>{user.email}</dd>
-            </div>
-            <div>
-              <dt>{t("profile.roles")}</dt>
-              <dd>{(user.roles ?? []).join(", ") || t("profile.noRoles")}</dd>
-            </div>
-            <div>
-              <dt>{t("auth.locale")}</dt>
-              <dd>{user.locale || t("profile.notSet")}</dd>
-            </div>
-            <div>
-              <dt>{t("profile.version")}</dt>
-              <dd>{user.__version ?? user.version ?? t("common.notAvailable")}</dd>
-            </div>
-            <div>
-              <dt>{t("profile.bannedUntil")}</dt>
-              <dd>{formatDateTime(user.bannedUntil)}</dd>
-            </div>
-            <div>
-              <dt>{t("profile.banReason")}</dt>
-              <dd>{user.banReason || t("profile.none")}</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article className="section-card">
-          <h2>{t("profile.editTitle")}</h2>
+      <section className="content-stack">
+        <article className="section-card profile-data-card">
+          <h2>{t("profile.currentData")}</h2>
           <form className="content-stack" onSubmit={handleSubmit}>
-            <Field
-              label={t("auth.nickname")}
-              value={form.nickname}
-              onChange={(value) => setForm((current) => ({ ...current, nickname: value }))}
-            />
-            <label className="field">
-              <span>{t("auth.locale")}</span>
-              <select
-                className="field-control"
-                onChange={(event) => {
-                  setLocale(event.target.value);
-                  setForm((current) => ({ ...current, locale: event.target.value }));
-                }}
-                value={form.locale}
-              >
-                {(metadataQuery.data?.locales ?? ["en"]).map((locale) => (
-                  <option key={locale} value={locale}>
-                    {locale}
-                  </option>
-                ))}
-              </select>
-            </label>
             <ImageUploadField
-              error={photoError}
               entityName={form.nickname || user.email}
+              error={photoError}
+              helperText={null}
               kind="user"
               label={t("profile.profilePhoto")}
               message={photoMessage}
-              onChange={(value) => setForm((current) => ({ ...current, photoBase64: value }))}
+              onChange={handlePhotoUpload}
               onRemove={handleDeletePhoto}
-              photoBase64={form.photoBase64}
+              photoBase64={null}
               photoUrl={form.photoUrl}
               removePending={photoPending}
             />
 
+            <StaticField label={t("auth.email")} value={user.email} />
+            <div className="inline-field-action">
+              <Field
+                label={t("auth.nickname")}
+                value={form.nickname}
+                onChange={(value) => setForm((current) => ({ ...current, nickname: value }))}
+              />
+
+              <button className="button button-compact" disabled={pending} type="submit">
+                {pending ? t("profile.saving") : updateNicknameLabel}
+              </button>
+            </div>
+
             {successMessage ? <p className="inline-message inline-message-success">{successMessage}</p> : null}
             {error ? <p className="inline-message inline-message-error">{error.message}</p> : null}
-
-            <button className="button" disabled={pending} type="submit">
-              {pending ? t("profile.saving") : t("profile.saveProfile")}
-            </button>
           </form>
         </article>
       </section>
@@ -201,10 +195,18 @@ function Field({ label, onChange, value }) {
   );
 }
 
+function StaticField({ label, value }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <input className="field-control" disabled readOnly type="email" value={value} />
+    </label>
+  );
+}
+
 function toProfilePayload(form) {
   const payload = trimFormPayload({
-    nickname: form.nickname,
-    locale: form.locale
+    nickname: form.nickname
   });
 
   if (form.photoBase64 !== null) {

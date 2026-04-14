@@ -4,6 +4,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../shared/api/config";
 import { apiRequest } from "../../shared/api/http";
 import { useAuth } from "../../shared/auth/AuthContext";
+import { useLocale } from "../../shared/i18n/LocaleContext";
+import { formatBookCategoryLabel } from "../../shared/lib/bookCategory";
 import { formatEnumLabel } from "../../shared/lib/format";
 import { BookCover, UserAvatar } from "../../shared/ui/Media";
 import { Pagination } from "../../shared/ui/Pagination";
@@ -91,7 +93,6 @@ export function HistoryPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">History</span>
         <h1>Resolved exchanges</h1>
         <p>
           This page consumes `GET /history` and shows completed or declined exchanges outside the
@@ -338,7 +339,6 @@ export function HistoryDetailsPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">History details</span>
         <h1>Exchange #{exchange.id}</h1>
         <p>
           This page uses `GET /history/{'{exchangeId}'}` and includes role-aware contact details
@@ -572,7 +572,6 @@ function ExchangeListPage({
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Exchange flow</span>
         <h1>{title}</h1>
         <p>
           These cards are backed by your pending exchange endpoints and open into the detailed
@@ -647,7 +646,6 @@ function ExchangeDetailsPage({
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Exchange details</span>
         <h1>{title}</h1>
         <p>{subtitle}</p>
       </header>
@@ -712,6 +710,8 @@ function ExchangePreviewPair({ receiverPhotoUrl, receiverTitle, senderPhotoUrl, 
 }
 
 function ExchangeBookCard({ book, title }) {
+  const { locale } = useLocale();
+
   return (
     <article className="section-card">
       <div className="entity-header">
@@ -733,11 +733,11 @@ function ExchangeBookCard({ book, title }) {
             <UserAvatar name={book?.ownerNickname} photoUrl={book?.ownerPhotoUrl} size="sm" />
             <span>{book?.ownerNickname || "Unknown owner"} (id {book?.ownerUserId ?? "n/a"})</span>
           </dd>
-        </div>
-        <div>
-          <dt>Category</dt>
-          <dd>{book?.category || "Not available"}</dd>
-        </div>
+          </div>
+          <div>
+            <dt>Category</dt>
+            <dd>{formatBookCategoryLabel(book?.category, locale, "Not available")}</dd>
+          </div>
         <div>
           <dt>City</dt>
           <dd>{book?.city || "Not available"}</dd>

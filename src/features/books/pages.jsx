@@ -2,8 +2,12 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../shared/api/config";
+import { useMetadataQuery } from "../../shared/api/hooks";
 import { apiRequest } from "../../shared/api/http";
+import { useLocale } from "../../shared/i18n/LocaleContext";
+import { buildBookCategoryOptions, formatBookCategoryLabel } from "../../shared/lib/bookCategory";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
+import { CityField } from "../../shared/ui/CityField";
 import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
@@ -22,6 +26,7 @@ const emptyBookForm = {
 };
 
 export function MyBooksPage() {
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [pageIndex, setPageIndex] = useState(0);
   const [deletingId, setDeletingId] = useState(null);
@@ -70,11 +75,8 @@ export function MyBooksPage() {
   return (
     <section className="content-stack my-books-page">
       <header className="section-card">
-        <span className="eyebrow">My books</span>
         <h1>Manage your inventory</h1>
-        <p>
-          This page uses `GET /book/user` and list-level `version` values for direct delete actions.
-        </p>
+        <p>Keep your active books updated and ready for exchanges.</p>
 
         <div className="card-actions">
           <Link className="button" to="/app/my-books/new">
@@ -109,12 +111,12 @@ export function MyBooksPage() {
 
               <div className="book-card-head">
                 <span className="eyebrow">{book.isGift ? "Gift" : "Exchange"}</span>
-                <span className="subtle-chip">v{book.version}</span>
+                <span className="subtle-chip">{book.city || "No city"}</span>
               </div>
 
               <h2>{book.name}</h2>
               <p className="book-meta">
-                {book.author} / {book.category} / {book.city}
+                {book.author} / {formatBookCategoryLabel(book.category, locale, "No category")} / {book.city}
               </p>
               <p className="book-description">
                 {book.description || "No description provided."}
@@ -180,9 +182,8 @@ export function CreateBookPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Create</span>
         <h1>Add a book</h1>
-        <p>This form sends `POST /book/user` with the full create payload, including contact details.</p>
+        <p>Add the main details about your book and make it ready for the catalog.</p>
       </header>
 
       <BookForm
@@ -199,6 +200,7 @@ export function CreateBookPage() {
 }
 
 export function MyBookDetailsPage() {
+  const { locale } = useLocale();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { bookId } = useParams();
@@ -247,11 +249,35 @@ export function MyBookDetailsPage() {
   return (
     <section className="content-stack">
       <header className="section-card book-detail-hero">
+        <div className="book-detail-header-bar">
+          <Link aria-label="Back to my books" className="back-link" to="/app/my-books">
+            <ArrowLeftIcon />
+          </Link>
+
+          <div className="hero-icon-actions">
+            <Link
+              aria-label="Edit book"
+              className="icon-button icon-button-secondary"
+              to={`/app/my-books/${book.id}/edit`}
+            >
+              <PencilIcon />
+            </Link>
+            <button
+              aria-label="Delete book"
+              className="icon-button icon-button-danger"
+              disabled={deletePending}
+              onClick={() => void handleDelete()}
+              type="button"
+            >
+              <TrashIcon />
+            </button>
+          </div>
+        </div>
+
         <div className="book-hero-layout">
           <BookCover expandable photoUrl={book.photoUrl} size="hero" title={book.name} />
 
           <div>
-            <span className="eyebrow">{book.isGift ? "Gift" : "Exchange"}</span>
             <h1>{book.name}</h1>
             <p>{book.description}</p>
           </div>
@@ -259,22 +285,18 @@ export function MyBookDetailsPage() {
 
         <div className="book-detail-stats">
           <DetailStat label="Author" value={book.author} />
-          <DetailStat label="Category" value={book.category} />
+          <DetailStat label="Category" value={formatBookCategoryLabel(book.category, locale, "Not available")} />
           <DetailStat label="City" value={book.city} />
-          <DetailStat label="Version" value={book.__version ?? book.version} />
+          <DetailStat label="Year" value={book.publicationYear} />
         </div>
       </header>
 
       {deleteError ? <ErrorBlock error={deleteError} title="Delete request failed" /> : null}
 
-      <section className="detail-grid">
+      <section className="content-stack">
         <article className="section-card">
-          <h2>Owner-facing payload snapshot</h2>
+          <h2>Book details</h2>
           <dl className="detail-list">
-            <div>
-              <dt>Book id</dt>
-              <dd>{book.id}</dd>
-            </div>
             <div>
               <dt>Publication year</dt>
               <dd>{book.publicationYear}</dd>
@@ -282,10 +304,6 @@ export function MyBookDetailsPage() {
             <div>
               <dt>Contact details</dt>
               <dd>{book.contactDetails || "Not provided"}</dd>
-            </div>
-            <div>
-              <dt>Photo URL</dt>
-              <dd>{book.photoUrl || "Not available"}</dd>
             </div>
             <div>
               <dt>Gift mode</dt>
@@ -296,28 +314,6 @@ export function MyBookDetailsPage() {
               <dd>{book.isExchanged ? "Yes" : "No"}</dd>
             </div>
           </dl>
-        </article>
-
-        <article className="section-card">
-          <h2>Next actions</h2>
-          <p>
-            All editable owner fields now come from `GET /book/user/{'{bookId}'}`, so the edit
-            form can be fully prefilled from the backend response.
-          </p>
-
-          <div className="card-actions">
-            <Link className="button button-secondary" to={`/app/my-books/${book.id}/edit`}>
-              Edit book
-            </Link>
-            <button
-              className="button button-danger"
-              disabled={deletePending}
-              onClick={() => void handleDelete()}
-              type="button"
-            >
-              {deletePending ? "Deleting..." : "Delete book"}
-            </button>
-          </div>
         </article>
       </section>
     </section>
@@ -442,11 +438,8 @@ export function EditBookPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Edit</span>
         <h1>Edit "{bookQuery.data.name}"</h1>
-        <p>
-          This form sends `PATCH /book/user/{'{bookId}'}` and only includes fields that changed.
-        </p>
+        <p>Update the information your readers should see in the catalog.</p>
       </header>
 
       <BookForm
@@ -468,6 +461,7 @@ export function EditBookPage() {
 }
 
 export function ExchangedBooksPage() {
+  const { locale } = useLocale();
   const [pageIndex, setPageIndex] = useState(0);
 
   const booksQuery = useQuery({
@@ -487,9 +481,8 @@ export function ExchangedBooksPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">History</span>
         <h1>Exchanged books</h1>
-        <p>This screen uses `GET /book/history` and gives you a read-only view of completed inventory.</p>
+        <p>Review the books that already completed an exchange.</p>
 
         <div className="card-actions">
           <Link className="button button-secondary" to="/app/my-books">
@@ -520,12 +513,12 @@ export function ExchangedBooksPage() {
 
               <div className="book-card-head">
                 <span className="eyebrow">Exchanged</span>
-                <span className="subtle-chip">v{book.version}</span>
+                <span className="subtle-chip">{book.city || "No city"}</span>
               </div>
 
               <h2>{book.name}</h2>
               <p className="book-meta">
-                {book.author} / {book.category} / {book.city}
+                {book.author} / {formatBookCategoryLabel(book.category, locale, "No category")} / {book.city}
               </p>
               <p className="book-description">
                 {book.description || "No description stored for this book."}
@@ -569,6 +562,15 @@ function BookForm({
   photoPending,
   submitLabel
 }) {
+  const metadataQuery = useMetadataQuery();
+  const { locale } = useLocale();
+  const categoryOptions = buildBookCategoryOptions(
+    metadataQuery.data?.bookCategories ?? [],
+    locale,
+    "Select category",
+    form.category
+  );
+
   return (
     <section className="section-card">
       <form className="content-stack" onSubmit={onSubmit}>
@@ -598,13 +600,14 @@ function BookForm({
             required={mode === "create"}
             value={form.author}
           />
-          <Field
+          <SelectField
             label="Category"
             onChange={(value) => onChange((current) => ({ ...current, category: value }))}
+            options={categoryOptions}
             required={mode === "create"}
             value={form.category}
           />
-          <Field
+          <CityField
             label="City"
             onChange={(value) => onChange((current) => ({ ...current, city: value }))}
             required={mode === "create"}
@@ -689,12 +692,85 @@ function Field({ label, onChange, required = false, type = "text", value }) {
   );
 }
 
+function SelectField({ label, onChange, options, required = false, value }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <select
+        className="field-control"
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+        value={value}
+      >
+        {options.map((option) => (
+          <option key={`${label}-${option.value || "empty"}`} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function DetailStat({ label, value }) {
   return (
     <div className="meta-stat">
       <strong>{value === null || value === undefined || value === "" ? "Not available" : value}</strong>
       <span>{label}</span>
     </div>
+  );
+}
+
+function ArrowLeftIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M14.75 5.75 8.5 12l6.25 6.25"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="m4 20 4.5-1 8.9-8.9a2.1 2.1 0 0 0 0-3L15.9 5.6a2.1 2.1 0 0 0-3 0L4 14.5 4 20Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M11.5 7.9 16.1 12.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M5 7h14M10 11v6M14 11v6M9 4h6l1 2H8l1-2Zm-2 3 1 12h8l1-12"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
   );
 }
 

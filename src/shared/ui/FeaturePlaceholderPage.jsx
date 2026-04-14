@@ -2,7 +2,6 @@ export function FeaturePlaceholderPage({ title, summary, checks }) {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Next slice</span>
         <h1>{title}</h1>
         <p>{summary}</p>
       </header>

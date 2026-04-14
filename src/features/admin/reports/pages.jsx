@@ -66,7 +66,6 @@ export function AdminReportsPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Admin reports</span>
         <h1>Moderation queue</h1>
         <p>
           This screen uses `GET /admin/reports` with status filters and sort direction, then opens
@@ -295,7 +294,6 @@ export function AdminReportDetailsPage() {
       <header className="section-card">
         <div className="row-between">
           <div>
-            <span className="eyebrow">Admin report details</span>
             <h1>
               {formatEnumLabel(report.targetType)} report #{report.id}
             </h1>
