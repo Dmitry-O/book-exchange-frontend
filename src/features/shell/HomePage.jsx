@@ -10,7 +10,6 @@ export function HomePage() {
   return (
     <div className="content-stack">
       <section className="hero-card">
-        <div className="eyebrow">{t("homePage.phase")}</div>
         <h1>{t("homePage.title")}</h1>
         <p>{t("homePage.description")}</p>
 

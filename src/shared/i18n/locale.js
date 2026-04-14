@@ -46,3 +46,14 @@ export function getLocaleLabel(locale) {
       return "English";
   }
 }
+
+export function getLocaleFlag(locale) {
+  switch (normalizeLocale(locale)) {
+    case "de":
+      return "🇩🇪";
+    case "ru":
+      return "🇷🇺";
+    default:
+      return "🇬🇧";
+  }
+}

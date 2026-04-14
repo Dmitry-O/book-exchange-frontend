@@ -199,8 +199,8 @@ const messages = {
     profile: {
       eyebrow: "Profile",
       title: "Account profile",
-      description: "Manage your nickname, language, and profile photo.",
-      currentData: "Current account data",
+      description: "Manage your nickname and profile photo.",
+      currentData: "Profile data",
       currentDataDescription: "Your photo is loaded from the server via photo URL.",
       roles: "Roles",
       version: "Version / ETag",
@@ -211,9 +211,10 @@ const messages = {
       none: "None",
       editTitle: "Edit profile",
       profilePhoto: "Profile photo",
-      saveProfile: "Save profile",
+      saveProfile: "Update nickname",
       saving: "Saving...",
       updated: "Profile updated successfully.",
+      photoUploaded: "Profile photo uploaded.",
       deletePhotoConfirm: "Delete your current profile photo?",
       photoDeleted: "Profile photo deleted."
     },
@@ -427,8 +428,8 @@ const messages = {
     profile: {
       eyebrow: "Profil",
       title: "Kontoprofil",
-      description: "Verwalte deinen Nickname, deine Sprache und dein Profilfoto.",
-      currentData: "Aktuelle Kontodaten",
+      description: "Verwalte deinen Nickname und dein Profilfoto.",
+      currentData: "Profildaten",
       currentDataDescription: "Dein Foto wird per Foto-URL direkt vom Server geladen.",
       roles: "Rollen",
       version: "Version / ETag",
@@ -439,9 +440,10 @@ const messages = {
       none: "Keine",
       editTitle: "Profil bearbeiten",
       profilePhoto: "Profilfoto",
-      saveProfile: "Profil speichern",
+      saveProfile: "Nickname aktualisieren",
       saving: "Wird gespeichert...",
       updated: "Profil erfolgreich aktualisiert.",
+      photoUploaded: "Profilfoto wurde hochgeladen.",
       deletePhotoConfirm: "Aktuelles Profilfoto löschen?",
       photoDeleted: "Profilfoto gelöscht."
     },
@@ -655,8 +657,8 @@ const messages = {
     profile: {
       eyebrow: "Профиль",
       title: "Профиль аккаунта",
-      description: "Управляйте никнеймом, языком и фотографией профиля.",
-      currentData: "Текущие данные аккаунта",
+      description: "Управляйте никнеймом и фотографией профиля.",
+      currentData: "Данные профиля",
       currentDataDescription:
         "Фотография подгружается с сервера по `photoUrl`.",
       roles: "Роли",

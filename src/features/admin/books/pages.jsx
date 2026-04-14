@@ -4,8 +4,15 @@ import { Link, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
+import { useLocale } from "../../../shared/i18n/LocaleContext";
+import {
+  buildBookCategoryOptions,
+  formatBookCategoryLabel,
+  getBookCategoryUiLabel
+} from "../../../shared/lib/bookCategory";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
 import { ImageUploadField } from "../../../shared/ui/ImageUploadField";
+import { CityField } from "../../../shared/ui/CityField";
 import { BookCover, UserIdentityInline } from "../../../shared/ui/Media";
 import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
@@ -37,12 +44,19 @@ const emptyBookForm = {
 
 export function AdminBooksPage() {
   const metadataQuery = useMetadataQuery();
+  const { locale } = useLocale();
   const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState(defaultFilters);
   const [draftFilters, setDraftFilters] = useState(defaultFilters);
 
   const bookTypes = metadataQuery.data?.bookTypes ?? ["ACTIVE", "DELETED", "ALL"];
   const bookSortFields = metadataQuery.data?.bookSortFields ?? [];
+  const categoryFilterOptions = buildBookCategoryOptions(
+    metadataQuery.data?.bookCategories ?? [],
+    locale,
+    getBookCategoryUiLabel("all", locale),
+    draftFilters.category
+  );
 
   const booksQuery = useQuery({
     queryKey: ["admin-books", pageIndex, filters],
@@ -90,7 +104,6 @@ export function AdminBooksPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Admin books</span>
         <h1>Book moderation</h1>
         <p>
           This screen uses `GET /admin/books/search` with the full search and sorting contract, then
@@ -150,33 +163,29 @@ export function AdminBooksPage() {
               />
             </label>
 
-            <label className="field">
-              <span>Category</span>
-              <input
-                className="field-control"
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    category: event.target.value
-                  }))
-                }
-                value={draftFilters.category}
-              />
-            </label>
+            <SelectField
+              label="Category"
+              onChange={(value) =>
+                setDraftFilters((current) => ({
+                  ...current,
+                  category: value
+                }))
+              }
+              options={categoryFilterOptions}
+              value={draftFilters.category}
+            />
 
-            <label className="field">
-              <span>City</span>
-              <input
-                className="field-control"
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    city: event.target.value
-                  }))
-                }
-                value={draftFilters.city}
-              />
-            </label>
+            <CityField
+              compactDropdown
+              label="City"
+              onChange={(value) =>
+                setDraftFilters((current) => ({
+                  ...current,
+                  city: value
+                }))
+              }
+              value={draftFilters.city}
+            />
 
             <label className="field">
               <span>Publication year</span>
@@ -300,7 +309,12 @@ export function AdminBooksPage() {
                   <div className="admin-book-card-copy">
                     <h2>{book.name || "Untitled book"}</h2>
                     <p className="muted-line admin-book-subtitle">
-                      {book.author || "Unknown author"} / {book.category || "No category"}
+                      {book.author || "Unknown author"} /{" "}
+                      {formatBookCategoryLabel(
+                        book.category,
+                        locale,
+                        getBookCategoryUiLabel("none", locale)
+                      )}
                     </p>
                   </div>
 
@@ -378,6 +392,8 @@ export function AdminBooksPage() {
 export function AdminBookDetailsPage() {
   const queryClient = useQueryClient();
   const { bookId } = useParams();
+  const metadataQuery = useMetadataQuery();
+  const { locale } = useLocale();
   const [form, setForm] = useState(emptyBookForm);
   const [initialForm, setInitialForm] = useState(emptyBookForm);
   const [pendingAction, setPendingAction] = useState(null);
@@ -572,6 +588,12 @@ export function AdminBookDetailsPage() {
 
   const book = detailQuery.data;
   const deleted = isBookDeleted(book);
+  const categoryOptions = buildBookCategoryOptions(
+    metadataQuery.data?.bookCategories ?? [],
+    locale,
+    getBookCategoryUiLabel("select", locale),
+    form.category
+  );
 
   return (
     <section className="content-stack">
@@ -580,12 +602,11 @@ export function AdminBookDetailsPage() {
           <div className="entity-inline">
             <BookCover expandable photoUrl={book.photoUrl} size="hero" title={book.name} />
             <div>
-            <span className="eyebrow">Admin book details</span>
-            <h1>{book.name || "Untitled book"}</h1>
-            <p>
-              This page uses `GET /admin/books/{'{bookId}'}` and wires together edit, delete, and
-              restore actions with optimistic locking.
-            </p>
+              <h1>{book.name || "Untitled book"}</h1>
+              <p>
+                This page uses `GET /admin/books/{'{bookId}'}` and wires together edit, delete, and
+                restore actions with optimistic locking.
+              </p>
             </div>
           </div>
 
@@ -739,12 +760,14 @@ export function AdminBookDetailsPage() {
               onChange={(value) => setForm((current) => ({ ...current, author: value }))}
               value={form.author}
             />
-            <Field
+            <SelectField
               label="Category"
               onChange={(value) => setForm((current) => ({ ...current, category: value }))}
+              options={categoryOptions}
               value={form.category}
             />
-            <Field
+            <CityField
+              compactDropdown
               label="City"
               onChange={(value) => setForm((current) => ({ ...current, city: value }))}
               value={form.city}
@@ -818,6 +841,26 @@ function Field({ label, onChange, type = "text", value }) {
         type={type}
         value={value}
       />
+    </label>
+  );
+}
+
+function SelectField({ label, onChange, options, required = false, value }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <select
+        className="field-control"
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+        value={value}
+      >
+        {options.map((option) => (
+          <option key={`${label}-${option.value || "empty"}`} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }

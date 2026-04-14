@@ -31,13 +31,14 @@ export function ImageUploadField({
 }) {
   const [cropState, setCropState] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [applyPending, setApplyPending] = useState(false);
   const dragRef = useRef(null);
   const previewPreset = cropPresets[kind];
   const previewSource = resolvePreviewSource(photoBase64, photoUrl);
   const hasPreview = Boolean(previewSource);
   const hasSavedPhoto = Boolean(photoUrl);
   const hasPendingUpload = typeof photoBase64 === "string" && photoBase64.length > 0;
-  const canRenderRemoveAction = hasPendingUpload || typeof onRemove === "function";
+  const canRenderRemoveAction = hasPendingUpload || (hasSavedPhoto && typeof onRemove === "function");
   const canRemove = hasPendingUpload || (hasSavedPhoto && typeof onRemove === "function");
 
   const previewMetrics = useMemo(() => {
@@ -86,6 +87,7 @@ export function ImageUploadField({
 
     dragRef.current = null;
     setIsDragging(false);
+    setApplyPending(false);
   }, [cropState]);
 
   async function handleFileSelection(event) {
@@ -115,9 +117,17 @@ export function ImageUploadField({
       return;
     }
 
-    const croppedBase64 = await cropImage(cropState, previewPreset);
-    onChange(croppedBase64);
-    setCropState(null);
+    setApplyPending(true);
+
+    try {
+      const croppedBase64 = await cropImage(cropState, previewPreset);
+      await Promise.resolve(onChange(croppedBase64));
+    } catch {
+      // Caller-owned error state is rendered outside this modal.
+    } finally {
+      setApplyPending(false);
+      setCropState(null);
+    }
   }
 
   function handleZoomStep(direction) {
@@ -204,6 +214,13 @@ export function ImageUploadField({
     event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
+  const helperCopy =
+    helperText === undefined
+      ? kind === "book"
+        ? "A vertical cover image makes the listing look much better in the catalog."
+        : "Choose an image, adjust the crop, and the form will send the resulting base64 payload."
+      : helperText;
+
   return (
     <>
       <label className="field">
@@ -253,9 +270,7 @@ export function ImageUploadField({
                 ) : null}
               </div>
 
-              <p className="field-hint">
-                {helperText || "A vertical cover image makes the listing look much better in the catalog."}
-              </p>
+              {helperCopy ? <p className="field-hint">{helperCopy}</p> : null}
 
               {hasPendingUpload ? (
                 <p className="inline-message inline-message-success">
@@ -267,26 +282,34 @@ export function ImageUploadField({
             </div>
           </div>
         ) : (
-          <div className="image-field-shell">
-            <div className="image-field-preview">
-              <UserAvatar
-                name={entityName}
-                photoUrl={previewSource}
-                size="xl"
-              />
-            </div>
+          <div className="image-field-shell image-field-shell-user">
+            <div className="image-upload-user-top">
+              <label
+                className={
+                  hasPreview
+                    ? "image-preview-trigger image-preview-trigger-user"
+                    : "image-preview-trigger image-preview-trigger-user image-preview-trigger-empty"
+                }
+              >
+                <div className="image-upload-user-avatar">
+                  <UserAvatar
+                    className="image-upload-user-avatar-media"
+                    name={entityName}
+                    photoUrl={previewSource}
+                    size="xl"
+                  />
+                </div>
+                {!hasPreview ? <span className="image-preview-empty-cta">Add photo</span> : null}
+                <input accept="image/*" className="image-preview-file-input" onChange={handleFileSelection} type="file" />
+              </label>
 
-            <div className="image-field-copy">
-              <p className="field-hint">
-                {helperText ||
-                  "Choose an image, adjust the crop, and the form will send the resulting base64 payload."}
-              </p>
-
-              <div className="card-actions">
-                <label className="button button-secondary image-upload-trigger">
-                  Choose photo
-                  <input accept="image/*" onChange={handleFileSelection} type="file" />
-                </label>
+              <div className="image-upload-book-actions">
+                {hasPreview ? (
+                  <label className="button button-secondary image-upload-trigger">
+                    Replace photo
+                    <input accept="image/*" onChange={handleFileSelection} type="file" />
+                  </label>
+                ) : null}
                 {canRenderRemoveAction ? (
                   <button
                     className="button button-secondary"
@@ -302,6 +325,8 @@ export function ImageUploadField({
                   </button>
                 ) : null}
               </div>
+
+              {helperCopy ? <p className="field-hint">{helperCopy}</p> : null}
 
               {hasPendingUpload ? (
                 <p className="inline-message inline-message-success">
@@ -405,11 +430,12 @@ export function ImageUploadField({
                 <p className="field-hint">Tip: drag with mouse or finger to move the photo.</p>
 
                 <div className="card-actions">
-                  <button className="button" onClick={() => void handleApplyCrop()} type="button">
-                    Apply crop
+                  <button className="button" disabled={applyPending} onClick={() => void handleApplyCrop()} type="button">
+                    {applyPending ? (kind === "user" ? "Uploading..." : "Applying...") : kind === "user" ? "Upload photo" : "Apply crop"}
                   </button>
                   <button
                     className="button button-secondary"
+                    disabled={applyPending}
                     onClick={() => setCropState(null)}
                     type="button"
                   >

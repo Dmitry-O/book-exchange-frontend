@@ -18,7 +18,6 @@ export function ErrorBlock({ error, title }) {
     <div className="state-block state-block-error">
       <h3>{title ?? t("common.somethingWentWrong")}</h3>
       <p>{error?.message ?? t("common.unexpectedError")}</p>
-      {error?.requestId ? <code>Request ID: {error.requestId}</code> : null}
     </div>
   );
 }

@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { DEFAULT_PAGE_SIZE } from "../../shared/api/config";
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { apiRequest } from "../../shared/api/http";
 import { useLocale } from "../../shared/i18n/LocaleContext";
+import { buildBookCategoryOptions, formatBookCategoryLabel } from "../../shared/lib/bookCategory";
 import { buildQueryString, formatEnumLabel } from "../../shared/lib/format";
+import { CityField } from "../../shared/ui/CityField";
 import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
@@ -23,18 +25,28 @@ const initialFilters = {
 
 export function CatalogPage() {
   const metadataQuery = useMetadataQuery();
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [filters, setFilters] = useState(initialFilters);
+  const [appliedSearchText, setAppliedSearchText] = useState("");
   const [pageIndex, setPageIndex] = useState(0);
+
+  useEffect(() => {
+    const trimmed = filters.searchText.trim();
+
+    if (trimmed.length === 0 || trimmed.length >= 3) {
+      setAppliedSearchText(trimmed);
+    }
+  }, [filters.searchText]);
 
   const queryString = useMemo(
     () =>
       buildQueryString({
         pageIndex,
         pageSize: DEFAULT_PAGE_SIZE,
-        ...filters
+        ...filters,
+        searchText: appliedSearchText
       }),
-    [filters, pageIndex]
+    [appliedSearchText, filters, pageIndex]
   );
 
   const booksQuery = useQuery({
@@ -56,11 +68,16 @@ export function CatalogPage() {
   const books = booksQuery.data?.content ?? [];
   const totalPages = booksQuery.data?.totalPages ?? 0;
   const totalElements = booksQuery.data?.totalElements ?? 0;
+  const categoryOptions = buildBookCategoryOptions(
+    metadataQuery.data?.bookCategories ?? [],
+    locale,
+    t("catalog.all"),
+    filters.category
+  );
 
   return (
     <section className="content-stack catalog-page">
       <header className="section-card">
-        <span className="eyebrow">{t("catalog.eyebrow")}</span>
         <h1>{t("catalog.title")}</h1>
         <p>{t("catalog.description")}</p>
       </header>
@@ -73,12 +90,13 @@ export function CatalogPage() {
             value={filters.searchText}
           />
           <Field label={t("catalog.author")} onChange={(value) => updateFilter("author", value)} value={filters.author} />
-          <Field
+          <SelectField
             label={t("catalog.category")}
             onChange={(value) => updateFilter("category", value)}
+            options={categoryOptions}
             value={filters.category}
           />
-          <Field label={t("catalog.city")} onChange={(value) => updateFilter("city", value)} value={filters.city} />
+          <CityField label={t("catalog.city")} onChange={(value) => updateFilter("city", value)} value={filters.city} />
           <Field
             label={t("catalog.publicationYear")}
             onChange={(value) => updateFilter("publicationYear", value)}
@@ -158,7 +176,7 @@ export function CatalogPage() {
 
               <h2>{book.name}</h2>
               <p className="book-meta">
-                {book.author} / {book.category} / {book.publicationYear || t("catalog.unknownYear")}
+                {book.author} / {formatBookCategoryLabel(book.category, locale, t("common.notAvailable"))} / {book.publicationYear || t("catalog.unknownYear")}
               </p>
               <p className="book-description">
                 {book.description || t("catalog.noDescription")}

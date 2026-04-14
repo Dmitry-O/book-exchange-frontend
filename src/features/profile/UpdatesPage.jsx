@@ -28,7 +28,6 @@ export function UpdatesPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Unread updates</span>
         <h1>Exchange notifications</h1>
         <p>
           This list proves the frontend can consume your unread exchange update endpoint, including

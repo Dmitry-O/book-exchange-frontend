@@ -62,7 +62,6 @@ export function SecurityPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">{t("security.eyebrow")}</span>
         <h1>{t("security.title")}</h1>
         <p>{t("security.description")}</p>
       </header>

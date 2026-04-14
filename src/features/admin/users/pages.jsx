@@ -80,7 +80,6 @@ export function AdminUsersPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <span className="eyebrow">Admin users</span>
         <h1>User moderation</h1>
         <p>
           This screen uses `GET /admin/users` with search, role, banned-state, and user-type
@@ -501,12 +500,11 @@ export function AdminUserDetailsPage() {
               size="lg"
             />
             <div>
-            <span className="eyebrow">Admin user details</span>
-            <h1>{targetUser.nickname || "Unknown user"}</h1>
-            <p>
-              This page uses `GET /admin/users/{'{userId}'}` and wires in role changes, ban
-              management, and soft delete actions.
-            </p>
+              <h1>{targetUser.nickname || "Unknown user"}</h1>
+              <p>
+                This page uses `GET /admin/users/{'{userId}'}` and wires in role changes, ban
+                management, and soft delete actions.
+              </p>
             </div>
           </div>
 
