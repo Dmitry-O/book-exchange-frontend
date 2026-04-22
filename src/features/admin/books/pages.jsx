@@ -1,30 +1,57 @@
-import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
 import { useLocale } from "../../../shared/i18n/LocaleContext";
+import { rt, rtf } from "../../../shared/i18n/rawText";
 import {
   buildBookCategoryOptions,
   formatBookCategoryLabel,
+  getBookCategoryTagStyle,
   getBookCategoryUiLabel
 } from "../../../shared/lib/bookCategory";
-import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
+import { getCityDisplayName, normalizeCityQueryValue } from "../../../shared/lib/cities";
+import {
+  buildBookSortOptions,
+  getBookTypeLabel,
+  getCurrentPublicationYear,
+  getPublicationYearSuggestions,
+  getTransferConditionLabel,
+  getTransferConditionOptions,
+  parsePublicationYearInput,
+  sanitizePublicationYearInput
+} from "../../../shared/lib/bookSearchUi";
+import { buildQueryString, formatDateTimeReadable, formatEnumLabel } from "../../../shared/lib/format";
+import { useInfiniteScroll } from "../../../shared/lib/useInfiniteScroll";
 import { ImageUploadField } from "../../../shared/ui/ImageUploadField";
 import { CityField } from "../../../shared/ui/CityField";
 import { BookCover, UserIdentityInline } from "../../../shared/ui/Media";
-import { Pagination } from "../../../shared/ui/Pagination";
+import {
+  ArrowLeftIcon,
+  ExternalLinkIcon,
+  FilterIcon,
+  GiftIcon,
+  RestoreIcon,
+  SearchIcon,
+  SortDirectionIcon,
+  TrashIcon,
+  UserIcon,
+  XIcon
+} from "../../../shared/ui/Icons";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
 const defaultFilters = {
   bookType: "ALL",
-  searchText: "",
   author: "",
   category: "",
   city: "",
   publicationYear: "",
-  isGift: "",
+  isGift: ""
+};
+
+const initialSort = {
   sortBy: "",
   sortDirection: "ASC"
 };
@@ -42,350 +69,548 @@ const emptyBookForm = {
   isGift: false
 };
 
+const YEAR_SUGGESTIONS = getPublicationYearSuggestions();
+
+const adminCatalogText = {
+  de: {
+    allLoaded: "Alle passenden Bücher sind geladen.",
+    description:
+      "Durchsuche den Katalog, prüfe Einträge und öffne einzelne Buchseiten für Moderationsentscheidungen.",
+    filtersHide: "Filter ausblenden",
+    filtersShow: "Filter anzeigen",
+    loadingMore: "Weitere Bücher werden geladen...",
+    searchPlaceholder: "Buchtitel eingeben...",
+    sortFieldAria: "Sortierfeld",
+    sortPlaceholder: "Sortierfeld auswählen",
+    sortToggleDescending: "Absteigend sortieren",
+    sortToggleAscending: "Aufsteigend sortieren",
+    yearHint: `Vier gültige Ziffern zwischen 0001 und ${getCurrentPublicationYear()} eingeben`
+  },
+  en: {
+    allLoaded: "All matching books are loaded",
+    description:
+      "Search the catalog, review listings, and open any book page when moderation work is needed.",
+    filtersHide: "Hide filters",
+    filtersShow: "Show filters",
+    loadingMore: "Loading more books...",
+    searchPlaceholder: "Enter book title...",
+    sortFieldAria: "Sort field",
+    sortPlaceholder: "Choose a sort field",
+    sortToggleDescending: "Sort descending",
+    sortToggleAscending: "Sort ascending",
+    yearHint: `Enter 4 valid digits between 0001 and ${getCurrentPublicationYear()}`
+  },
+  ru: {
+    allLoaded: "Все подходящие книги уже загружены",
+    description:
+      "Проверяйте каталог, находите нужные объявления и открывайте страницы книг для модерации без лишних действий.",
+    filtersHide: "Скрыть фильтры",
+    filtersShow: "Показать фильтры",
+    loadingMore: "Подгружаем ещё книги...",
+    searchPlaceholder: "Введите название книги...",
+    sortFieldAria: "Поле сортировки",
+    sortPlaceholder: "Выберите поле сортировки",
+    sortToggleDescending: "Сортировать по убыванию",
+    sortToggleAscending: "Сортировать по возрастанию",
+    yearHint: `Введите 4 корректные цифры от 0001 до ${getCurrentPublicationYear()}`
+  }
+};
+
 export function AdminBooksPage() {
   const metadataQuery = useMetadataQuery();
   const { locale } = useLocale();
-  const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState(defaultFilters);
   const [draftFilters, setDraftFilters] = useState(defaultFilters);
+  const [searchText, setSearchText] = useState("");
+  const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [sortState, setSortState] = useState(initialSort);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const text = adminCatalogText[locale] ?? adminCatalogText.en;
 
-  const bookTypes = metadataQuery.data?.bookTypes ?? ["ACTIVE", "DELETED", "ALL"];
-  const bookSortFields = metadataQuery.data?.bookSortFields ?? [];
-  const categoryFilterOptions = buildBookCategoryOptions(
-    metadataQuery.data?.bookCategories ?? [],
-    locale,
-    getBookCategoryUiLabel("all", locale),
-    draftFilters.category
+  const normalizedFilters = useMemo(() => normalizeAdminBookFilters(filters), [filters]);
+  const normalizedDraftFilters = useMemo(
+    () => normalizeAdminBookFilters(draftFilters),
+    [draftFilters]
+  );
+  const normalizedInitialFilters = useMemo(
+    () => normalizeAdminBookFilters(defaultFilters),
+    []
+  );
+  const normalizedSearchText = useMemo(() => String(searchText ?? "").trim(), [searchText]);
+  const normalizedPublicationYear = useMemo(
+    () => parsePublicationYearInput(normalizedFilters.publicationYear),
+    [normalizedFilters.publicationYear]
+  );
+  const normalizedDraftPublicationYear = useMemo(
+    () => parsePublicationYearInput(normalizedDraftFilters.publicationYear),
+    [normalizedDraftFilters.publicationYear]
   );
 
-  const booksQuery = useQuery({
-    queryKey: ["admin-books", pageIndex, filters],
-    queryFn: async () => {
+  const bookTypes = metadataQuery.data?.bookTypes ?? ["ACTIVE", "DELETED", "ALL"];
+  const categoryFilterOptions = useMemo(
+    () =>
+      buildBookCategoryOptions(
+        metadataQuery.data?.bookCategories ?? [],
+        locale,
+        getBookCategoryUiLabel("all", locale),
+        draftFilters.category
+      ),
+    [draftFilters.category, locale, metadataQuery.data?.bookCategories]
+  );
+  const transferConditionOptions = useMemo(
+    () => getTransferConditionOptions(locale, getBookCategoryUiLabel("all", locale)),
+    [locale]
+  );
+  const sortOptions = useMemo(
+    () =>
+      buildBookSortOptions(metadataQuery.data?.bookSortFields ?? [], locale, {
+        emptyLabel: text.sortPlaceholder
+      }),
+    [locale, metadataQuery.data?.bookSortFields, text.sortPlaceholder]
+  );
+
+  const booksQuery = useInfiniteQuery({
+    queryKey: [
+      "admin-books",
+      normalizedFilters.bookType,
+      appliedSearchText,
+      normalizedFilters.author,
+      normalizedFilters.category,
+      normalizedFilters.city,
+      normalizedFilters.isGift,
+      sortState.sortBy,
+      sortState.sortDirection,
+      normalizedPublicationYear
+    ],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
       const query = buildQueryString({
-        pageIndex,
+        pageIndex: pageParam,
         pageSize: DEFAULT_LIST_PAGE_SIZE,
-        bookType: filters.bookType === "ALL" ? undefined : filters.bookType,
-        searchText: filters.searchText,
-        author: filters.author,
-        category: filters.category,
-        city: filters.city,
-        publicationYear: filters.publicationYear === "" ? undefined : Number(filters.publicationYear),
-        isGift: filters.isGift === "" ? undefined : filters.isGift === "true",
-        sortBy: filters.sortBy || undefined,
-        sortDirection:
-          filters.sortBy && filters.sortDirection !== "ASC" ? filters.sortDirection : undefined
+        bookType: normalizedFilters.bookType === "ALL" ? undefined : normalizedFilters.bookType,
+        searchText: appliedSearchText || undefined,
+        author: normalizedFilters.author || undefined,
+        category: normalizedFilters.category || undefined,
+        city: normalizedFilters.city || undefined,
+        publicationYear: normalizedPublicationYear,
+        isGift: normalizedFilters.isGift === "" ? undefined : normalizedFilters.isGift === "true",
+        sortBy: sortState.sortBy || undefined,
+        sortDirection: sortState.sortBy ? sortState.sortDirection : undefined
       });
       const response = await apiRequest(`/admin/books/search?${query}`, { auth: true });
 
       return response.data;
-    }
+    },
+    getNextPageParam: (lastPage, pages) =>
+      pages.length < (lastPage?.totalPages ?? 0) ? pages.length : undefined
   });
 
-  function handleApplyFilters(event) {
-    event.preventDefault();
-    setPageIndex(0);
-    setFilters({
-      ...draftFilters,
-      searchText: draftFilters.searchText.trim(),
-      author: draftFilters.author.trim(),
-      category: draftFilters.category.trim(),
-      city: draftFilters.city.trim()
-    });
+  function handleApplyFilters() {
+    if (hasYearError) {
+      return;
+    }
+
+    setDraftFilters(normalizedDraftFilters);
+    setFilters(normalizedDraftFilters);
   }
 
   function handleResetFilters() {
-    setPageIndex(0);
     setDraftFilters(defaultFilters);
     setFilters(defaultFilters);
   }
 
-  const books = booksQuery.data?.content ?? [];
+  function handleSearch() {
+    if (!canSearch) {
+      return;
+    }
+
+    setAppliedSearchText(normalizedSearchText);
+  }
+
+  function handleClearSearch() {
+    setSearchText("");
+    setAppliedSearchText("");
+  }
+
+  function updateDraftFilter(name, value) {
+    setDraftFilters((current) => ({
+      ...current,
+      [name]: value
+    }));
+  }
+
+  const books = useMemo(
+    () => (booksQuery.data?.pages ?? []).flatMap((page) => page.content ?? []),
+    [booksQuery.data?.pages]
+  );
+  const totalElements = booksQuery.data?.pages?.[0]?.totalElements ?? 0;
+  const hasYearError =
+    Boolean(normalizedDraftFilters.publicationYear) && normalizedDraftPublicationYear === undefined;
+  const hasPendingFilterChanges = !areAdminBookFiltersEqual(normalizedFilters, normalizedDraftFilters);
+  const canSearch = normalizedSearchText.length === 0 || normalizedSearchText.length >= 3;
+  const hasSearchChanges = normalizedSearchText !== appliedSearchText;
+  const hasAppliedCatalogContext =
+    Boolean(appliedSearchText) || !areAdminBookFiltersEqual(normalizedFilters, normalizedInitialFilters);
+  const loadMoreRef = useInfiniteScroll({
+    enabled: !booksQuery.isPending && !booksQuery.error,
+    hasNextPage: booksQuery.hasNextPage,
+    isFetchingNextPage: booksQuery.isFetchingNextPage,
+    onLoadMore: () => void booksQuery.fetchNextPage()
+  });
 
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>Book moderation</h1>
-        <p>
-          This screen uses `GET /admin/books/search` with the full search and sorting contract, then
-          opens each book into a moderation detail view.
-        </p>
+        <h1>{rt(locale, "Book moderation")}</h1>
+        <p>{text.description}</p>
       </header>
 
-      <section className="section-card">
-        <form className="content-stack" onSubmit={handleApplyFilters}>
-          <div className="filters-grid">
-            <label className="field">
-              <span>Book type</span>
-              <select
-                className="field-control"
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    bookType: event.target.value
-                  }))
+      <section className="section-card catalog-controls-card">
+        <div className="catalog-search-stack">
+          <div className="catalog-search-shell">
+            <input
+              aria-label={rt(locale, "Search text")}
+              className="field-control catalog-search-input"
+              onChange={(event) => setSearchText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleSearch();
                 }
-                value={draftFilters.bookType}
-              >
-                {bookTypes.map((bookType) => (
-                  <option key={bookType} value={bookType}>
-                    {formatEnumLabel(bookType)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field">
-              <span>Search text</span>
-              <input
-                className="field-control"
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    searchText: event.target.value
-                  }))
-                }
-                placeholder="Book name"
-                value={draftFilters.searchText}
-              />
-            </label>
-
-            <label className="field">
-              <span>Author</span>
-              <input
-                className="field-control"
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    author: event.target.value
-                  }))
-                }
-                value={draftFilters.author}
-              />
-            </label>
-
-            <SelectField
-              label="Category"
-              onChange={(value) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  category: value
-                }))
-              }
-              options={categoryFilterOptions}
-              value={draftFilters.category}
+              }}
+              placeholder={text.searchPlaceholder}
+              value={searchText}
             />
-
-            <CityField
-              compactDropdown
-              label="City"
-              onChange={(value) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  city: value
-                }))
-              }
-              value={draftFilters.city}
-            />
-
-            <label className="field">
-              <span>Publication year</span>
-              <input
-                className="field-control"
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    publicationYear: event.target.value
-                  }))
-                }
-                type="number"
-                value={draftFilters.publicationYear}
-              />
-            </label>
-
-            <label className="field">
-              <span>Gift mode</span>
-              <select
-                className="field-control"
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    isGift: event.target.value
-                  }))
-                }
-                value={draftFilters.isGift}
+            {searchText ? (
+              <button
+                aria-label={rt(locale, "Clear")}
+                className="catalog-search-clear"
+                onClick={handleClearSearch}
+                title={rt(locale, "Clear")}
+                type="button"
               >
-                <option value="">All</option>
-                <option value="true">Gift only</option>
-                <option value="false">Exchange only</option>
-              </select>
-            </label>
+                <XIcon />
+              </button>
+            ) : null}
+            <button
+              aria-label={rt(locale, "Search")}
+              className="catalog-search-submit"
+              disabled={!canSearch || !hasSearchChanges}
+              onClick={handleSearch}
+              title={rt(locale, "Search")}
+              type="button"
+            >
+              <SearchIcon />
+            </button>
+            <button
+              aria-expanded={filtersOpen}
+              aria-label={filtersOpen ? text.filtersHide : text.filtersShow}
+              className={`catalog-filter-toggle${filtersOpen ? " catalog-filter-toggle-active" : ""}`}
+              onClick={() => setFiltersOpen((current) => !current)}
+              title={filtersOpen ? text.filtersHide : text.filtersShow}
+              type="button"
+            >
+              <FilterIcon />
+            </button>
+          </div>
 
-            <div className="field">
-              <span>Result set</span>
-              <div className="admin-summary-box">
-                <strong>{booksQuery.data?.totalElements ?? 0}</strong>
-                <span>matching books</span>
+          {filtersOpen ? (
+            <div className="catalog-filters-panel">
+              <div className="filters-grid">
+                <FilterSelectField
+                  className="filter-field-span-2"
+                  label={rt(locale, "Book type")}
+                  onChange={(value) => updateDraftFilter("bookType", value)}
+                  options={bookTypes.map((bookType) => ({
+                    label: getBookTypeLabel(bookType, locale),
+                    value: bookType
+                  }))}
+                  value={draftFilters.bookType}
+                />
+                <FilterField
+                  className="filter-field-span-2"
+                  label={rt(locale, "Author")}
+                  onChange={(value) => updateDraftFilter("author", value)}
+                  value={draftFilters.author}
+                />
+                <FilterSelectField
+                  className="filter-field-span-2"
+                  label={rt(locale, "Category")}
+                  onChange={(value) => updateDraftFilter("category", value)}
+                  options={categoryFilterOptions}
+                  value={draftFilters.category}
+                />
+                <CityField
+                  className="filter-field-span-2"
+                  compactDropdown
+                  label={rt(locale, "City")}
+                  onChange={(value) => updateDraftFilter("city", value)}
+                  value={draftFilters.city}
+                />
+                <FilterPublicationYearField
+                  className="filter-field-year"
+                  hint={text.yearHint}
+                  label={rt(locale, "Publication year")}
+                  onChange={(value) => updateDraftFilter("publicationYear", value)}
+                  value={draftFilters.publicationYear}
+                />
+                <FilterSelectField
+                  className="filter-field-transfer"
+                  label={getTransferConditionLabel(locale)}
+                  onChange={(value) => updateDraftFilter("isGift", value)}
+                  options={transferConditionOptions}
+                  value={draftFilters.isGift}
+                />
+              </div>
+
+              <div className="catalog-actions-bar">
+                <div className="filters-actions">
+                  <button
+                    className="button"
+                    disabled={hasYearError || !hasPendingFilterChanges}
+                    onClick={handleApplyFilters}
+                    type="button"
+                  >
+                    {rt(locale, "Apply filters")}
+                  </button>
+                  <button
+                    className="button button-secondary"
+                    onClick={handleResetFilters}
+                    type="button"
+                  >
+                    {rt(locale, "Reset")}
+                  </button>
+                </div>
+                {hasYearError ? <span className="muted-line">{text.yearHint}</span> : null}
               </div>
             </div>
-          </div>
-
-          <div className="filters-grid">
-            <label className="field">
-              <span>Sort by</span>
-              <select
-                className="field-control"
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    sortBy: event.target.value
-                  }))
-                }
-                value={draftFilters.sortBy}
-              >
-                <option value="">Default</option>
-                {bookSortFields.map((field) => (
-                  <option key={field} value={field}>
-                    {formatEnumLabel(field)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field">
-              <span>Sort direction</span>
-              <select
-                className="field-control"
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    sortDirection: event.target.value
-                  }))
-                }
-                value={draftFilters.sortDirection}
-              >
-                <option value="ASC">Ascending</option>
-                <option value="DESC">Descending</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="filters-actions">
-            <button className="button" type="submit">
-              Apply filters
-            </button>
-            <button className="button button-secondary" onClick={handleResetFilters} type="button">
-              Reset
-            </button>
-          </div>
-        </form>
+          ) : null}
+        </div>
       </section>
 
-      {metadataQuery.isPending ? <LoadingBlock label="Loading book metadata" /> : null}
+      <div className="catalog-results-toolbar">
+        {hasAppliedCatalogContext ? (
+          <span className="muted-line">{rtf(locale, "Found books: {count}", { count: totalElements })}</span>
+        ) : (
+          <span />
+        )}
+
+        <div className="catalog-sort-controls">
+          <select
+            aria-label={text.sortFieldAria}
+            className="field-control catalog-sort-select"
+            onChange={(event) =>
+              setSortState((current) => ({ ...current, sortBy: event.target.value }))
+            }
+            value={sortState.sortBy}
+          >
+            {sortOptions.map((option) => (
+              <option key={`admin-sort-${option.value || "empty"}`} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <button
+            aria-label={
+              sortState.sortDirection === "ASC"
+                ? text.sortToggleDescending
+                : text.sortToggleAscending
+            }
+            className="icon-button catalog-sort-direction-button"
+            disabled={!sortState.sortBy}
+            onClick={() =>
+              setSortState((current) => ({
+                ...current,
+                sortDirection: current.sortDirection === "ASC" ? "DESC" : "ASC"
+              }))
+            }
+            title={
+              sortState.sortDirection === "ASC"
+                ? text.sortToggleDescending
+                : text.sortToggleAscending
+            }
+            type="button"
+          >
+            <SortDirectionIcon direction={sortState.sortDirection} />
+          </button>
+        </div>
+      </div>
+
+      {metadataQuery.isPending ? <LoadingBlock label={rt(locale, "Loading book metadata")} /> : null}
       {metadataQuery.error ? (
-        <ErrorBlock error={metadataQuery.error} title="Book metadata could not be loaded" />
+        <ErrorBlock error={metadataQuery.error} title={rt(locale, "Book metadata could not be loaded")} />
       ) : null}
-      {booksQuery.isPending ? <LoadingBlock label="Loading moderated books" /> : null}
-      {booksQuery.error ? <ErrorBlock error={booksQuery.error} title="Admin books could not be loaded" /> : null}
+      {booksQuery.isPending ? <LoadingBlock label={rt(locale, "Loading moderated books")} /> : null}
+      {booksQuery.error ? <ErrorBlock error={booksQuery.error} title={rt(locale, "Admin books could not be loaded")} /> : null}
 
       {!booksQuery.isPending && !booksQuery.error && books.length === 0 ? (
         <EmptyBlock
-          title="No books match these filters"
-          description="Try resetting the filters or changing the book type, search, or sort combination."
+          title={rt(locale, "No books match these filters")}
+          description={rt(locale, "Try resetting the filters or changing the book type, search, or sort combination.")}
         />
       ) : null}
 
       {books.length > 0 ? (
-        <section className="admin-book-grid">
-          {books.map((book) => {
-            const deleted = isBookDeleted(book);
+        <>
+          <section className="admin-book-grid">
+            {books.map((book) => {
+              const deleted = isBookDeleted(book);
 
-            return (
-              <article className="section-card compact-card admin-book-list-card" key={book.id}>
-                <Link className="book-card-cover-link" to={`/admin/books/${book.id}`}>
-                  <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
-                </Link>
+              return (
+                <article
+                  className={`section-card compact-card admin-book-list-card${
+                    deleted ? " admin-book-list-card-deleted" : ""
+                  }`}
+                  key={book.id}
+                >
+                  <Link className="book-card-cover-link" to={`/admin/books/${book.id}`}>
+                    <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
+                  </Link>
 
-                <div className="row-between">
-                  <div className="admin-book-card-copy">
-                    <h2>{book.name || "Untitled book"}</h2>
-                    <p className="muted-line admin-book-subtitle">
-                      {book.author || "Unknown author"} /{" "}
-                      {formatBookCategoryLabel(
-                        book.category,
-                        locale,
-                        getBookCategoryUiLabel("none", locale)
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="pill-row admin-book-statuses">
-                    <span className="subtle-chip">v{book.version}</span>
-                    {book.isGift ? <span className="status-pill status-pill-neutral">Gift</span> : null}
-                    {book.isExchanged ? (
-                      <span className="status-pill status-pill-success">Exchanged</span>
-                    ) : null}
-                    {deleted ? <span className="status-pill status-pill-danger">Deleted</span> : null}
-                  </div>
-                </div>
-
-                  <div className="admin-book-facts">
-                    <div className="admin-book-fact admin-book-fact-owner">
-                      <span className="admin-book-fact-label">Owner</span>
-                      <UserIdentityInline
-                        className="admin-book-owner-inline"
-                        name={book.ownerNickname}
-                        photoUrl={book.ownerPhotoUrl}
-                        size="sm"
-                      >
-                        <strong title={`${book.ownerNickname || "Unknown"} (id ${book.ownerUserId ?? "n/a"})`}>
-                          {book.ownerNickname || "Unknown"} (id {book.ownerUserId ?? "n/a"})
-                        </strong>
-                      </UserIdentityInline>
+                  <div className="book-card-head">
+                    <div className="book-card-statuses">
+                      {book.isGift ? (
+                        <span
+                          aria-label={rt(locale, "Gift")}
+                          className="gift-icon-badge gift-icon-badge-small"
+                          title={rt(locale, "Gift")}
+                        >
+                          <GiftIcon />
+                        </span>
+                      ) : null}
+                      <span className="category-chip" style={getBookCategoryTagStyle(book.category)}>
+                        {formatBookCategoryLabel(
+                          book.category,
+                          locale,
+                          getBookCategoryUiLabel("none", locale)
+                        )}
+                      </span>
+                      <span className="subtle-chip">
+                        {book.city ? getCityDisplayName(book.city, locale) : rt(locale, "Not available")}
+                      </span>
                     </div>
-                  <div className="admin-book-fact">
-                    <span className="admin-book-fact-label">City</span>
-                    <strong>{book.city || "Not available"}</strong>
                   </div>
-                  <div className="admin-book-fact">
-                    <span className="admin-book-fact-label">Publication year</span>
-                    <strong>{renderValue(book.publicationYear)}</strong>
-                  </div>
-                  <div className="admin-book-fact">
-                    <span className="admin-book-fact-label">Deleted at</span>
-                    <strong>{formatDateTime(book.meta?.deletedAt)}</strong>
-                  </div>
-                </div>
 
-                <p className="book-description admin-book-description">
-                  {book.description || "No description provided."}
-                </p>
+                  <h2>{book.name || rt(locale, "Untitled book")}</h2>
+                  <p className="book-meta book-meta-compact">
+                    {book.author || rt(locale, "Unknown author")} / {renderValue(locale, book.publicationYear)}
+                  </p>
 
-                <div className="card-actions">
-                  <div className="pill-row">
-                    {book.ownerUserId ? (
-                      <Link className="link-inline" to={`/admin/users/${book.ownerUserId}`}>
-                        Open owner
+                  <div className="book-owner">
+                    <UserIdentityInline
+                      className="admin-book-owner-inline"
+                      name={book.ownerNickname}
+                      photoUrl={book.ownerPhotoUrl}
+                      size="sm"
+                    >
+                      <strong>{book.ownerNickname || rt(locale, "Unknown owner")}</strong>
+                    </UserIdentityInline>
+                  </div>
+
+                  <div className="card-actions">
+                    <div className="action-icon-group">
+                      {book.ownerUserId ? (
+                        <Link
+                          aria-label={rt(locale, "Open owner")}
+                          className="icon-button"
+                          title={rt(locale, "Open owner")}
+                          to={`/admin/users/${book.ownerUserId}`}
+                        >
+                          <UserIcon />
+                        </Link>
+                      ) : null}
+                      <Link
+                        aria-label={rt(locale, "Open public page")}
+                        className="icon-button"
+                        title={rt(locale, "Open public page")}
+                        to={`/book/${book.id}`}
+                      >
+                        <ExternalLinkIcon />
                       </Link>
-                    ) : null}
-                    <Link className="link-inline" to={`/book/${book.id}`}>
-                      Open public page
-                    </Link>
+                    </div>
                   </div>
-                </div>
-              </article>
-            );
-          })}
-        </section>
-      ) : null}
+                </article>
+              );
+            })}
+          </section>
 
-      {!booksQuery.isPending && !booksQuery.error && (booksQuery.data?.totalPages ?? 0) > 1 ? (
-        <Pagination
-          onChange={setPageIndex}
-          page={pageIndex}
-          totalPages={booksQuery.data.totalPages}
-        />
+          <div className="infinite-scroll-status" ref={loadMoreRef}>
+            {booksQuery.isFetchingNextPage
+              ? text.loadingMore
+              : booksQuery.hasNextPage
+                ? ""
+                : text.allLoaded}
+          </div>
+        </>
       ) : null}
     </section>
+  );
+}
+
+function normalizeAdminBookFilters(filters) {
+  return {
+    ...filters,
+    author: String(filters.author ?? "").trim(),
+    city: normalizeCityQueryValue(filters.city),
+    publicationYear: sanitizePublicationYearInput(filters.publicationYear)
+  };
+}
+
+function areAdminBookFiltersEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function FilterField({ className = "", label, onChange, value }) {
+  return (
+    <label className={`field ${className}`.trim()}>
+      <span>{label}</span>
+      <input
+        className="field-control"
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      />
+    </label>
+  );
+}
+
+function FilterPublicationYearField({ className = "", hint, label, onChange, value }) {
+  const listId = "admin-book-publication-year-options";
+  const hasError = Boolean(value) && parsePublicationYearInput(value) === undefined;
+
+  return (
+    <label className={`field ${className}`.trim()}>
+      <span>{label}</span>
+      <input
+        aria-invalid={hasError}
+        className="field-control"
+        inputMode="numeric"
+        list={listId}
+        onChange={(event) => onChange(sanitizePublicationYearInput(event.target.value))}
+        value={value}
+      />
+      <datalist id={listId}>
+        {YEAR_SUGGESTIONS.map((year) => (
+          <option key={year} value={year} />
+        ))}
+      </datalist>
+      {hasError ? <span className="field-hint">{hint}</span> : null}
+    </label>
+  );
+}
+
+function FilterSelectField({ className = "", label, onChange, options, value }) {
+  return (
+    <label className={`field ${className}`.trim()}>
+      <span>{label}</span>
+      <select className="field-control" onChange={(event) => onChange(event.target.value)} value={value}>
+        {options.map((option) => (
+          <option key={`${label}-${option.value || "empty"}`} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -416,10 +641,10 @@ export function AdminBookDetailsPage() {
       return;
     }
 
-    const nextForm = fromBookToForm(detailQuery.data);
+    const nextForm = fromBookToForm(detailQuery.data, locale);
     setForm(nextForm);
     setInitialForm(nextForm);
-  }, [detailQuery.data]);
+  }, [detailQuery.data, locale]);
 
   async function handleSave(event) {
     event.preventDefault();
@@ -430,10 +655,9 @@ export function AdminBookDetailsPage() {
 
     const payload = toUpdatePayload(form, initialForm);
 
-    if (Object.keys(payload).length === 0) {
-      setEditMessage("No changes to save yet.");
-      return;
-    }
+      if (Object.keys(payload).length === 0) {
+        return;
+      }
 
     setPendingAction("save");
 
@@ -450,11 +674,11 @@ export function AdminBookDetailsPage() {
         queryKey: ["admin-book", String(bookId)],
         queryFn: () => fetchAdminBook(bookId)
       });
-      const nextForm = fromBookToForm(nextBook);
+      const nextForm = fromBookToForm(nextBook, locale);
 
       setForm(nextForm);
       setInitialForm(nextForm);
-      setEditMessage("Book updated.");
+      setEditMessage(rt(locale, "Book updated."));
     } catch (error) {
       setEditError(error);
     } finally {
@@ -463,7 +687,7 @@ export function AdminBookDetailsPage() {
   }
 
   async function handleDelete() {
-    const confirmed = window.confirm("Soft-delete this book from the moderation console?");
+    const confirmed = window.confirm(rt(locale, "Soft-delete this book from the moderation console?"));
 
     if (!confirmed) {
       return;
@@ -485,11 +709,11 @@ export function AdminBookDetailsPage() {
         queryKey: ["admin-book", String(bookId)],
         queryFn: () => fetchAdminBook(bookId)
       });
-      const nextForm = fromBookToForm(nextBook);
+      const nextForm = fromBookToForm(nextBook, locale);
 
       setForm(nextForm);
       setInitialForm(nextForm);
-      setModerationMessage("Book deleted.");
+      setModerationMessage(rt(locale, "Book deleted."));
     } catch (error) {
       setModerationError(error);
     } finally {
@@ -498,7 +722,7 @@ export function AdminBookDetailsPage() {
   }
 
   async function handleRestore() {
-    const confirmed = window.confirm("Restore this deleted book?");
+    const confirmed = window.confirm(rt(locale, "Restore this deleted book?"));
 
     if (!confirmed) {
       return;
@@ -520,11 +744,11 @@ export function AdminBookDetailsPage() {
         queryKey: ["admin-book", String(bookId)],
         queryFn: () => fetchAdminBook(bookId)
       });
-      const nextForm = fromBookToForm(nextBook);
+      const nextForm = fromBookToForm(nextBook, locale);
 
       setForm(nextForm);
       setInitialForm(nextForm);
-      setModerationMessage("Book restored.");
+      setModerationMessage(rt(locale, "Book restored."));
     } catch (error) {
       setModerationError(error);
     } finally {
@@ -533,7 +757,7 @@ export function AdminBookDetailsPage() {
   }
 
   async function handleDeletePhoto() {
-    const confirmed = window.confirm("Delete the saved photo for this book?");
+    const confirmed = window.confirm(rt(locale, "Delete the saved photo for this book?"));
 
     if (!confirmed) {
       return;
@@ -570,7 +794,7 @@ export function AdminBookDetailsPage() {
       }));
 
       await queryClient.invalidateQueries({ queryKey: ["admin-books"] });
-      setPhotoMessage("Book photo deleted.");
+      setPhotoMessage(rt(locale, "Book photo deleted."));
     } catch (error) {
       setPhotoError(error.message);
     } finally {
@@ -579,11 +803,11 @@ export function AdminBookDetailsPage() {
   }
 
   if (detailQuery.isPending) {
-    return <LoadingBlock label="Loading admin book details" />;
+    return <LoadingBlock label={rt(locale, "Loading admin book details")} />;
   }
 
   if (detailQuery.error) {
-    return <ErrorBlock error={detailQuery.error} title="Admin book details could not be loaded" />;
+    return <ErrorBlock error={detailQuery.error} title={rt(locale, "Admin book details could not be loaded")} />;
   }
 
   const book = detailQuery.data;
@@ -594,237 +818,231 @@ export function AdminBookDetailsPage() {
     getBookCategoryUiLabel("select", locale),
     form.category
   );
+  const hasChanges = Object.keys(toUpdatePayload(form, initialForm)).length > 0;
 
   return (
     <section className="content-stack">
-      <header className="section-card">
-        <div className="row-between">
-          <div className="entity-inline">
-            <BookCover expandable photoUrl={book.photoUrl} size="hero" title={book.name} />
-            <div>
-              <h1>{book.name || "Untitled book"}</h1>
-              <p>
-                This page uses `GET /admin/books/{'{bookId}'}` and wires together edit, delete, and
-                restore actions with optimistic locking.
-              </p>
-            </div>
-          </div>
+      <header className="section-card book-detail-hero">
+        <div className="book-detail-header-bar">
+          <Link aria-label={rt(locale, "Back to books")} className="back-link" to="/admin/books">
+            <ArrowLeftIcon />
+          </Link>
 
-          <div className="pill-row">
-            <span className="subtle-chip">Book #{book.id}</span>
-            <span className="subtle-chip">v{book.__version ?? book.version}</span>
-            {deleted ? <span className="status-pill status-pill-danger">Deleted</span> : null}
+          <div className="hero-icon-actions">
+            {book.ownerUserId ? (
+              <Link
+                aria-label={rt(locale, "Open owner")}
+                className="icon-button"
+                title={rt(locale, "Open owner")}
+                to={`/admin/users/${book.ownerUserId}`}
+              >
+                <UserIcon />
+              </Link>
+            ) : null}
+            <Link
+              aria-label={rt(locale, "Open public page")}
+              className="icon-button"
+              title={rt(locale, "Open public page")}
+              to={`/book/${book.id}`}
+            >
+              <ExternalLinkIcon />
+            </Link>
+            {deleted ? (
+              <button
+                aria-label={rt(locale, "Restore book")}
+                className="icon-button icon-button-success"
+                disabled={pendingAction !== null}
+                onClick={() => void handleRestore()}
+                title={rt(locale, "Restore book")}
+                type="button"
+              >
+                <RestoreIcon />
+              </button>
+            ) : (
+              <button
+                aria-label={rt(locale, "Delete book")}
+                className="icon-button icon-button-danger"
+                disabled={pendingAction !== null}
+                onClick={() => void handleDelete()}
+                title={rt(locale, "Delete book")}
+                type="button"
+              >
+                <TrashIcon />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="book-hero-layout">
+          <BookCover expandable photoUrl={book.photoUrl} size="hero" title={book.name} />
+
+          <div>
+            <div className="book-hero-tags">
+              <span className="category-chip" style={getBookCategoryTagStyle(book.category)}>
+                {formatBookCategoryLabel(
+                  book.category,
+                  locale,
+                  getBookCategoryUiLabel("none", locale)
+                )}
+              </span>
+              {book.isGift ? (
+                <span aria-label={rt(locale, "Gift")} className="gift-icon-badge" title={rt(locale, "Gift")}>
+                  <GiftIcon />
+                </span>
+              ) : null}
+              {book.isExchanged ? (
+                <span className="status-pill status-pill-success">{rt(locale, "Exchanged")}</span>
+              ) : null}
+              {deleted ? <span className="status-pill status-pill-danger">{rt(locale, "Deleted")}</span> : null}
+            </div>
+
+            <h1>{book.name || rt(locale, "Untitled book")}</h1>
+
+            <div className="entity-inline entity-inline-spaced book-detail-owner">
+              <UserIdentityInline
+                className="admin-book-owner-inline"
+                name={book.ownerNickname}
+                photoUrl={book.ownerPhotoUrl}
+                size="sm"
+              >
+                <strong>{book.ownerNickname || rt(locale, "Unknown owner")}</strong>
+              </UserIdentityInline>
+            </div>
+
+            <p className="book-detail-description">
+              <strong>{rt(locale, "Description")}:</strong>{" "}
+              {book.description || rt(locale, "No description provided.")}
+            </p>
+
+            <div className="book-hero-facts">
+              <p>{rt(locale, "Author")}: {book.author || rt(locale, "Unknown author")}</p>
+              <p>{rt(locale, "Publication year")}: {renderValue(locale, book.publicationYear)}</p>
+              <p>
+                {formatEnumLabel("CITY")}:{" "}
+                {book.city ? getCityDisplayName(book.city, locale) : rt(locale, "Not available")}
+              </p>
+              {book.contactDetails ? <p>{rt(locale, "Contact details")}: {book.contactDetails}</p> : null}
+            </div>
+
+            <div className="book-hero-timeline">
+              {book.meta?.createdAt ? (
+                <p>{rtf(locale, "Created on {value}", { value: formatDateTimeReadable(book.meta?.createdAt) })}</p>
+              ) : null}
+              {book.meta?.updatedAt ? (
+                <p>{rtf(locale, "Updated on {value}", { value: formatDateTimeReadable(book.meta?.updatedAt) })}</p>
+              ) : null}
+              {book.meta?.deletedAt ? (
+                <p>{rtf(locale, "Deleted on {value}", { value: formatDateTimeReadable(book.meta?.deletedAt) })}</p>
+              ) : null}
+            </div>
           </div>
         </div>
       </header>
 
-      <section className="detail-grid">
-        <article className="section-card">
-          <h2>Book snapshot</h2>
-          <dl className="detail-list">
-              <div>
-                <dt>Owner</dt>
-                <dd>
-                  <UserIdentityInline
-                    className="admin-book-owner-inline"
-                    name={book.ownerNickname}
-                    photoUrl={book.ownerPhotoUrl}
-                    size="sm"
-                  >
-                    <strong title={`${book.ownerNickname || "Unknown"} (id ${book.ownerUserId ?? "n/a"})`}>
-                      {book.ownerNickname || "Unknown"} (id {book.ownerUserId ?? "n/a"})
-                    </strong>
-                  </UserIdentityInline>
-                </dd>
-              </div>
-            <div>
-              <dt>Owner photo URL</dt>
-              <dd>{book.ownerPhotoUrl || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Photo URL</dt>
-              <dd>{book.photoUrl || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Publication year</dt>
-              <dd>{renderValue(book.publicationYear)}</dd>
-            </div>
-            <div>
-              <dt>Gift mode</dt>
-              <dd>{book.isGift ? "Yes" : "No"}</dd>
-            </div>
-            <div>
-              <dt>Exchanged</dt>
-              <dd>{book.isExchanged ? "Yes" : "No"}</dd>
-            </div>
-            <div>
-              <dt>City</dt>
-              <dd>{book.city || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Contact details</dt>
-              <dd>{book.contactDetails || "Not available"}</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article className="section-card">
-          <h2>Audit metadata</h2>
-          <dl className="detail-list">
-            <div>
-              <dt>Created at</dt>
-              <dd>{formatDateTime(book.meta?.createdAt)}</dd>
-            </div>
-            <div>
-              <dt>Updated at</dt>
-              <dd>{formatDateTime(book.meta?.updatedAt)}</dd>
-            </div>
-            <div>
-              <dt>Deleted at</dt>
-              <dd>{formatDateTime(book.meta?.deletedAt)}</dd>
-            </div>
-            <div>
-              <dt>Created by</dt>
-              <dd>{book.meta?.createdBy ?? "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Updated by</dt>
-              <dd>{book.meta?.updatedBy ?? "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Updated request id</dt>
-              <dd>{book.meta?.updatedRequestId || "Not available"}</dd>
-            </div>
-          </dl>
-        </article>
-      </section>
+      {moderationMessage ? <p className="inline-message inline-message-success">{moderationMessage}</p> : null}
+      {moderationError ? <ErrorBlock error={moderationError} title={rt(locale, "Book action failed")} /> : null}
 
       <section className="section-card">
-        <h2>Moderation actions</h2>
-        {moderationMessage ? (
-          <p className="inline-message inline-message-success">{moderationMessage}</p>
-        ) : null}
-        {moderationError ? <ErrorBlock error={moderationError} title="Book action failed" /> : null}
-        <div className="card-actions">
-          {book.ownerUserId ? (
-            <Link className="button button-secondary" to={`/admin/users/${book.ownerUserId}`}>
-              Open owner
-            </Link>
-          ) : null}
-          <Link className="button button-secondary" to={`/book/${book.id}`}>
-            Open public page
-          </Link>
-          <button
-            className="button button-danger"
-            disabled={deleted || pendingAction !== null}
-            onClick={() => void handleDelete()}
-            type="button"
-          >
-            {pendingAction === "delete" ? "Deleting..." : "Delete book"}
-          </button>
-          <button
-            className="button"
-            disabled={!deleted || pendingAction !== null}
-            onClick={() => void handleRestore()}
-            type="button"
-          >
-            {pendingAction === "restore" ? "Restoring..." : "Restore book"}
-          </button>
-        </div>
-      </section>
-
-      <section className="section-card">
-        <h2>Edit book</h2>
         <form className="content-stack" onSubmit={handleSave}>
-          <ImageUploadField
-            error={photoError}
-            entityName={form.name || "Book cover"}
-            kind="book"
-            label="Book photo"
-            message={photoMessage}
-            onChange={(value) => setForm((current) => ({ ...current, photoBase64: value }))}
-            onRemove={handleDeletePhoto}
-            photoBase64={form.photoBase64}
-            photoUrl={form.photoUrl}
-            removePending={photoPending}
-          />
-
-          <div className="filters-grid">
-            <Field
-              label="Name"
-              onChange={(value) => setForm((current) => ({ ...current, name: value }))}
-              value={form.name}
-            />
-            <Field
-              label="Author"
-              onChange={(value) => setForm((current) => ({ ...current, author: value }))}
-              value={form.author}
-            />
-            <SelectField
-              label="Category"
-              onChange={(value) => setForm((current) => ({ ...current, category: value }))}
-              options={categoryOptions}
-              value={form.category}
-            />
-            <CityField
-              compactDropdown
-              label="City"
-              onChange={(value) => setForm((current) => ({ ...current, city: value }))}
-              value={form.city}
-            />
-            <Field
-              label="Publication year"
-              onChange={(value) => setForm((current) => ({ ...current, publicationYear: value }))}
-              type="number"
-              value={form.publicationYear}
-            />
-            <label className="field field-checkbox">
-              <span>Gift mode</span>
-              <input
-                checked={form.isGift}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, isGift: event.target.checked }))
-                }
-                type="checkbox"
-              />
-            </label>
+          <div className="section-card-header">
+            <div className="section-card-header-copy">
+              <h2>{rt(locale, "Edit book")}</h2>
+              <p>{rt(locale, "Update the information your readers should see in the catalog.")}</p>
+            </div>
+            <div className="section-card-toolbar">
+              <button className="button" disabled={pendingAction !== null || !hasChanges} type="submit">
+                {pendingAction === "save" ? rt(locale, "Saving...") : rt(locale, "Save changes")}
+              </button>
+            </div>
           </div>
 
-          <label className="field">
-            <span>Description</span>
-            <textarea
-              className="field-control field-control-textarea"
-              onChange={(event) =>
-                setForm((current) => ({ ...current, description: event.target.value }))
-              }
-              rows={5}
-              value={form.description}
-            />
-          </label>
+          <div className="editor-layout">
+            <div className="editor-column">
+              <ImageUploadField
+                error={photoError}
+                entityName={form.name || rt(locale, "Book cover")}
+                kind="book"
+                label={rt(locale, "Book photo")}
+                message={photoMessage}
+                onChange={(value) => setForm((current) => ({ ...current, photoBase64: value }))}
+                onRemove={handleDeletePhoto}
+                photoBase64={form.photoBase64}
+                photoUrl={form.photoUrl}
+                removePending={photoPending}
+              />
+            </div>
 
-          <label className="field">
-            <span>Contact details</span>
-            <textarea
-              className="field-control"
-              onChange={(event) =>
-                setForm((current) => ({ ...current, contactDetails: event.target.value }))
-              }
-              rows={3}
-              value={form.contactDetails}
-            />
-          </label>
+            <div className="editor-column editor-column-grow">
+              <div className="editor-panel editor-panel-form">
+                <h3>{rt(locale, "Book details")}</h3>
+                <div className="filters-grid editor-form-grid">
+                  <Field
+                    label={rt(locale, "Name")}
+                    onChange={(value) => setForm((current) => ({ ...current, name: value }))}
+                    value={form.name}
+                  />
+                  <Field
+                    label={rt(locale, "Author")}
+                    onChange={(value) => setForm((current) => ({ ...current, author: value }))}
+                    value={form.author}
+                  />
+                  <SelectField
+                    label={rt(locale, "Category")}
+                    onChange={(value) => setForm((current) => ({ ...current, category: value }))}
+                    options={categoryOptions}
+                    value={form.category}
+                  />
+                  <CityField
+                    compactDropdown
+                    label={rt(locale, "City")}
+                    onChange={(value) => setForm((current) => ({ ...current, city: value }))}
+                    value={form.city}
+                  />
+                  <Field
+                    label={rt(locale, "Publication year")}
+                    onChange={(value) => setForm((current) => ({ ...current, publicationYear: value }))}
+                    type="number"
+                    value={form.publicationYear}
+                  />
+                  <label className="field field-checkbox">
+                    <span>{rt(locale, "Gift mode")}</span>
+                    <input
+                      checked={form.isGift}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, isGift: event.target.checked }))
+                      }
+                      type="checkbox"
+                    />
+                  </label>
+                  <label className="field editor-field-span-full editor-textarea-field">
+                    <span>{rt(locale, "Description")}</span>
+                    <textarea
+                      className="field-control field-control-textarea"
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, description: event.target.value }))
+                      }
+                      rows={6}
+                      value={form.description}
+                    />
+                  </label>
+                  <label className="field editor-field-span-full editor-textarea-field">
+                    <span>{rt(locale, "Contact details")}</span>
+                    <textarea
+                      className="field-control"
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, contactDetails: event.target.value }))
+                      }
+                      rows={5}
+                      value={form.contactDetails}
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {editMessage ? <p className="inline-message inline-message-success">{editMessage}</p> : null}
-          {editError ? <ErrorBlock error={editError} title="Book action failed" /> : null}
-
-          <div className="card-actions">
-            <button className="button" disabled={pendingAction !== null} type="submit">
-              {pendingAction === "save" ? "Saving..." : "Save changes"}
-            </button>
-            <Link className="button button-secondary" to="/admin/books">
-              Back to books
-            </Link>
-          </div>
+          {editError ? <ErrorBlock error={editError} title={rt(locale, "Book action failed")} /> : null}
         </form>
       </section>
     </section>
@@ -869,11 +1087,11 @@ function isBookDeleted(book) {
   return Boolean(book?.meta?.deletedAt);
 }
 
-function renderValue(value) {
-  return value === null || value === undefined || value === "" ? "Not available" : value;
+function renderValue(locale, value) {
+  return value === null || value === undefined || value === "" ? rt(locale, "Not available") : value;
 }
 
-function fromBookToForm(book) {
+function fromBookToForm(book, locale) {
   return {
     name: book.name ?? "",
     description: book.description ?? "",
@@ -882,7 +1100,7 @@ function fromBookToForm(book) {
     publicationYear: book.publicationYear ? String(book.publicationYear) : "",
     photoBase64: null,
     photoUrl: book.photoUrl ?? "",
-    city: book.city ?? "",
+    city: book.city ? getCityDisplayName(book.city, locale) : "",
     contactDetails: book.contactDetails ?? "",
     isGift: Boolean(book.isGift)
   };
