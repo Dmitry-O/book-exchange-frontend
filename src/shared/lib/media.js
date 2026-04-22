@@ -1,16 +1,37 @@
 import { API_BASE_URL } from "../api/config";
 
 const apiOrigin = resolveApiOrigin();
+const GENERATED_PLACEHOLDER_PATTERN =
+  /(placeholder|default|mock|stub|sample|demo|no[-_]?image|book-cover-placeholder)/i;
+const UPLOADED_BOOK_IMAGE_PATTERN = /\/users\/\d+\/books\/\d+_\d{10,}\.[a-z0-9]+(?:[?#].*)?$/i;
 
-export function resolveMediaUrl(photoUrl) {
+export function resolveMediaUrl(photoUrl, { kind = "generic", uploadedOnly = false } = {}) {
   if (!photoUrl) {
     return "";
   }
 
+  const normalizedPhotoUrl = String(photoUrl).trim();
+
+  if (!normalizedPhotoUrl) {
+    return "";
+  }
+
+  if (kind === "book" && GENERATED_PLACEHOLDER_PATTERN.test(normalizedPhotoUrl)) {
+    return "";
+  }
+
+  if (
+    uploadedOnly &&
+    kind === "book" &&
+    !isUploadedBookImageUrl(normalizedPhotoUrl)
+  ) {
+    return "";
+  }
+
   try {
-    return new URL(photoUrl, apiOrigin || undefined).toString();
+    return new URL(normalizedPhotoUrl, apiOrigin || undefined).toString();
   } catch {
-    return photoUrl;
+    return normalizedPhotoUrl;
   }
 }
 
@@ -38,4 +59,8 @@ function resolveApiOrigin() {
   } catch {
     return "";
   }
+}
+
+export function isUploadedBookImageUrl(photoUrl) {
+  return /^data:image\//i.test(photoUrl) || UPLOADED_BOOK_IMAGE_PATTERN.test(photoUrl);
 }

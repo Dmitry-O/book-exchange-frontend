@@ -84,13 +84,32 @@ export function getCityDisplayName(value, locale = "en") {
     return "";
   }
 
-  const entry = CITY_LOOKUP.get(normalizeCityValue(value));
+  const entry = resolveCityEntry(value);
 
   if (!entry) {
     return value;
   }
 
   return entry.labels[locale] ?? entry.labels.en;
+}
+
+export function getCityApiValue(value) {
+  const entry = resolveCityEntry(value);
+  return entry?.labels.en ?? "";
+}
+
+export function isKnownCity(value) {
+  return Boolean(resolveCityEntry(value));
+}
+
+export function normalizeCityQueryValue(value) {
+  const trimmedValue = String(value ?? "").trim();
+
+  if (!trimmedValue) {
+    return "";
+  }
+
+  return getCityApiValue(trimmedValue) || trimmedValue;
 }
 
 export function findCitySuggestions(value, locale = "en", limit = 6) {
@@ -122,6 +141,14 @@ function toCitySuggestion(entry, locale) {
     key: entry.key,
     label: entry.labels[locale] ?? entry.labels.en
   };
+}
+
+function resolveCityEntry(value) {
+  if (!value) {
+    return null;
+  }
+
+  return CITY_LOOKUP.get(normalizeCityValue(value)) ?? null;
 }
 
 function getCityScore(entry, normalizedValue, locale) {

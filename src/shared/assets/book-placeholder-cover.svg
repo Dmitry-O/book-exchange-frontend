@@ -1,0 +1,31 @@
+<svg width="144" height="216" viewBox="0 0 144 216" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="book-bg" x1="16" y1="12" x2="128" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2F6FA"/>
+      <stop offset="1" stop-color="#E2E9F0"/>
+    </linearGradient>
+    <linearGradient id="book-spine" x1="22" y1="10" x2="22" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BBC7D3"/>
+      <stop offset="1" stop-color="#A8B6C4"/>
+    </linearGradient>
+    <linearGradient id="book-page" x1="36" y1="12" x2="132" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EEF4F9"/>
+      <stop offset="1" stop-color="#DCE5EE"/>
+    </linearGradient>
+    <filter id="shadow" x="10" y="8" width="124" height="208" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#95A5B6" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <rect x="14.5" y="10.5" width="115" height="195" rx="22.5" fill="url(#book-bg)"/>
+    <rect x="14.5" y="10.5" width="115" height="195" rx="22.5" stroke="#D0D9E2"/>
+    <path d="M14 33C14 20.3 24.3 10 37 10H55V205H37C24.3 205 14 194.7 14 182V33Z" fill="url(#book-spine)"/>
+    <path d="M37 10H107C119.15 10 129 19.85 129 32V183C129 195.15 119.15 205 107 205H37V10Z" fill="url(#book-page)"/>
+    <path d="M37 10H107C119.15 10 129 19.85 129 32V183C129 195.15 119.15 205 107 205H37" stroke="#D4DEE7"/>
+
+    <rect x="56" y="80" width="55" height="10" rx="5" fill="#C4CED8"/>
+    <rect x="56" y="102" width="40" height="9" rx="4.5" fill="#C4CED8"/>
+    <rect x="56" y="124" width="29" height="9" rx="4.5" fill="#C4CED8"/>
+  </g>
+</svg>
