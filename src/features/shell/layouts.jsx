@@ -13,7 +13,6 @@ const BASE_NAV_LINKS = [
 
 const USER_MENU_LINKS = [
   { to: "/app/profile", labelKey: "shell.profile" },
-  { to: "/app/security", labelKey: "shell.security" },
   { to: "/app/updates", labelKey: "shell.updates", badge: "updates" },
   { to: "/app/my-reports", labelKey: "shell.myReports" },
   { to: "/app/my-books", labelKey: "shell.myBooks" },

@@ -4,6 +4,7 @@ import { useLocale } from "../../shared/i18n/LocaleContext";
 import { trimFormPayload } from "../../shared/lib/format";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
+import { SecuritySettingsPanel } from "./SecurityPage";
 
 export function ProfilePage() {
   const { locale, t } = useLocale();
@@ -146,7 +147,7 @@ export function ProfilePage() {
         <p>{t("profile.description")}</p>
       </header>
 
-      <section className="content-stack">
+      <section className="detail-grid profile-settings-grid">
         <article className="section-card profile-data-card">
           <h2>{t("profile.currentData")}</h2>
           <form className="content-stack" onSubmit={handleSubmit}>
@@ -181,6 +182,7 @@ export function ProfilePage() {
             {error ? <p className="inline-message inline-message-error">{error.message}</p> : null}
           </form>
         </article>
+        <SecuritySettingsPanel />
       </section>
     </section>
   );

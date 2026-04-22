@@ -4,8 +4,11 @@ import { Link, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
+import { useLocale } from "../../../shared/i18n/LocaleContext";
+import { rt, rtf } from "../../../shared/i18n/rawText";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
 import { UserAvatar } from "../../../shared/ui/Media";
+import { ArrowLeftIcon, CheckIcon, ExternalLinkIcon, UserIcon, XIcon } from "../../../shared/ui/Icons";
 import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
@@ -15,6 +18,7 @@ const defaultFilters = {
 };
 
 export function AdminReportsPage() {
+  const { locale } = useLocale();
   const metadataQuery = useMetadataQuery();
   const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState(defaultFilters);
@@ -66,18 +70,15 @@ export function AdminReportsPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>Moderation queue</h1>
-        <p>
-          This screen uses `GET /admin/reports` with status filters and sort direction, then opens
-          individual moderation decisions in the detail view.
-        </p>
+        <h1>{rt(locale, "Moderation queue")}</h1>
+        <p>{rt(locale, "Review incoming reports, filter them by status, and open each case in detail.")}</p>
       </header>
 
       <section className="section-card">
         <form className="content-stack" onSubmit={handleApplyFilters}>
           <div className="filters-grid">
             <label className="field">
-              <span>Sort direction</span>
+              <span>{rt(locale, "Sort direction")}</span>
               <select
                 className="field-control"
                 onChange={(event) =>
@@ -88,22 +89,22 @@ export function AdminReportsPage() {
                 }
                 value={draftFilters.sortDirection}
               >
-                <option value="ASC">Ascending</option>
-                <option value="DESC">Descending</option>
+                <option value="ASC">{rt(locale, "Ascending")}</option>
+                <option value="DESC">{rt(locale, "Descending")}</option>
               </select>
             </label>
 
             <div className="field">
-              <span>Result set</span>
+              <span>{rt(locale, "Result set")}</span>
               <div className="admin-summary-box">
                 <strong>{reportsQuery.data?.totalElements ?? 0}</strong>
-                <span>matching reports</span>
+                <span>{rt(locale, "matching reports")}</span>
               </div>
             </div>
           </div>
 
           <div className="field">
-            <span>Status filters</span>
+            <span>{rt(locale, "Status filters")}</span>
             <div className="checkbox-grid">
               {reportStatuses.map((status) => (
                 <label className="field field-checkbox admin-checkbox-card" key={status}>
@@ -120,28 +121,28 @@ export function AdminReportsPage() {
 
           <div className="filters-actions">
             <button className="button" type="submit">
-              Apply filters
+              {rt(locale, "Apply filters")}
             </button>
             <button className="button button-secondary" onClick={handleResetFilters} type="button">
-              Reset
+              {rt(locale, "Reset")}
             </button>
           </div>
         </form>
       </section>
 
-      {metadataQuery.isPending ? <LoadingBlock label="Loading report metadata" /> : null}
+      {metadataQuery.isPending ? <LoadingBlock label={rt(locale, "Loading report metadata")} /> : null}
       {metadataQuery.error ? (
-        <ErrorBlock error={metadataQuery.error} title="Report metadata could not be loaded" />
+        <ErrorBlock error={metadataQuery.error} title={rt(locale, "Report metadata could not be loaded")} />
       ) : null}
-      {reportsQuery.isPending ? <LoadingBlock label="Loading moderation reports" /> : null}
+      {reportsQuery.isPending ? <LoadingBlock label={rt(locale, "Loading moderation reports")} /> : null}
       {reportsQuery.error ? (
-        <ErrorBlock error={reportsQuery.error} title="Admin reports could not be loaded" />
+        <ErrorBlock error={reportsQuery.error} title={rt(locale, "Admin reports could not be loaded")} />
       ) : null}
 
       {!reportsQuery.isPending && !reportsQuery.error && reports.length === 0 ? (
         <EmptyBlock
-          title="No reports match these filters"
-          description="Try resetting the filters or selecting a different moderation status."
+          title={rt(locale, "No reports match these filters")}
+          description={rt(locale, "Try resetting the filters or selecting a different moderation status.")}
         />
       ) : null}
 
@@ -157,12 +158,12 @@ export function AdminReportsPage() {
                     size="md"
                   />
                   <div>
-                  <h2>
-                    {formatEnumLabel(report.targetType)} report #{report.id}
-                  </h2>
-                  <p className="muted-line">
-                    Reporter: {report.reporter?.nickname || "Unknown"} / target {report.targetId}
-                  </p>
+                    <h2>
+                      {formatEnumLabel(report.targetType)} {formatEnumLabel("REPORT")}
+                    </h2>
+                    <p className="muted-line">
+                      {rt(locale, "Reporter")}: {report.reporter?.nickname || rt(locale, "Unknown")} / {formatDateTime(report.meta?.createdAt)}
+                    </p>
                   </div>
                 </div>
 
@@ -170,45 +171,54 @@ export function AdminReportsPage() {
                   <span className={`status-pill ${getReportStatusClassName(report.status)}`}>
                     {formatEnumLabel(report.status)}
                   </span>
-                  <span className="subtle-chip">v{report.version}</span>
                 </div>
               </div>
 
               <dl className="detail-list detail-list-compact">
                 <div>
-                  <dt>Reason</dt>
+                  <dt>{rt(locale, "Reason")}</dt>
                   <dd>{formatEnumLabel(report.reason)}</dd>
                 </div>
                 <div>
-                  <dt>Target type</dt>
+                  <dt>{rt(locale, "Target type")}</dt>
                   <dd>{formatEnumLabel(report.targetType)}</dd>
                 </div>
                 <div>
-                  <dt>Created at</dt>
+                  <dt>{rt(locale, "Created at")}</dt>
                   <dd>{formatDateTime(report.meta?.createdAt)}</dd>
                 </div>
                 <div>
-                  <dt>Updated at</dt>
+                  <dt>{rt(locale, "Updated at")}</dt>
                   <dd>{formatDateTime(report.meta?.updatedAt)}</dd>
                 </div>
               </dl>
 
-              <p className="book-description">{report.comment || "No moderator note provided."}</p>
+              <p className="book-description">{report.comment || rt(locale, "No moderator note provided.")}</p>
 
               <div className="card-actions">
-                <div className="pill-row">
-                  <Link className="link-inline" to={resolveReportTargetLink(report)}>
-                    Open target
+                <div className="action-icon-group">
+                  <Link
+                    aria-label={rt(locale, "Open target")}
+                    className="icon-button"
+                    title={rt(locale, "Open target")}
+                    to={resolveReportTargetLink(report)}
+                  >
+                    <ExternalLinkIcon />
                   </Link>
                   {report.reporter?.id ? (
-                    <Link className="link-inline" to={`/admin/users/${report.reporter.id}`}>
-                      Open reporter
+                    <Link
+                      aria-label={rt(locale, "Open reporter")}
+                      className="icon-button"
+                      title={rt(locale, "Open reporter")}
+                      to={`/admin/users/${report.reporter.id}`}
+                    >
+                      <UserIcon />
                     </Link>
                   ) : null}
                 </div>
 
                 <Link className="button button-secondary" to={`/admin/reports/${report.id}`}>
-                  Open details
+                  {rt(locale, "Open details")}
                 </Link>
               </div>
             </article>
@@ -228,6 +238,7 @@ export function AdminReportsPage() {
 }
 
 export function AdminReportDetailsPage() {
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const { reportId } = useParams();
   const [pendingAction, setPendingAction] = useState(null);
@@ -248,8 +259,8 @@ export function AdminReportDetailsPage() {
     const report = detailQuery.data;
     const confirmed = window.confirm(
       action === "resolve"
-        ? "Resolve this report and mark it as handled?"
-        : "Reject this report as not actionable?"
+        ? rt(locale, "Resolve this report and mark it as handled?")
+        : rt(locale, "Reject this report as not actionable?")
     );
 
     if (!confirmed) {
@@ -269,7 +280,9 @@ export function AdminReportDetailsPage() {
 
       queryClient.setQueryData(["admin-report", String(reportId)], withVersion(response));
       await queryClient.invalidateQueries({ queryKey: ["admin-reports"] });
-      setActionMessage(action === "resolve" ? "Report resolved." : "Report rejected.");
+      setActionMessage(
+        action === "resolve" ? rt(locale, "Report resolved.") : rt(locale, "Report rejected.")
+      );
     } catch (error) {
       setActionError(error);
     } finally {
@@ -278,37 +291,77 @@ export function AdminReportDetailsPage() {
   }
 
   if (detailQuery.isPending) {
-    return <LoadingBlock label="Loading report details" />;
+    return <LoadingBlock label={rt(locale, "Loading report details")} />;
   }
 
   if (detailQuery.error) {
-    return <ErrorBlock error={detailQuery.error} title="Admin report details could not be loaded" />;
+    return <ErrorBlock error={detailQuery.error} title={rt(locale, "Admin report details could not be loaded")} />;
   }
 
   const report = detailQuery.data;
   const reporterRoles =
-    (report.reporter?.roles ?? []).map((role) => formatEnumLabel(role)).join(", ") || "None";
+    (report.reporter?.roles ?? []).map((role) => formatEnumLabel(role)).join(", ") || rt(locale, "None");
 
   return (
     <section className="content-stack">
-      <header className="section-card">
-        <div className="row-between">
-          <div>
-            <h1>
-              {formatEnumLabel(report.targetType)} report #{report.id}
-            </h1>
-            <p>
-              This page uses `GET /admin/reports/{'{reportId}'}` and lets moderators resolve or
-              reject open reports with optimistic locking.
-            </p>
-          </div>
+      <header className="section-card book-detail-hero">
+        <div className="book-detail-header-bar">
+          <Link aria-label={rt(locale, "Back to reports")} className="back-link" to="/admin/reports">
+            <ArrowLeftIcon />
+          </Link>
 
-          <div className="pill-row">
-            <span className={`status-pill ${getReportStatusClassName(report.status)}`}>
-              {formatEnumLabel(report.status)}
-            </span>
-            <span className="subtle-chip">v{report.__version ?? report.version}</span>
+          <div className="hero-icon-actions">
+            <Link
+              aria-label={rt(locale, "Open target")}
+              className="icon-button"
+              title={rt(locale, "Open target")}
+              to={resolveReportTargetLink(report)}
+            >
+              <ExternalLinkIcon />
+            </Link>
+            {report.reporter?.id ? (
+              <Link
+                aria-label={rt(locale, "Open reporter")}
+                className="icon-button"
+                title={rt(locale, "Open reporter")}
+                to={`/admin/users/${report.reporter.id}`}
+              >
+                <UserIcon />
+              </Link>
+            ) : null}
+            <button
+              aria-label={rt(locale, "Resolve report")}
+              className="icon-button icon-button-success"
+              disabled={report.status !== "OPEN" || pendingAction !== null}
+              onClick={() => void handleAction("resolve")}
+              title={rt(locale, "Resolve report")}
+              type="button"
+            >
+              <CheckIcon />
+            </button>
+            <button
+              aria-label={rt(locale, "Reject report")}
+              className="icon-button icon-button-danger"
+              disabled={report.status !== "OPEN" || pendingAction !== null}
+              onClick={() => void handleAction("reject")}
+              title={rt(locale, "Reject report")}
+              type="button"
+            >
+              <XIcon />
+            </button>
           </div>
+        </div>
+
+        <h1>{formatEnumLabel(report.targetType)} {formatEnumLabel("REPORT")}</h1>
+        <p>{rt(locale, "Review this report, inspect the reporter, and decide whether to resolve or reject it.")}</p>
+        <div className="hero-meta-line">
+          <span>{rt(locale, "Created at")}: {formatDateTime(report.meta?.createdAt)}</span>
+          <span>{rt(locale, "Updated at")}: {formatDateTime(report.meta?.updatedAt)}</span>
+        </div>
+        <div className="pill-row">
+          <span className={`status-pill ${getReportStatusClassName(report.status)}`}>
+            {formatEnumLabel(report.status)}
+          </span>
         </div>
       </header>
 
@@ -316,35 +369,27 @@ export function AdminReportDetailsPage() {
 
       <section className="detail-grid">
         <article className="section-card">
-          <h2>Report snapshot</h2>
+          <h2>{rt(locale, "Report overview")}</h2>
           <dl className="detail-list">
             <div>
-              <dt>Target type</dt>
+              <dt>{rt(locale, "Target type")}</dt>
               <dd>{formatEnumLabel(report.targetType)}</dd>
             </div>
             <div>
-              <dt>Target id</dt>
-              <dd>{report.targetId}</dd>
-            </div>
-            <div>
-              <dt>Reason</dt>
+              <dt>{rt(locale, "Reason")}</dt>
               <dd>{formatEnumLabel(report.reason)}</dd>
             </div>
             <div>
-              <dt>Status</dt>
+              <dt>{rt(locale, "Status")}</dt>
               <dd>{formatEnumLabel(report.status)}</dd>
             </div>
             <div>
-              <dt>Comment</dt>
-              <dd>{report.comment || "No report comment provided."}</dd>
+              <dt>{rt(locale, "Comment")}</dt>
+              <dd>{report.comment || rt(locale, "No report comment provided.")}</dd>
             </div>
             <div>
-              <dt>Target navigation</dt>
-              <dd>
-                <Link className="link-inline" to={resolveReportTargetLink(report)}>
-                  Open target
-                </Link>
-              </dd>
+              <dt>{rt(locale, "Created at")}</dt>
+              <dd>{formatDateTime(report.meta?.createdAt)}</dd>
             </div>
           </dl>
         </article>
@@ -357,108 +402,35 @@ export function AdminReportDetailsPage() {
               size="lg"
             />
             <div>
-              <h2>Reporter snapshot</h2>
-              <p>Reporter media comes from the nested `UserDTO.photoUrl` field.</p>
+              <h2>{rt(locale, "Reporter overview")}</h2>
+              <p>{rt(locale, "Review the reporter account and open the full admin user page if needed.")}</p>
             </div>
           </div>
 
           <dl className="detail-list">
             <div>
-              <dt>Reporter id</dt>
-              <dd>{report.reporter?.id ?? "Not available"}</dd>
+              <dt>{rt(locale, "Reporter nickname")}</dt>
+              <dd>{report.reporter?.nickname || rt(locale, "Not available")}</dd>
             </div>
             <div>
-              <dt>Reporter nickname</dt>
-              <dd>{report.reporter?.nickname || "Not available"}</dd>
+              <dt>{rt(locale, "Reporter email")}</dt>
+              <dd>{report.reporter?.email || rt(locale, "Not available")}</dd>
             </div>
             <div>
-              <dt>Reporter email</dt>
-              <dd>{report.reporter?.email || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Reporter photo URL</dt>
-              <dd>{report.reporter?.photoUrl || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Reporter roles</dt>
+              <dt>{rt(locale, "Reporter roles")}</dt>
               <dd>{reporterRoles}</dd>
             </div>
             <div>
-              <dt>Reporter locale</dt>
-              <dd>{report.reporter?.locale || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Reporter navigation</dt>
+              <dt>{rt(locale, "Reporter navigation")}</dt>
               <dd>
                 {report.reporter?.id ? (
                   <Link className="link-inline" to={`/admin/users/${report.reporter.id}`}>
-                    Open reporter
+                    {rt(locale, "Open reporter")}
                   </Link>
                 ) : (
-                  "Not available"
+                  rt(locale, "Not available")
                 )}
               </dd>
-            </div>
-          </dl>
-        </article>
-      </section>
-
-      <section className="detail-grid">
-        <article className="section-card">
-          <h2>Moderation actions</h2>
-          <p>Open reports can be resolved or rejected here. Closed reports stay read-only.</p>
-
-          {actionError ? <ErrorBlock error={actionError} title="Report action failed" /> : null}
-
-          <div className="card-actions">
-            <button
-              className="button"
-              disabled={report.status !== "OPEN" || pendingAction !== null}
-              onClick={() => void handleAction("resolve")}
-              type="button"
-            >
-              {pendingAction === "resolve" ? "Resolving..." : "Resolve report"}
-            </button>
-            <button
-              className="button button-danger"
-              disabled={report.status !== "OPEN" || pendingAction !== null}
-              onClick={() => void handleAction("reject")}
-              type="button"
-            >
-              {pendingAction === "reject" ? "Rejecting..." : "Reject report"}
-            </button>
-            <Link className="button button-secondary" to="/admin/reports">
-              Back to reports
-            </Link>
-          </div>
-        </article>
-
-        <article className="section-card">
-          <h2>Audit metadata</h2>
-          <dl className="detail-list">
-            <div>
-              <dt>Created at</dt>
-              <dd>{formatDateTime(report.meta?.createdAt)}</dd>
-            </div>
-            <div>
-              <dt>Updated at</dt>
-              <dd>{formatDateTime(report.meta?.updatedAt)}</dd>
-            </div>
-            <div>
-              <dt>Created by</dt>
-              <dd>{report.meta?.createdBy ?? "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Updated by</dt>
-              <dd>{report.meta?.updatedBy ?? "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Created request id</dt>
-              <dd>{report.meta?.createdRequestId || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Updated request id</dt>
-              <dd>{report.meta?.updatedRequestId || "Not available"}</dd>
             </div>
           </dl>
         </article>

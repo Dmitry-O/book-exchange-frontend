@@ -1,66 +1,99 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { apiRequest } from "../../shared/api/http";
 import { useAuth } from "../../shared/auth/AuthContext";
-import { formatEnumLabel, trimFormPayload } from "../../shared/lib/format";
+import { useLocale } from "../../shared/i18n/LocaleContext";
+import { formatEnumLabel } from "../../shared/lib/format";
+import { trimFormPayload } from "../../shared/lib/format";
 import { BookCover, UserAvatar } from "../../shared/ui/Media";
+import { FlagIcon, XIcon } from "../../shared/ui/Icons";
 
 const initialForm = {
   reason: "",
   comment: ""
 };
 
-export function ReportActionCard({ book }) {
+const reportText = {
+  de: {
+    aboutBook: "Dieses Buch melden",
+    aboutUser: "Diesen Nutzer melden",
+    alreadyBook: "Du hast für dieses Buch bereits eine Meldung gesendet.",
+    alreadyUser: "Du hast für diesen Nutzer bereits eine Meldung gesendet.",
+    chooseTarget: "Wähle oben zuerst aus, worauf sich die Meldung beziehen soll.",
+    close: "Fenster schließen",
+    comment: "Kommentar",
+    commentPlaceholder: "Beschreibe kurz, was geprüft werden soll",
+    helper:
+      "Wähle zuerst, ob sich die Meldung auf das Buch oder auf den Besitzer des Inserats bezieht, und sende dann deinen Kommentar.",
+    loadingReasons: "Meldegründe werden geladen...",
+    openDialog: "Meldeformular öffnen",
+    reason: "Grund",
+    send: "Meldung senden",
+    sending: "Meldung wird gesendet...",
+    title: "Meldung"
+  },
+  en: {
+    aboutBook: "Report this book",
+    aboutUser: "Report this user",
+    alreadyBook: "You have already sent a report about this book.",
+    alreadyUser: "You have already sent a report about this user.",
+    chooseTarget: "Choose what you want to report above to continue.",
+    close: "Close window",
+    comment: "Comment",
+    commentPlaceholder: "Briefly describe what should be reviewed",
+    helper:
+      "First choose whether the report is about the book or about the owner of this listing, then send your moderation comment.",
+    loadingReasons: "Loading report reasons...",
+    openDialog: "Open report dialog",
+    reason: "Reason",
+    send: "Send report",
+    sending: "Sending report...",
+    title: "Report"
+  },
+  ru: {
+    aboutBook: "Пожаловаться на книгу",
+    aboutUser: "Пожаловаться на пользователя",
+    alreadyBook: "Вы уже отправляли жалобу на эту книгу.",
+    alreadyUser: "Вы уже отправляли жалобу на этого пользователя.",
+    chooseTarget: "Сначала выберите, на что именно вы хотите пожаловаться.",
+    close: "Закрыть окно",
+    comment: "Комментарий",
+    commentPlaceholder: "Коротко опишите, что именно нужно проверить",
+    helper:
+      "Сначала выберите, относится ли жалоба к книге или к владельцу объявления, а затем отправьте комментарий для модерации.",
+    loadingReasons: "Загружаем причины жалобы...",
+    openDialog: "Открыть окно жалобы",
+    reason: "Причина",
+    send: "Отправить жалобу",
+    sending: "Отправляем жалобу...",
+    title: "Жалоба"
+  }
+};
+
+export function ReportActionCard({ book, variant = "icon" }) {
+  const { locale } = useLocale();
   const { isAuthenticated, user } = useAuth();
+  const text = reportText[locale] ?? reportText.en;
   const isOwnBook = isAuthenticated && user?.id === book.ownerUserId;
   const [isOpen, setIsOpen] = useState(false);
 
-  if (!isAuthenticated) {
-    return (
-      <section className="section-card">
-        <h2>Reporting</h2>
-        <p>Sign in if you want to send a moderation report about this book or its owner.</p>
-        <div className="card-actions">
-          <Link className="button" to="/login">
-            Sign in
-          </Link>
-          <Link className="button button-secondary" to="/register">
-            Register
-          </Link>
-        </div>
-      </section>
-    );
-  }
-
-  if (isOwnBook) {
-    return (
-      <section className="section-card">
-        <h2>Reporting</h2>
-        <p>This is your own listing, so reporting actions are intentionally hidden here.</p>
-      </section>
-    );
+  if (!isAuthenticated || isOwnBook || variant !== "icon") {
+    return null;
   }
 
   return (
     <>
-      <section className="section-card">
-        <h2>Reporting</h2>
-        <p>
-          If this listing or its owner needs moderation review, open the report dialog and choose
-          what exactly should be reported.
-        </p>
-
-        <div className="card-actions">
-          <button className="button button-secondary" onClick={() => setIsOpen(true)} type="button">
-            Open report dialog
-          </button>
-          <Link className="button button-secondary" to="/app/my-reports">
-            Open my reports
-          </Link>
-        </div>
-      </section>
+      <button
+        aria-label={text.openDialog}
+        className="icon-button icon-button-danger"
+        onClick={() => setIsOpen(true)}
+        title={text.openDialog}
+        type="button"
+      >
+        <FlagIcon />
+      </button>
 
       {isOpen ? <ReportModal book={book} onClose={() => setIsOpen(false)} /> : null}
     </>
@@ -68,6 +101,7 @@ export function ReportActionCard({ book }) {
 }
 
 function ReportModal({ book, onClose }) {
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const metadataQuery = useMetadataQuery();
   const [targetType, setTargetType] = useState(null);
@@ -75,6 +109,7 @@ function ReportModal({ book, onClose }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const text = reportText[locale] ?? reportText.en;
 
   useEffect(() => {
     if (!metadataQuery.data?.reportReasons?.length) {
@@ -99,7 +134,7 @@ function ReportModal({ book, onClose }) {
     setSuccessMessage("");
 
     try {
-      const response = await apiRequest(`/${"report"}/${resolveTargetId(book, targetType)}`, {
+      const response = await apiRequest(`/report/${resolveTargetId(book, targetType)}`, {
         method: "POST",
         auth: true,
         body: {
@@ -109,7 +144,7 @@ function ReportModal({ book, onClose }) {
       });
 
       await queryClient.invalidateQueries({ queryKey: ["my-reports"] });
-      setSuccessMessage(response.message || "Your report has been sent.");
+      setSuccessMessage(response.message || text.send);
       setForm((current) => ({
         ...current,
         comment: ""
@@ -121,7 +156,11 @@ function ReportModal({ book, onClose }) {
     }
   }
 
-  return (
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
     <div
       className="modal-backdrop"
       onClick={(event) => {
@@ -133,23 +172,23 @@ function ReportModal({ book, onClose }) {
     >
       <section
         aria-modal="true"
-        className="modal-panel"
+        className="modal-panel report-modal-panel"
         role="dialog"
       >
         <div className="row-between">
-          <div>
-            <span className="eyebrow">Report</span>
-            <h2>Moderation report</h2>
-          </div>
-          <button className="modal-close" onClick={onClose} type="button">
-            Close
+          <h2>{text.title}</h2>
+          <button
+            aria-label={text.close}
+            className="modal-close modal-close-icon"
+            onClick={onClose}
+            title={text.close}
+            type="button"
+          >
+            <XIcon />
           </button>
         </div>
 
-        <p className="muted-line">
-          First choose whether the report is about the book listing or about the owner of this
-          listing. Then send the moderation comment.
-        </p>
+        <p className="muted-line">{text.helper}</p>
 
         <div className="choice-grid">
           <button
@@ -162,7 +201,7 @@ function ReportModal({ book, onClose }) {
             type="button"
           >
             <BookCover photoUrl={book.photoUrl} size="sm" title={book.name} />
-            <strong>Report this book</strong>
+            <strong>{text.aboutBook}</strong>
             <span>{book.name}</span>
           </button>
           <button
@@ -175,12 +214,12 @@ function ReportModal({ book, onClose }) {
             type="button"
           >
             <UserAvatar name={book.ownerNickname} photoUrl={book.ownerPhotoUrl} size="sm" />
-            <strong>Report this user</strong>
+            <strong>{text.aboutUser}</strong>
             <span>{book.ownerNickname}</span>
           </button>
         </div>
 
-        {metadataQuery.isPending ? <p className="muted-line">Loading report reasons...</p> : null}
+        {metadataQuery.isPending ? <p className="muted-line">{text.loadingReasons}</p> : null}
         {metadataQuery.error ? (
           <p className="inline-message inline-message-error">
             {metadataQuery.error.message}
@@ -190,7 +229,7 @@ function ReportModal({ book, onClose }) {
         {targetType ? (
           <form className="content-stack" onSubmit={handleSubmit}>
             <label className="field">
-              <span>Reason</span>
+              <span>{text.reason}</span>
               <select
                 className="field-control"
                 onChange={(event) =>
@@ -207,13 +246,13 @@ function ReportModal({ book, onClose }) {
             </label>
 
             <label className="field">
-              <span>Comment</span>
+              <span>{text.comment}</span>
               <textarea
                 className="field-control"
                 onChange={(event) =>
                   setForm((current) => ({ ...current, comment: event.target.value }))
                 }
-                placeholder="Describe what happened and why this should be reviewed"
+                placeholder={text.commentPlaceholder}
                 required
                 rows={4}
                 value={form.comment}
@@ -223,7 +262,11 @@ function ReportModal({ book, onClose }) {
             {successMessage ? (
               <p className="inline-message inline-message-success">{successMessage}</p>
             ) : null}
-            {error ? <p className="inline-message inline-message-error">{error.message}</p> : null}
+            {error ? (
+              <p className="inline-message inline-message-error">
+                {resolveErrorMessage(error, targetType, text)}
+              </p>
+            ) : null}
 
             <div className="card-actions">
               <button
@@ -231,19 +274,25 @@ function ReportModal({ book, onClose }) {
                 disabled={pending || !form.reason || metadataQuery.isPending}
                 type="submit"
               >
-                {pending ? "Sending report..." : `Send ${targetType.toLowerCase()} report`}
-              </button>
-              <button className="button button-secondary" onClick={onClose} type="button">
-                Done
+                {pending ? text.sending : text.send}
               </button>
             </div>
           </form>
         ) : (
-          <p className="muted-line">Choose one target above to continue.</p>
+          <p className="muted-line">{text.chooseTarget}</p>
         )}
       </section>
-    </div>
+    </div>,
+    document.body
   );
+}
+
+function resolveErrorMessage(error, targetType, text) {
+  if (error?.errorCode === "REPORT_ALREADY_EXISTS") {
+    return targetType === "USER" ? text.alreadyUser : text.alreadyBook;
+  }
+
+  return error?.message ?? "";
 }
 
 function resolveTargetId(book, targetType) {
