@@ -240,6 +240,22 @@ export function getBookCategoryUiLabel(kind, locale = "en") {
   return labels[locale] ?? labels.en ?? "";
 }
 
+export function getBookCategoryTagStyle(value) {
+  const key = normalizeBookCategoryKey(value);
+
+  if (!key) {
+    return undefined;
+  }
+
+  const hue =
+    Array.from(key).reduce((sum, character) => sum + character.charCodeAt(0), 0) % 360;
+
+  return {
+    backgroundColor: `hsla(${hue} 78% 92% / 0.98)`,
+    color: `hsl(${hue} 38% 28%)`
+  };
+}
+
 function normalizeBookCategoryKey(value) {
   return String(value)
     .trim()

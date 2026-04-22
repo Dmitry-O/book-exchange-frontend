@@ -1,0 +1,20 @@
+<svg width="144" height="216" viewBox="0 0 144 216" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0.5" y="0.5" width="143" height="215" rx="23.5" fill="#E8EEF4"/>
+  <rect x="0.5" y="0.5" width="143" height="215" rx="23.5" stroke="#D5DEE7"/>
+  <path d="M0 24C0 10.7452 10.7452 0 24 0H35V216H24C10.7452 216 0 205.255 0 192V24Z" fill="url(#spine)"/>
+  <path d="M35 0H120C133.255 0 144 10.7452 144 24V192C144 205.255 133.255 216 120 216H35V0Z" fill="url(#page)"/>
+  <path d="M35 0H120C133.255 0 144 10.7452 144 24V192C144 205.255 133.255 216 120 216H35" stroke="#D5DEE7"/>
+  <rect x="58" y="80" width="58" height="9" rx="4.5" fill="#C4CED8"/>
+  <rect x="58" y="101" width="41" height="8" rx="4" fill="#C4CED8"/>
+  <rect x="58" y="122" width="30" height="8" rx="4" fill="#C4CED8"/>
+  <defs>
+    <linearGradient id="spine" x1="17.5" y1="0" x2="17.5" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B8C4D0"/>
+      <stop offset="1" stop-color="#A5B3C0"/>
+    </linearGradient>
+    <linearGradient id="page" x1="35" y1="0" x2="144" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EEF4F9"/>
+      <stop offset="1" stop-color="#DEE7EF"/>
+    </linearGradient>
+  </defs>
+</svg>

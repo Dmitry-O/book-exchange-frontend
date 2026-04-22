@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocale } from "../i18n/LocaleContext";
+import { RefreshIcon, TrashIcon } from "./Icons";
 import { BookCover, UserAvatar } from "./Media";
 
 const cropPresets = {
@@ -29,6 +31,8 @@ export function ImageUploadField({
   photoUrl,
   removePending = false
 }) {
+  const { locale } = useLocale();
+  const text = imageUploadText[locale] ?? imageUploadText.en;
   const [cropState, setCropState] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [applyPending, setApplyPending] = useState(false);
@@ -217,8 +221,8 @@ export function ImageUploadField({
   const helperCopy =
     helperText === undefined
       ? kind === "book"
-        ? "A vertical cover image makes the listing look much better in the catalog."
-        : "Choose an image, adjust the crop, and the form will send the resulting base64 payload."
+        ? text.bookHelper
+        : text.userHelper
       : helperText;
 
   return (
@@ -228,53 +232,57 @@ export function ImageUploadField({
         {kind === "book" ? (
           <div className="image-field-shell image-field-shell-book">
             <div className="image-upload-book-top">
-              <label
-                className={
-                  hasPreview
-                    ? "image-preview-trigger image-preview-trigger-book"
-                    : "image-preview-trigger image-preview-trigger-book image-preview-trigger-empty"
-                }
-              >
-                <BookCover
-                  className="image-upload-book-cover"
-                  photoUrl={previewSource}
-                  size="upload"
-                  title={entityName}
-                />
-                {!hasPreview ? (
-                  <span className="image-preview-empty-cta">+ Add photo</span>
-                ) : null}
-                <input accept="image/*" className="image-preview-file-input" onChange={handleFileSelection} type="file" />
-              </label>
+              <div className="image-upload-book-preview-shell">
+                <label
+                  className={
+                    hasPreview
+                      ? "image-preview-trigger image-preview-trigger-book"
+                      : "image-preview-trigger image-preview-trigger-book image-preview-trigger-empty"
+                  }
+                >
+                  <BookCover
+                    className="image-upload-book-cover"
+                    photoUrl={previewSource}
+                    size="upload"
+                    title={entityName}
+                  />
+                  {!hasPreview ? (
+                    <span className="image-preview-empty-cta">{text.addPhotoCta}</span>
+                  ) : null}
+                  <input accept="image/*" className="image-preview-file-input" onChange={handleFileSelection} type="file" />
+                </label>
 
-              <div className="image-upload-book-actions">
-                {hasPreview ? (
-                  <label className="button button-secondary image-upload-trigger">
-                    Replace photo
-                    <input accept="image/*" onChange={handleFileSelection} type="file" />
-                  </label>
-                ) : null}
-                {canRenderRemoveAction ? (
-                  <button
-                    className="button button-secondary"
-                    disabled={!canRemove || removePending}
-                    onClick={() => void handleRemoveClick()}
-                    type="button"
-                  >
-                    {removePending
-                      ? "Deleting photo..."
-                      : hasPendingUpload
-                        ? "Discard selected photo"
-                        : "Delete saved photo"}
-                  </button>
-                ) : null}
+                <div className="image-upload-book-actions image-upload-book-actions-float">
+                  {hasPreview ? (
+                    <label
+                      aria-label={text.replacePhoto}
+                      className="icon-button image-upload-icon-button image-upload-trigger"
+                      title={text.replacePhoto}
+                    >
+                      <RefreshIcon />
+                      <input accept="image/*" onChange={handleFileSelection} type="file" />
+                    </label>
+                  ) : null}
+                  {canRenderRemoveAction ? (
+                    <button
+                      aria-label={hasPendingUpload ? text.discardSelectedPhoto : text.deleteSavedPhoto}
+                      className="icon-button icon-button-danger image-upload-icon-button"
+                      disabled={!canRemove || removePending}
+                      onClick={() => void handleRemoveClick()}
+                      title={hasPendingUpload ? text.discardSelectedPhoto : text.deleteSavedPhoto}
+                      type="button"
+                    >
+                      <TrashIcon />
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
               {helperCopy ? <p className="field-hint">{helperCopy}</p> : null}
 
               {hasPendingUpload ? (
                 <p className="inline-message inline-message-success">
-                  New image selected. Save the form to upload it.
+                  {text.newImageSelected}
                 </p>
               ) : null}
               {message ? <p className="inline-message inline-message-success">{message}</p> : null}
@@ -299,29 +307,31 @@ export function ImageUploadField({
                     size="xl"
                   />
                 </div>
-                {!hasPreview ? <span className="image-preview-empty-cta">Add photo</span> : null}
+                {!hasPreview ? <span className="image-preview-empty-cta">{text.addPhoto}</span> : null}
                 <input accept="image/*" className="image-preview-file-input" onChange={handleFileSelection} type="file" />
               </label>
 
-              <div className="image-upload-book-actions">
+              <div className="image-upload-book-actions image-upload-user-actions">
                 {hasPreview ? (
-                  <label className="button button-secondary image-upload-trigger">
-                    Replace photo
+                  <label
+                    aria-label={text.replacePhoto}
+                    className="icon-button image-upload-icon-button image-upload-trigger"
+                    title={text.replacePhoto}
+                  >
+                    <RefreshIcon />
                     <input accept="image/*" onChange={handleFileSelection} type="file" />
                   </label>
                 ) : null}
                 {canRenderRemoveAction ? (
                   <button
-                    className="button button-secondary"
+                    aria-label={hasPendingUpload ? text.discardSelectedPhoto : text.deleteSavedPhoto}
+                    className="icon-button icon-button-danger image-upload-icon-button"
                     disabled={!canRemove || removePending}
                     onClick={() => void handleRemoveClick()}
+                    title={hasPendingUpload ? text.discardSelectedPhoto : text.deleteSavedPhoto}
                     type="button"
                   >
-                    {removePending
-                      ? "Deleting photo..."
-                      : hasPendingUpload
-                        ? "Discard selected photo"
-                        : "Delete saved photo"}
+                    <TrashIcon />
                   </button>
                 ) : null}
               </div>
@@ -330,7 +340,7 @@ export function ImageUploadField({
 
               {hasPendingUpload ? (
                 <p className="inline-message inline-message-success">
-                  New image selected. Save the form to upload it.
+                  {text.newImageSelected}
                 </p>
               ) : null}
               {message ? <p className="inline-message inline-message-success">{message}</p> : null}
@@ -353,11 +363,11 @@ export function ImageUploadField({
           <section aria-modal="true" className="modal-panel" role="dialog">
             <div className="row-between">
               <div>
-                <span className="eyebrow">Photo crop</span>
+                <span className="eyebrow">{text.photoCrop}</span>
                 <h2>{cropState.fileName}</h2>
               </div>
               <button className="modal-close" onClick={() => setCropState(null)} type="button">
-                Close
+                {text.close}
               </button>
             </div>
 
@@ -398,13 +408,13 @@ export function ImageUploadField({
               <div className="content-stack">
                 <p className="field-hint">
                   {kind === "user"
-                    ? "Use zoom for framing, then drag the image inside the preview to position it. The same crop is used for the uploaded base64 image."
-                    : "Drag the image inside the preview to position the visible area. The same crop is used for the uploaded base64 image."}
+                    ? text.userCropHint
+                    : text.bookCropHint}
                 </p>
 
                 {kind === "user" ? (
                   <div className="field">
-                    <span>Zoom</span>
+                    <span>{text.zoom}</span>
                     <div className="zoom-stepper">
                       <button
                         className="button button-secondary"
@@ -427,11 +437,17 @@ export function ImageUploadField({
                   </div>
                 ) : null}
 
-                <p className="field-hint">Tip: drag with mouse or finger to move the photo.</p>
+                <p className="field-hint">{text.dragTip}</p>
 
                 <div className="card-actions">
                   <button className="button" disabled={applyPending} onClick={() => void handleApplyCrop()} type="button">
-                    {applyPending ? (kind === "user" ? "Uploading..." : "Applying...") : kind === "user" ? "Upload photo" : "Apply crop"}
+                    {applyPending
+                      ? kind === "user"
+                        ? text.uploading
+                        : text.applying
+                      : kind === "user"
+                        ? text.uploadPhoto
+                        : text.applyCrop}
                   </button>
                   <button
                     className="button button-secondary"
@@ -439,7 +455,7 @@ export function ImageUploadField({
                     onClick={() => setCropState(null)}
                     type="button"
                   >
-                    Cancel
+                    {text.cancel}
                   </button>
                 </div>
               </div>
@@ -546,3 +562,81 @@ async function readImageElement(source) {
     image.src = source;
   });
 }
+
+const imageUploadText = {
+  en: {
+    addPhoto: "Add photo",
+    addPhotoCta: "+ Add photo",
+    applying: "Applying...",
+    applyCrop: "Apply crop",
+    bookCropHint:
+      "Drag the image inside the preview to position the visible area. The same crop is used for the uploaded base64 image.",
+    bookHelper: "A vertical cover image makes the listing look much better in the catalog.",
+    cancel: "Cancel",
+    close: "Close",
+    deleteSavedPhoto: "Delete saved photo",
+    deletingPhoto: "Deleting photo...",
+    discardSelectedPhoto: "Discard selected photo",
+    dragTip: "Tip: drag with mouse or finger to move the photo.",
+    newImageSelected: "New image selected. Save the form to upload it.",
+    photoCrop: "Photo crop",
+    replacePhoto: "Replace photo",
+    uploadPhoto: "Upload photo",
+    uploading: "Uploading...",
+    userCropHint:
+      "Use zoom for framing, then drag the image inside the preview to position it. The same crop is used for the uploaded base64 image.",
+    userHelper:
+      "Choose an image, adjust the crop, and the form will send the resulting base64 payload.",
+    zoom: "Zoom"
+  },
+  de: {
+    addPhoto: "Foto hinzufügen",
+    addPhotoCta: "+ Foto hinzufügen",
+    applying: "Wird angewendet...",
+    applyCrop: "Zuschnitt anwenden",
+    bookCropHint:
+      "Ziehe das Bild im Vorschaufenster, um den sichtbaren Bereich zu positionieren. Derselbe Zuschnitt wird für das hochgeladene Base64-Bild verwendet.",
+    bookHelper: "Ein vertikales Coverbild wirkt im Katalog deutlich besser.",
+    cancel: "Abbrechen",
+    close: "Schließen",
+    deleteSavedPhoto: "Gespeichertes Foto löschen",
+    deletingPhoto: "Foto wird gelöscht...",
+    discardSelectedPhoto: "Ausgewähltes Foto verwerfen",
+    dragTip: "Tipp: Ziehe das Foto mit Maus oder Finger.",
+    newImageSelected: "Neues Bild ausgewählt. Speichere das Formular, um es hochzuladen.",
+    photoCrop: "Foto zuschneiden",
+    replacePhoto: "Foto ersetzen",
+    uploadPhoto: "Foto hochladen",
+    uploading: "Wird hochgeladen...",
+    userCropHint:
+      "Nutze den Zoom für den Bildausschnitt und ziehe das Bild in der Vorschau an die richtige Position. Derselbe Zuschnitt wird für das hochgeladene Base64-Bild verwendet.",
+    userHelper:
+      "Wähle ein Bild aus, passe den Zuschnitt an und das Formular sendet daraus den Base64-Upload.",
+    zoom: "Zoom"
+  },
+  ru: {
+    addPhoto: "Добавить фото",
+    addPhotoCta: "+ Добавить фото",
+    applying: "Применение...",
+    applyCrop: "Применить обрезку",
+    bookCropHint:
+      "Перетащите изображение внутри превью, чтобы выбрать видимую область. Та же обрезка будет использована для загружаемого base64-изображения.",
+    bookHelper: "Вертикальная обложка заметно лучше смотрится в каталоге.",
+    cancel: "Отмена",
+    close: "Закрыть",
+    deleteSavedPhoto: "Удалить сохранённое фото",
+    deletingPhoto: "Удаление фото...",
+    discardSelectedPhoto: "Убрать выбранное фото",
+    dragTip: "Подсказка: перетаскивайте фото мышкой или пальцем.",
+    newImageSelected: "Новое изображение выбрано. Сохраните форму, чтобы загрузить его.",
+    photoCrop: "Обрезка фото",
+    replacePhoto: "Заменить фото",
+    uploadPhoto: "Загрузить фото",
+    uploading: "Загрузка...",
+    userCropHint:
+      "Используйте зум для кадрирования, затем перетащите изображение внутри превью. Та же обрезка будет использована для загружаемого base64-изображения.",
+    userHelper:
+      "Выберите изображение, настройте обрезку, и форма отправит итоговый base64 payload.",
+    zoom: "Зум"
+  }
+};

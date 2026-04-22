@@ -14,6 +14,18 @@ let authBridge = {
 
 let refreshPromise = null;
 
+const TRANSPORT_ERROR_TEXT = {
+  de: "Verbindung zum Server fehlgeschlagen. Prüfe, ob das Backend läuft, und versuche es erneut.",
+  en: "Could not connect to the server. Check that the backend is running and try again.",
+  ru: "Не удалось подключиться к серверу. Проверьте, что бэкенд запущен, и попробуйте снова."
+};
+
+const ABORTED_REQUEST_TEXT = {
+  de: "Die Anfrage wurde abgebrochen.",
+  en: "The request was aborted.",
+  ru: "Запрос был прерван."
+};
+
 export class ApiClientError extends Error {
   constructor({
     status,
@@ -101,7 +113,7 @@ async function performRequest(endpoint, options, canRefresh) {
       }
     }
 
-    throw error;
+    throw normalizeTransportError(error);
   }
 
   if (
@@ -153,15 +165,21 @@ async function performRequest(endpoint, options, canRefresh) {
 async function refreshAccessToken(refreshToken) {
   if (!refreshPromise) {
     refreshPromise = (async () => {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh_token`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Accept-Language": getPreferredLocale(),
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ refreshToken })
-      });
+      let response;
+
+      try {
+        response = await fetch(`${API_BASE_URL}/auth/refresh_token`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Accept-Language": getPreferredLocale(),
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ refreshToken })
+        });
+      } catch (error) {
+        throw normalizeTransportError(error);
+      }
 
       const payload = await parsePayload(response);
 
@@ -232,4 +250,28 @@ function parseEtag(eTag) {
 
 function getPreferredLocale() {
   return readStoredLocale();
+}
+
+function normalizeTransportError(error) {
+  if (error instanceof ApiClientError) {
+    return error;
+  }
+
+  const locale = getPreferredLocale();
+  const isAborted = error?.name === "AbortError";
+
+  return new ApiClientError({
+    status: 0,
+    message: isAborted
+      ? getLocalizedText(ABORTED_REQUEST_TEXT, locale)
+      : getLocalizedText(TRANSPORT_ERROR_TEXT, locale),
+    details: {
+      cause: error?.message ?? null,
+      errorName: error?.name ?? null
+    }
+  });
+}
+
+function getLocalizedText(map, locale) {
+  return map[locale] ?? map.en;
 }

@@ -229,7 +229,7 @@ const messages = {
       sessionActions: "Session actions",
       currentProfileVersion: "Current profile version",
       unknownVersion: "unknown",
-      logoutCurrentSession: "Logout current session",
+      logoutCurrentSession: "Logout",
       deletingAccount: "Deleting account...",
       deleteAccount: "Delete account",
       deleteConfirm:
@@ -458,7 +458,7 @@ const messages = {
       sessionActions: "Sitzungsaktionen",
       currentProfileVersion: "Aktuelle Profilversion",
       unknownVersion: "unbekannt",
-      logoutCurrentSession: "Aktuelle Sitzung abmelden",
+      logoutCurrentSession: "Abmelden",
       deletingAccount: "Konto wird gelöscht...",
       deleteAccount: "Konto löschen",
       deleteConfirm:
@@ -475,7 +475,7 @@ const messages = {
       login: "Войти",
       register: "Регистрация",
       language: "Язык",
-      signIn: "Войти",
+      signIn: "Вход",
       goHome: "На главную",
       backHome: "На главную",
       loading: "Загрузка",
@@ -552,7 +552,7 @@ const messages = {
       myReports: "Мои жалобы",
       myBooks: "Мои книги",
       requests: "Запросы",
-      offers: "Офферы",
+      offers: "Предложения",
       history: "История",
       users: "Пользователи",
       books: "Книги",
@@ -687,7 +687,7 @@ const messages = {
       sessionActions: "Действия с сессией",
       currentProfileVersion: "Текущая версия профиля",
       unknownVersion: "неизвестно",
-      logoutCurrentSession: "Выйти из текущей сессии",
+      logoutCurrentSession: "Выйти",
       deletingAccount: "Удаление аккаунта...",
       deleteAccount: "Удалить аккаунт",
       deleteConfirm:
@@ -707,7 +707,9 @@ export function LocaleProvider({ children }) {
   }, [locale]);
 
   const setLocale = (nextLocale) => {
-    setLocaleState(normalizeLocale(nextLocale));
+    const normalizedLocale = normalizeLocale(nextLocale);
+    writeStoredLocale(normalizedLocale);
+    setLocaleState(normalizedLocale);
   };
 
   const value = useMemo(() => {

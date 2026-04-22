@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { useLocale } from "../i18n/LocaleContext";
-import { findCitySuggestions } from "../lib/cities";
+import { findCitySuggestions, getCityApiValue, getCityDisplayName } from "../lib/cities";
 
 const BEST_MATCH_LABELS = {
   de: "Beste Wahl",
@@ -8,7 +8,15 @@ const BEST_MATCH_LABELS = {
   ru: "Лучший вариант"
 };
 
-export function CityField({ compactDropdown = false, label, onChange, required = false, value }) {
+export function CityField({
+  className = "",
+  compactDropdown = false,
+  error = "",
+  label,
+  onChange,
+  required = false,
+  value
+}) {
   const listId = useId();
   const { locale } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
@@ -25,6 +33,20 @@ export function CityField({ compactDropdown = false, label, onChange, required =
     onChange(nextValue);
     setIsOpen(false);
     setHighlightedIndex(0);
+  }
+
+  function normalizeKnownCity() {
+    const nextApiValue = getCityApiValue(value);
+
+    if (!nextApiValue) {
+      return;
+    }
+
+    const localizedValue = getCityDisplayName(nextApiValue, locale);
+
+    if (localizedValue !== value) {
+      onChange(localizedValue);
+    }
   }
 
   function handleKeyDown(event) {
@@ -65,7 +87,9 @@ export function CityField({ compactDropdown = false, label, onChange, required =
   }
 
   return (
-    <label className={`field city-field${compactDropdown ? " city-field-compact" : ""}`}>
+    <label
+      className={`field city-field${compactDropdown ? " city-field-compact" : ""} ${className}`.trim()}
+    >
       <span>{label}</span>
 
       <div className="city-field-shell">
@@ -84,6 +108,7 @@ export function CityField({ compactDropdown = false, label, onChange, required =
           className="field-control city-field-input"
           onBlur={() => {
             window.setTimeout(() => {
+              normalizeKnownCity();
               setIsOpen(false);
             }, 120);
           }}
@@ -129,6 +154,7 @@ export function CityField({ compactDropdown = false, label, onChange, required =
           </div>
         ) : null}
       </div>
+      {error ? <span className="field-hint">{error}</span> : null}
     </label>
   );
 }
