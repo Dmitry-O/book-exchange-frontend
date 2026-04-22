@@ -5,9 +5,12 @@ import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
 import { useLocale } from "../../../shared/i18n/LocaleContext";
+import { rt, rtf } from "../../../shared/i18n/rawText";
+import { readStoredLocale } from "../../../shared/i18n/locale";
 import { formatBookCategoryLabel } from "../../../shared/lib/bookCategory";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
 import { BookCover, UserAvatar } from "../../../shared/ui/Media";
+import { ArrowLeftIcon, BookIcon, SwapIcon, UserIcon } from "../../../shared/ui/Icons";
 import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
@@ -20,6 +23,7 @@ export function AdminExchangesPage() {
   const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState(defaultFilters);
   const [draftFilters, setDraftFilters] = useState(defaultFilters);
+  const { locale } = useLocale();
 
   const exchangeStatuses = metadataQuery.data?.exchangeStatuses ?? ["PENDING", "APPROVED", "DECLINED"];
 
@@ -65,17 +69,14 @@ export function AdminExchangesPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>Exchange oversight</h1>
-        <p>
-          This screen uses `GET /admin/exchanges` and lets you inspect the full exchange graph by
-          status, including sender and receiver users plus books.
-        </p>
+        <h1>{rt(locale, "Exchange oversight")}</h1>
+        <p>{rt(locale, "Inspect exchanges by status and open full details for books and participants.")}</p>
       </header>
 
       <section className="section-card">
         <form className="content-stack" onSubmit={handleApplyFilters}>
           <div className="field">
-            <span>Status filters</span>
+            <span>{rt(locale, "Status filters")}</span>
             <div className="checkbox-grid">
               {exchangeStatuses.map((status) => (
                 <label className="field field-checkbox admin-checkbox-card" key={status}>
@@ -93,33 +94,33 @@ export function AdminExchangesPage() {
           <div className="filters-actions">
             <div className="admin-summary-box">
               <strong>{exchangesQuery.data?.totalElements ?? 0}</strong>
-              <span>matching exchanges</span>
+              <span>{rt(locale, "matching exchanges")}</span>
             </div>
             <div className="pill-row">
               <button className="button" type="submit">
-                Apply filters
+                {rt(locale, "Apply filters")}
               </button>
               <button className="button button-secondary" onClick={handleResetFilters} type="button">
-                Reset
+                {rt(locale, "Reset")}
               </button>
             </div>
           </div>
         </form>
       </section>
 
-      {metadataQuery.isPending ? <LoadingBlock label="Loading exchange metadata" /> : null}
+      {metadataQuery.isPending ? <LoadingBlock label={rt(locale, "Loading exchange metadata")} /> : null}
       {metadataQuery.error ? (
-        <ErrorBlock error={metadataQuery.error} title="Exchange metadata could not be loaded" />
+        <ErrorBlock error={metadataQuery.error} title={rt(locale, "Exchange metadata could not be loaded")} />
       ) : null}
-      {exchangesQuery.isPending ? <LoadingBlock label="Loading exchange oversight" /> : null}
+      {exchangesQuery.isPending ? <LoadingBlock label={rt(locale, "Loading exchange oversight")} /> : null}
       {exchangesQuery.error ? (
-        <ErrorBlock error={exchangesQuery.error} title="Admin exchanges could not be loaded" />
+        <ErrorBlock error={exchangesQuery.error} title={rt(locale, "Admin exchanges could not be loaded")} />
       ) : null}
 
       {!exchangesQuery.isPending && !exchangesQuery.error && exchanges.length === 0 ? (
         <EmptyBlock
-          title="No exchanges match these filters"
-          description="Try resetting the filters or selecting a different set of exchange statuses."
+          title={rt(locale, "No exchanges match these filters")}
+          description={rt(locale, "Try resetting the filters or selecting a different set of exchange statuses.")}
         />
       ) : null}
 
@@ -131,21 +132,23 @@ export function AdminExchangesPage() {
                 <BookCover
                   photoUrl={exchange.senderBook?.photoUrl}
                   size="sm"
-                  title={exchange.senderBook?.name}
+                  title={resolveAdminSenderBookLabel(locale, exchange.senderBook?.name)}
                 />
+                <span aria-hidden="true" className="exchange-preview-swap-icon">
+                  <SwapIcon />
+                </span>
                 <BookCover
                   photoUrl={exchange.receiverBook?.photoUrl}
                   size="sm"
-                  title={exchange.receiverBook?.name}
+                  title={resolveAdminReceiverBookLabel(locale, exchange.receiverBook?.name)}
                 />
               </div>
 
               <div className="row-between">
                 <div>
-                  <h2>Exchange #{exchange.id}</h2>
+                  <h2>{exchange.senderBook?.name || exchange.receiverBook?.name || rt(locale, "Exchange overview")}</h2>
                   <p className="muted-line">
-                    {exchange.senderBook?.name || "Unknown sender book"} /{" "}
-                    {exchange.receiverBook?.name || "Unknown receiver book"}
+                    {formatAdminExchangeBookSummary(locale, exchange.senderBook?.name, exchange.receiverBook?.name)}
                   </p>
                 </div>
 
@@ -153,13 +156,12 @@ export function AdminExchangesPage() {
                   <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
                     {formatEnumLabel(exchange.status)}
                   </span>
-                  <span className="subtle-chip">v{exchange.version}</span>
                 </div>
               </div>
 
               <dl className="detail-list detail-list-compact">
                 <div>
-                  <dt>Sender</dt>
+                  <dt>{rt(locale, "Sender")}</dt>
                   <dd className="detail-inline-media">
                     <UserAvatar
                       name={exchange.senderUser?.nickname || exchange.senderUser?.email}
@@ -170,7 +172,7 @@ export function AdminExchangesPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Receiver</dt>
+                  <dt>{rt(locale, "Receiver")}</dt>
                   <dd className="detail-inline-media">
                     <UserAvatar
                       name={exchange.receiverUser?.nickname || exchange.receiverUser?.email}
@@ -181,31 +183,41 @@ export function AdminExchangesPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Sender read</dt>
-                  <dd>{exchange.isReadBySender ? "Yes" : "No"}</dd>
+                  <dt>{rt(locale, "Sender read")}</dt>
+                  <dd>{exchange.isReadBySender ? rt(locale, "Yes") : rt(locale, "No")}</dd>
                 </div>
                 <div>
-                  <dt>Receiver read</dt>
-                  <dd>{exchange.isReadByReceiver ? "Yes" : "No"}</dd>
+                  <dt>{rt(locale, "Receiver read")}</dt>
+                  <dd>{exchange.isReadByReceiver ? rt(locale, "Yes") : rt(locale, "No")}</dd>
                 </div>
               </dl>
 
               <div className="card-actions">
-                <div className="pill-row">
+                <div className="action-icon-group">
                   {exchange.senderUser?.id ? (
-                    <Link className="link-inline" to={`/admin/users/${exchange.senderUser.id}`}>
-                      Open sender
+                    <Link
+                      aria-label={rt(locale, "Open sender")}
+                      className="icon-button"
+                      title={rt(locale, "Open sender")}
+                      to={`/admin/users/${exchange.senderUser.id}`}
+                    >
+                      <UserIcon />
                     </Link>
                   ) : null}
                   {exchange.receiverUser?.id ? (
-                    <Link className="link-inline" to={`/admin/users/${exchange.receiverUser.id}`}>
-                      Open receiver
+                    <Link
+                      aria-label={rt(locale, "Open receiver")}
+                      className="icon-button"
+                      title={rt(locale, "Open receiver")}
+                      to={`/admin/users/${exchange.receiverUser.id}`}
+                    >
+                      <UserIcon />
                     </Link>
                   ) : null}
                 </div>
 
                 <Link className="button button-secondary" to={`/admin/exchanges/${exchange.id}`}>
-                  Open details
+                  {rt(locale, "Open details")}
                 </Link>
               </div>
             </article>
@@ -225,6 +237,7 @@ export function AdminExchangesPage() {
 }
 
 export function AdminExchangeDetailsPage() {
+  const { locale } = useLocale();
   const { exchangeId } = useParams();
 
   const detailQuery = useQuery({
@@ -241,104 +254,71 @@ export function AdminExchangeDetailsPage() {
   });
 
   if (detailQuery.isPending) {
-    return <LoadingBlock label="Loading exchange details" />;
+    return <LoadingBlock label={rt(locale, "Loading exchange details")} />;
   }
 
   if (detailQuery.error) {
-    return <ErrorBlock error={detailQuery.error} title="Admin exchange details could not be loaded" />;
+    return <ErrorBlock error={detailQuery.error} title={rt(locale, "Admin exchange details could not be loaded")} />;
   }
 
   const exchange = detailQuery.data;
 
   return (
     <section className="content-stack">
-      <header className="section-card">
-        <div className="row-between">
-          <div>
-            <h1>Exchange #{exchange.id}</h1>
-            <p>
-              This screen uses `GET /admin/exchanges/{'{exchangeId}'}` and gives you the full
-              audit-friendly view of users, books, read flags, and exchange state.
-            </p>
-          </div>
-
-          <div className="pill-row">
-            <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
-              {formatEnumLabel(exchange.status)}
-            </span>
-            <span className="subtle-chip">v{exchange.__version ?? exchange.version}</span>
-          </div>
+      <header className="section-card book-detail-hero">
+        <div className="book-detail-header-bar">
+          <Link aria-label={rt(locale, "Back")} className="back-link" to="/admin/exchanges">
+            <ArrowLeftIcon />
+          </Link>
+          <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
+            {formatEnumLabel(exchange.status)}
+          </span>
+        </div>
+        <h1>{exchange.senderBook?.name || exchange.receiverBook?.name || rt(locale, "Exchange overview")}</h1>
+        <p>{rt(locale, "See the full exchange details, participants, books, and read states.")}</p>
+        <div className="hero-meta-line">
+          <span>{rt(locale, "Created at")}: {formatDateTime(exchange.meta?.createdAt)}</span>
+          <span>{rt(locale, "Updated at")}: {formatDateTime(exchange.meta?.updatedAt)}</span>
         </div>
       </header>
 
-      <section className="detail-grid">
-        <article className="section-card">
-          <h2>Exchange snapshot</h2>
-          <dl className="detail-list">
-            <div>
-              <dt>Status</dt>
-              <dd>{formatEnumLabel(exchange.status)}</dd>
-            </div>
-            <div>
-              <dt>Sender read</dt>
-              <dd>{exchange.isReadBySender ? "Yes" : "No"}</dd>
-            </div>
-            <div>
-              <dt>Receiver read</dt>
-              <dd>{exchange.isReadByReceiver ? "Yes" : "No"}</dd>
-            </div>
-            <div>
-              <dt>Decliner</dt>
-              <dd>{renderUserLabel(exchange.declinerUser)}</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article className="section-card">
-          <h2>Audit metadata</h2>
-          <dl className="detail-list">
-            <div>
-              <dt>Created at</dt>
-              <dd>{formatDateTime(exchange.meta?.createdAt)}</dd>
-            </div>
-            <div>
-              <dt>Updated at</dt>
-              <dd>{formatDateTime(exchange.meta?.updatedAt)}</dd>
-            </div>
-            <div>
-              <dt>Created by</dt>
-              <dd>{exchange.meta?.createdBy ?? "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Updated by</dt>
-              <dd>{exchange.meta?.updatedBy ?? "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Created request id</dt>
-              <dd>{exchange.meta?.createdRequestId || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Updated request id</dt>
-              <dd>{exchange.meta?.updatedRequestId || "Not available"}</dd>
-            </div>
-          </dl>
-        </article>
+      <section className="section-card">
+        <h2>{rt(locale, "Exchange overview")}</h2>
+        <dl className="detail-list detail-list-compact">
+          <div>
+            <dt>{rt(locale, "Status")}</dt>
+            <dd>{formatEnumLabel(exchange.status)}</dd>
+          </div>
+          <div>
+            <dt>{rt(locale, "Sender read")}</dt>
+            <dd>{exchange.isReadBySender ? rt(locale, "Yes") : rt(locale, "No")}</dd>
+          </div>
+          <div>
+            <dt>{rt(locale, "Receiver read")}</dt>
+            <dd>{exchange.isReadByReceiver ? rt(locale, "Yes") : rt(locale, "No")}</dd>
+          </div>
+          <div>
+            <dt>{rt(locale, "Decliner")}</dt>
+            <dd>{renderUserLabel(exchange.declinerUser)}</dd>
+          </div>
+        </dl>
       </section>
 
       <section className="detail-grid">
-        <UserCard title="Sender user" user={exchange.senderUser} />
-        <UserCard title="Receiver user" user={exchange.receiverUser} />
+        <UserCard title={rt(locale, "Sender user")} user={exchange.senderUser} />
+        <UserCard title={rt(locale, "Receiver user")} user={exchange.receiverUser} />
       </section>
 
       <section className="detail-grid">
-        <BookCard title="Sender book" book={exchange.senderBook} />
-        <BookCard title="Receiver book" book={exchange.receiverBook} />
+        <BookCard title={rt(locale, "Sender book")} book={exchange.senderBook} />
+        <BookCard title={rt(locale, "Receiver book")} book={exchange.receiverBook} />
       </section>
     </section>
   );
 }
 
 function UserCard({ title, user }) {
+  const { locale } = useLocale();
   return (
     <article className="section-card">
       <div className="entity-header">
@@ -351,34 +331,30 @@ function UserCard({ title, user }) {
 
       <dl className="detail-list">
         <div>
-          <dt>Email</dt>
-          <dd>{user?.email || "Not available"}</dd>
+          <dt>{rt(locale, "Email")}</dt>
+          <dd>{user?.email || rt(locale, "Not available")}</dd>
         </div>
         <div>
-          <dt>Photo URL</dt>
-          <dd>{user?.photoUrl || "Not available"}</dd>
+          <dt>{rt(locale, "Roles")}</dt>
+          <dd>{(user?.roles ?? []).map((role) => formatEnumLabel(role)).join(", ") || rt(locale, "None")}</dd>
         </div>
         <div>
-          <dt>Roles</dt>
-          <dd>{(user?.roles ?? []).map((role) => formatEnumLabel(role)).join(", ") || "None"}</dd>
+          <dt>{rt(locale, "Ban reason")}</dt>
+          <dd>{user?.banReason || rt(locale, "Not available")}</dd>
         </div>
         <div>
-          <dt>Locale</dt>
-          <dd>{user?.locale || "Not available"}</dd>
-        </div>
-        <div>
-          <dt>Ban reason</dt>
-          <dd>{user?.banReason || "Not available"}</dd>
-        </div>
-        <div>
-          <dt>Open user</dt>
+          <dt>{rt(locale, "Open user")}</dt>
           <dd>
             {user?.id ? (
-              <Link className="link-inline" to={`/admin/users/${user.id}`}>
-                Admin user details
+              <Link className="action-link-inline" to={`/admin/users/${user.id}`}>
+                <UserIcon />
+                <div className="action-link-copy">
+                  <strong>{rt(locale, "Open user")}</strong>
+                  <span>{rt(locale, "Admin user details")}</span>
+                </div>
               </Link>
             ) : (
-              "Not available"
+              rt(locale, "Not available")
             )}
           </dd>
         </div>
@@ -396,55 +372,55 @@ function BookCard({ title, book }) {
         <BookCover photoUrl={book?.photoUrl} size="md" title={book?.name} />
         <div>
           <h2>{title}</h2>
-          <p>{book?.name || "Not available"}</p>
+          <p>{book?.name || rt(locale, "Not available")}</p>
         </div>
       </div>
 
       <dl className="detail-list">
         <div>
-          <dt>Owner</dt>
+          <dt>{rt(locale, "Owner")}</dt>
           <dd className="detail-inline-media">
             <UserAvatar name={book?.ownerNickname} photoUrl={book?.ownerPhotoUrl} size="sm" />
-            <span>{book?.ownerNickname || "Unknown"} (id {book?.ownerUserId ?? "n/a"})</span>
+            <span>{book?.ownerNickname || rt(locale, "Unknown owner")}</span>
           </dd>
         </div>
         <div>
-          <dt>Photo URL</dt>
-          <dd>{book?.photoUrl || "Not available"}</dd>
+          <dt>{rt(locale, "Author")}</dt>
+          <dd>{book?.author || rt(locale, "Not available")}</dd>
         </div>
         <div>
-          <dt>Author</dt>
-          <dd>{book?.author || "Not available"}</dd>
+          <dt>{rt(locale, "Category")}</dt>
+          <dd>{formatBookCategoryLabel(book?.category, locale, rt(locale, "Not available"))}</dd>
         </div>
         <div>
-          <dt>Category</dt>
-          <dd>{formatBookCategoryLabel(book?.category, locale, "Not available")}</dd>
+          <dt>{rt(locale, "City")}</dt>
+          <dd>{book?.city || rt(locale, "Not available")}</dd>
         </div>
         <div>
-          <dt>City</dt>
-          <dd>{book?.city || "Not available"}</dd>
+          <dt>{rt(locale, "Publication year")}</dt>
+          <dd>{renderValue(locale, book?.publicationYear)}</dd>
         </div>
         <div>
-          <dt>Publication year</dt>
-          <dd>{renderValue(book?.publicationYear)}</dd>
+          <dt>{rt(locale, "Gift mode")}</dt>
+          <dd>{book?.isGift ? rt(locale, "Yes") : rt(locale, "No")}</dd>
         </div>
         <div>
-          <dt>Gift mode</dt>
-          <dd>{book?.isGift ? "Yes" : "No"}</dd>
+          <dt>{rt(locale, "Exchanged")}</dt>
+          <dd>{book?.isExchanged ? rt(locale, "Yes") : rt(locale, "No")}</dd>
         </div>
         <div>
-          <dt>Exchanged</dt>
-          <dd>{book?.isExchanged ? "Yes" : "No"}</dd>
-        </div>
-        <div>
-          <dt>Open book</dt>
+          <dt>{rt(locale, "Open book")}</dt>
           <dd>
             {book?.id ? (
-              <Link className="link-inline" to={`/admin/books/${book.id}`}>
-                Admin book details
+              <Link className="action-link-inline" to={`/admin/books/${book.id}`}>
+                <BookIcon />
+                <div className="action-link-copy">
+                  <strong>{rt(locale, "Open book")}</strong>
+                  <span>{rt(locale, "Admin book details")}</span>
+                </div>
               </Link>
             ) : (
-              "Not available"
+              rt(locale, "Not available")
             )}
           </dd>
         </div>
@@ -454,15 +430,31 @@ function BookCard({ title, book }) {
 }
 
 function renderUserLabel(user) {
+  const locale = readLocaleForLabel();
   if (!user) {
-    return "Not available";
+    return rt(locale, "Not available");
   }
 
-  return `${user.nickname || "Unknown user"} (id ${user.id ?? "n/a"})`;
+  return `${user.nickname || rt(locale, "Unknown user")} (id ${user.id ?? "n/a"})`;
 }
 
-function renderValue(value) {
-  return value === null || value === undefined || value === "" ? "Not available" : value;
+function renderValue(locale, value) {
+  return value === null || value === undefined || value === "" ? rt(locale, "Not available") : value;
+}
+
+function formatAdminExchangeBookSummary(locale, senderBookName, receiverBookName) {
+  const senderLabel = resolveAdminSenderBookLabel(locale, senderBookName);
+  const receiverLabel = resolveAdminReceiverBookLabel(locale, receiverBookName);
+
+  return [senderLabel, receiverLabel].filter(Boolean).join(" / ");
+}
+
+function resolveAdminSenderBookLabel(locale, senderBookName) {
+  return senderBookName || rt(locale, "Without counter book");
+}
+
+function resolveAdminReceiverBookLabel(locale, receiverBookName) {
+  return receiverBookName || rt(locale, "Unknown receiver book");
 }
 
 function getExchangeStatusClassName(status) {
@@ -475,4 +467,8 @@ function getExchangeStatusClassName(status) {
   }
 
   return "status-pill-danger";
+}
+
+function readLocaleForLabel() {
+  return readStoredLocale();
 }
