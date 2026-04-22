@@ -4,9 +4,12 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
+import { useLocale } from "../../../shared/i18n/LocaleContext";
+import { rt, rtf } from "../../../shared/i18n/rawText";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
 import { UserAvatar } from "../../../shared/ui/Media";
+import { ArrowLeftIcon, TrashIcon } from "../../../shared/ui/Icons";
 import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
@@ -24,6 +27,7 @@ const emptyBanForm = {
 };
 
 export function AdminUsersPage() {
+  const { locale } = useLocale();
   const metadataQuery = useMetadataQuery();
   const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState(defaultFilters);
@@ -80,18 +84,15 @@ export function AdminUsersPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>User moderation</h1>
-        <p>
-          This screen uses `GET /admin/users` with search, role, banned-state, and user-type
-          filters, then opens into the detail moderation view.
-        </p>
+        <h1>{rt(locale, "User moderation")}</h1>
+        <p>{rt(locale, "Review user accounts, apply filters, and open detailed moderation controls.")}</p>
       </header>
 
       <section className="section-card">
         <form className="content-stack" onSubmit={handleApplyFilters}>
           <div className="filters-grid">
             <label className="field">
-              <span>Search</span>
+              <span>{rt(locale, "Search")}</span>
               <input
                 className="field-control"
                 onChange={(event) =>
@@ -100,13 +101,13 @@ export function AdminUsersPage() {
                     searchText: event.target.value
                   }))
                 }
-                placeholder="Email or nickname"
+                placeholder={rt(locale, "Email or nickname")}
                 value={draftFilters.searchText}
               />
             </label>
 
             <label className="field">
-              <span>User type</span>
+              <span>{rt(locale, "User type")}</span>
               <select
                 className="field-control"
                 onChange={(event) =>
@@ -126,7 +127,7 @@ export function AdminUsersPage() {
             </label>
 
             <label className="field field-checkbox admin-toggle-field">
-              <span>Only banned users</span>
+              <span>{rt(locale, "Only banned users")}</span>
               <input
                 checked={draftFilters.onlyBannedUsers}
                 onChange={(event) =>
@@ -140,16 +141,16 @@ export function AdminUsersPage() {
             </label>
 
             <div className="field">
-              <span>Result set</span>
+              <span>{rt(locale, "Result set")}</span>
               <div className="admin-summary-box">
                 <strong>{usersQuery.data?.totalElements ?? 0}</strong>
-                <span>matching users</span>
+                <span>{rt(locale, "matching users")}</span>
               </div>
             </div>
           </div>
 
           <div className="field">
-            <span>Role filters</span>
+            <span>{rt(locale, "Role filters")}</span>
             <div className="checkbox-grid">
               {roles.map((role) => (
                 <label className="field field-checkbox admin-checkbox-card" key={role}>
@@ -166,28 +167,28 @@ export function AdminUsersPage() {
 
           <div className="filters-actions">
             <button className="button" type="submit">
-              Apply filters
+              {rt(locale, "Apply filters")}
             </button>
             <button className="button button-secondary" onClick={handleResetFilters} type="button">
-              Reset
+              {rt(locale, "Reset")}
             </button>
           </div>
         </form>
       </section>
 
-      {metadataQuery.isPending ? <LoadingBlock label="Loading admin metadata" /> : null}
+      {metadataQuery.isPending ? <LoadingBlock label={rt(locale, "Loading admin metadata")} /> : null}
       {metadataQuery.error ? (
-        <ErrorBlock error={metadataQuery.error} title="Admin metadata could not be loaded" />
+        <ErrorBlock error={metadataQuery.error} title={rt(locale, "Admin metadata could not be loaded")} />
       ) : null}
-      {usersQuery.isPending ? <LoadingBlock label="Loading moderated users" /> : null}
+      {usersQuery.isPending ? <LoadingBlock label={rt(locale, "Loading moderated users")} /> : null}
       {usersQuery.error ? (
-        <ErrorBlock error={usersQuery.error} title="Admin users could not be loaded" />
+        <ErrorBlock error={usersQuery.error} title={rt(locale, "Admin users could not be loaded")} />
       ) : null}
 
       {!usersQuery.isPending && !usersQuery.error && users.length === 0 ? (
         <EmptyBlock
-          title="No users match these filters"
-          description="Try resetting the filters or searching with a different email, nickname, or role."
+          title={rt(locale, "No users match these filters")}
+          description={rt(locale, "Try resetting the filters or searching with a different email, nickname, or role.")}
         />
       ) : null}
 
@@ -203,15 +204,14 @@ export function AdminUsersPage() {
                   <div className="entity-inline">
                     <UserAvatar name={user.nickname || user.email} photoUrl={user.photoUrl} size="md" />
                     <div>
-                    <h2>{user.nickname || "Unknown user"}</h2>
-                    <p className="muted-line">{user.email || "No email available"}</p>
+                      <h2>{user.nickname || rt(locale, "Unknown user")}</h2>
+                      <p className="muted-line">{user.email || rt(locale, "No email available")}</p>
                     </div>
                   </div>
 
                   <div className="pill-row">
-                    <span className="subtle-chip">v{user.version}</span>
-                    {deleted ? <span className="status-pill status-pill-danger">Deleted</span> : null}
-                    {banned ? <span className="status-pill status-pill-warning">Banned</span> : null}
+                    {deleted ? <span className="status-pill status-pill-danger">{rt(locale, "Deleted")}</span> : null}
+                    {banned ? <span className="status-pill status-pill-warning">{rt(locale, "Banned")}</span> : null}
                   </div>
                 </div>
 
@@ -225,19 +225,11 @@ export function AdminUsersPage() {
 
                 <dl className="detail-list detail-list-compact">
                   <div>
-                    <dt>User id</dt>
-                    <dd>{user.id}</dd>
+                    <dt>{rt(locale, "Ban reason")}</dt>
+                    <dd>{user.banReason || rt(locale, "Not available")}</dd>
                   </div>
                   <div>
-                    <dt>Locale</dt>
-                    <dd>{user.locale || "Not available"}</dd>
-                  </div>
-                  <div>
-                    <dt>Ban reason</dt>
-                    <dd>{user.banReason || "Not available"}</dd>
-                  </div>
-                  <div>
-                    <dt>Banned until</dt>
+                    <dt>{rt(locale, "Banned until")}</dt>
                     <dd>{formatDateTime(user.bannedUntil)}</dd>
                   </div>
                 </dl>
@@ -245,11 +237,11 @@ export function AdminUsersPage() {
                 <div className="card-actions">
                   <span className="muted-line">
                     {deleted
-                      ? `Deleted at ${formatDateTime(user.meta?.deletedAt)}`
-                      : "Active moderation target"}
+                      ? rtf(locale, "Deleted at {value}", { value: formatDateTime(user.meta?.deletedAt) })
+                      : rt(locale, "Active moderation target")}
                   </span>
                   <Link className="button button-secondary" to={`/admin/users/${user.id}`}>
-                    Open details
+                    {rt(locale, "Open details")}
                   </Link>
                 </div>
               </article>
@@ -270,6 +262,7 @@ export function AdminUsersPage() {
 }
 
 export function AdminUserDetailsPage() {
+  const { locale } = useLocale();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { userId } = useParams();
@@ -322,23 +315,19 @@ export function AdminUserDetailsPage() {
 
     return [
       {
-        label: "Status",
-        value: deleted ? "Deleted" : "Active"
+        label: rt(locale, "Status"),
+        value: deleted ? rt(locale, "Deleted") : rt(locale, "Active")
       },
       {
-        label: "Ban state",
-        value: banned ? "Banned" : "Not banned"
+        label: rt(locale, "Ban state"),
+        value: banned ? rt(locale, "Banned") : rt(locale, "Not banned")
       },
       {
-        label: "Roles",
-        value: (targetUser.roles ?? []).map((role) => formatEnumLabel(role)).join(", ") || "None"
-      },
-      {
-        label: "Version",
-        value: targetUser.__version ?? targetUser.version
+        label: rt(locale, "Roles"),
+        value: (targetUser.roles ?? []).map((role) => formatEnumLabel(role)).join(", ") || rt(locale, "None")
       }
     ];
-  }, [banned, deleted, targetUser]);
+  }, [banned, deleted, locale, targetUser]);
 
   async function persistUserMutation(requestPromise, successMessage, { onError } = {}) {
     setActionError(null);
@@ -367,8 +356,9 @@ export function AdminUserDetailsPage() {
 
   async function handleRoleAction(action) {
     setBanError("");
-    const targetLabel = action === "make-admin" ? "grant admin rights" : "remove admin rights";
-    const confirmed = window.confirm(`Do you want to ${targetLabel} for this user?`);
+    const targetLabel =
+      action === "make-admin" ? rt(locale, "grant admin rights") : rt(locale, "remove admin rights");
+    const confirmed = window.confirm(rtf(locale, "Do you want to {action} for this user?", { action: targetLabel }));
 
     if (!confirmed) {
       return;
@@ -386,7 +376,7 @@ export function AdminUserDetailsPage() {
         method: "PATCH",
         auth: true
       }),
-      action === "make-admin" ? "Admin rights granted." : "Admin rights removed."
+      action === "make-admin" ? rt(locale, "Admin rights granted.") : rt(locale, "Admin rights removed.")
     );
   }
 
@@ -395,7 +385,7 @@ export function AdminUserDetailsPage() {
     setBanError("");
     setActionError(null);
 
-    const validationError = validateBanForm(banForm);
+    const validationError = validateBanForm(locale, banForm);
 
     if (validationError) {
       setBanError(validationError);
@@ -411,7 +401,7 @@ export function AdminUserDetailsPage() {
         version: targetUser.__version ?? targetUser.version,
         body: toBanPayload(banForm)
       }),
-      banForm.bannedPermanently ? "Permanent ban applied." : "Temporary ban applied.",
+      banForm.bannedPermanently ? rt(locale, "Permanent ban applied.") : rt(locale, "Temporary ban applied."),
       {
         onError: (error) => setBanError(error.message)
       }
@@ -425,7 +415,7 @@ export function AdminUserDetailsPage() {
 
   async function handleUnban() {
     setBanError("");
-    const confirmed = window.confirm("Remove the current ban from this user?");
+    const confirmed = window.confirm(rt(locale, "Remove the current ban from this user?"));
 
     if (!confirmed) {
       return;
@@ -438,7 +428,7 @@ export function AdminUserDetailsPage() {
         auth: true,
         version: targetUser.__version ?? targetUser.version
       }),
-      "User ban removed.",
+      rt(locale, "User ban removed."),
       {
         onError: (error) => setBanError(error.message)
       }
@@ -453,7 +443,7 @@ export function AdminUserDetailsPage() {
   async function handleDelete() {
     setBanError("");
     const confirmed = window.confirm(
-      "Soft-delete this user and cascade moderation changes to their books?"
+      rt(locale, "Soft-delete this user and cascade moderation changes to their books?")
     );
 
     if (!confirmed) {
@@ -482,35 +472,48 @@ export function AdminUserDetailsPage() {
   }
 
   if (detailQuery.isPending) {
-    return <LoadingBlock label="Loading admin user details" />;
+    return <LoadingBlock label={rt(locale, "Loading admin user details")} />;
   }
 
   if (detailQuery.error) {
-    return <ErrorBlock error={detailQuery.error} title="Admin user details could not be loaded" />;
+    return <ErrorBlock error={detailQuery.error} title={rt(locale, "Admin user details could not be loaded")} />;
   }
 
   return (
     <section className="content-stack">
-      <header className="section-card">
-        <div className="row-between">
-          <div className="entity-inline">
-            <UserAvatar
-              name={targetUser.nickname || targetUser.email}
-              photoUrl={targetUser.photoUrl}
-              size="lg"
-            />
-            <div>
-              <h1>{targetUser.nickname || "Unknown user"}</h1>
-              <p>
-                This page uses `GET /admin/users/{'{userId}'}` and wires in role changes, ban
-                management, and soft delete actions.
-              </p>
-            </div>
-          </div>
+      <header className="section-card book-detail-hero">
+        <div className="book-detail-header-bar">
+          <Link aria-label={rt(locale, "Back to users")} className="back-link" to="/admin/users">
+            <ArrowLeftIcon />
+          </Link>
 
-          <div className="pill-row">
-            <span className="subtle-chip">User #{targetUser.id}</span>
-            <span className="subtle-chip">v{targetUser.__version ?? targetUser.version}</span>
+          <div className="hero-icon-actions">
+            <button
+              aria-label={rt(locale, "Delete user")}
+              className="icon-button icon-button-danger"
+              disabled={deleted || isOwnAccount || pendingAction !== null}
+              onClick={() => void handleDelete()}
+              title={rt(locale, "Delete user")}
+              type="button"
+            >
+              <TrashIcon />
+            </button>
+          </div>
+        </div>
+
+        <div className="entity-inline">
+          <UserAvatar
+            name={targetUser.nickname || targetUser.email}
+            photoUrl={targetUser.photoUrl}
+            size="lg"
+          />
+          <div>
+            <h1>{targetUser.nickname || rt(locale, "Unknown user")}</h1>
+            <p>{targetUser.email || rt(locale, "Not available")}</p>
+            <div className="hero-meta-line">
+              <span>{rt(locale, "Created at")}: {formatDateTime(targetUser.meta?.createdAt)}</span>
+              <span>{rt(locale, "Updated at")}: {formatDateTime(targetUser.meta?.updatedAt)}</span>
+            </div>
           </div>
         </div>
 
@@ -525,92 +528,54 @@ export function AdminUserDetailsPage() {
       </header>
 
       {actionMessage ? <p className="inline-message inline-message-success">{actionMessage}</p> : null}
-      {actionError ? <ErrorBlock error={actionError} title="Moderation action failed" /> : null}
+      {actionError ? <ErrorBlock error={actionError} title={rt(locale, "Moderation action failed")} /> : null}
 
-      <section className="detail-grid">
+      <section className="content-stack">
         <article className="section-card">
-          <h2>Account snapshot</h2>
+          <h2>{rt(locale, "Account overview")}</h2>
           <dl className="detail-list">
             <div>
-              <dt>Email</dt>
-              <dd>{targetUser.email || "Not available"}</dd>
+              <dt>{rt(locale, "Email")}</dt>
+              <dd>{targetUser.email || rt(locale, "Not available")}</dd>
             </div>
             <div>
-              <dt>Nickname</dt>
-              <dd>{targetUser.nickname || "Not available"}</dd>
+              <dt>{rt(locale, "Nickname")}</dt>
+              <dd>{targetUser.nickname || rt(locale, "Not available")}</dd>
             </div>
             <div>
-              <dt>Photo URL</dt>
-              <dd>{targetUser.photoUrl || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Locale</dt>
-              <dd>{targetUser.locale || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Roles</dt>
+              <dt>{rt(locale, "Roles")}</dt>
               <dd>
-                {(targetUser.roles ?? []).map((role) => formatEnumLabel(role)).join(", ") || "None"}
+                {(targetUser.roles ?? []).map((role) => formatEnumLabel(role)).join(", ") || rt(locale, "None")}
               </dd>
             </div>
             <div>
-              <dt>Banned permanently</dt>
-              <dd>{targetUser.bannedPermanently ? "Yes" : "No"}</dd>
+              <dt>{rt(locale, "Banned permanently")}</dt>
+              <dd>{targetUser.bannedPermanently ? rt(locale, "Yes") : rt(locale, "No")}</dd>
             </div>
             <div>
-              <dt>Banned until</dt>
+              <dt>{rt(locale, "Banned until")}</dt>
               <dd>{formatDateTime(targetUser.bannedUntil)}</dd>
             </div>
             <div>
-              <dt>Ban reason</dt>
-              <dd>{targetUser.banReason || "Not available"}</dd>
+              <dt>{rt(locale, "Ban reason")}</dt>
+              <dd>{targetUser.banReason || rt(locale, "Not available")}</dd>
             </div>
             <div>
-              <dt>Deleted at</dt>
+              <dt>{rt(locale, "Deleted at")}</dt>
               <dd>{formatDateTime(targetUser.meta?.deletedAt)}</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article className="section-card">
-          <h2>Audit metadata</h2>
-          <dl className="detail-list">
-            <div>
-              <dt>Created at</dt>
-              <dd>{formatDateTime(targetUser.meta?.createdAt)}</dd>
-            </div>
-            <div>
-              <dt>Updated at</dt>
-              <dd>{formatDateTime(targetUser.meta?.updatedAt)}</dd>
-            </div>
-            <div>
-              <dt>Created by</dt>
-              <dd>{targetUser.meta?.createdBy ?? "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Updated by</dt>
-              <dd>{targetUser.meta?.updatedBy ?? "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Created request id</dt>
-              <dd>{targetUser.meta?.createdRequestId || "Not available"}</dd>
-            </div>
-            <div>
-              <dt>Updated request id</dt>
-              <dd>{targetUser.meta?.updatedRequestId || "Not available"}</dd>
             </div>
           </dl>
         </article>
       </section>
 
-      <section className="detail-grid">
+      <section className="content-stack">
         <article className="section-card">
-          <h2>Role management</h2>
-          <p>Only super admins can grant or revoke admin rights from this view.</p>
+          <h2>{rt(locale, "Role management")}</h2>
+          <p>{rt(locale, "Only super admins can grant or revoke admin rights from this view.")}</p>
 
           {isOwnAccount ? (
             <p className="inline-message inline-message-error">
-              Role and moderation actions are disabled for your own account in the admin UI.
+              {rt(locale, "Role and moderation actions are disabled for your own account in the admin UI.")}
             </p>
           ) : null}
 
@@ -621,7 +586,7 @@ export function AdminUserDetailsPage() {
               onClick={() => void handleRoleAction("make-admin")}
               type="button"
             >
-              {pendingAction === "make-admin" ? "Granting..." : "Make admin"}
+              {pendingAction === "make-admin" ? rt(locale, "Granting...") : rt(locale, "Make admin")}
             </button>
             <button
               className="button button-secondary"
@@ -629,45 +594,20 @@ export function AdminUserDetailsPage() {
               onClick={() => void handleRoleAction("remove-admin")}
               type="button"
             >
-              {pendingAction === "remove-admin" ? "Removing..." : "Remove admin"}
+              {pendingAction === "remove-admin" ? rt(locale, "Removing...") : rt(locale, "Remove admin")}
             </button>
-          </div>
-        </article>
-
-        <article className="section-card">
-          <h2>Delete user</h2>
-          <p>
-            This action calls `DELETE /admin/users/{'{userId}'}` and soft-deletes the user with
-            optimistic locking.
-          </p>
-
-          <div className="card-actions">
-            <button
-              className="button button-danger"
-              disabled={deleted || isOwnAccount || pendingAction !== null}
-              onClick={() => void handleDelete()}
-              type="button"
-            >
-              {pendingAction === "delete" ? "Deleting..." : "Delete user"}
-            </button>
-            <Link className="button button-secondary" to="/admin/users">
-              Back to users
-            </Link>
           </div>
         </article>
       </section>
 
       <section className="section-card">
-        <h2>Ban management</h2>
-        <p>
-          Temporary bans require a date, while permanent bans only require a reason. Both flows use
-          `PATCH /admin/users/{'{userId}'}/ban`.
-        </p>
+        <h2>{rt(locale, "Ban management")}</h2>
+        <p>{rt(locale, "Choose whether the ban is temporary or permanent and explain the reason.")}</p>
 
         <form className="content-stack" onSubmit={handleBanSubmit}>
           <div className="filters-grid">
             <label className="field field-checkbox admin-toggle-field">
-              <span>Permanent ban</span>
+              <span>{rt(locale, "Permanent ban")}</span>
               <input
                 checked={banForm.bannedPermanently}
                 disabled={deleted || isOwnAccount || pendingAction !== null}
@@ -682,7 +622,7 @@ export function AdminUserDetailsPage() {
             </label>
 
             <label className="field">
-              <span>Banned until</span>
+              <span>{rt(locale, "Banned until")}</span>
               <input
                 className="field-control"
                 disabled={deleted || isOwnAccount || banForm.bannedPermanently || pendingAction !== null}
@@ -699,7 +639,7 @@ export function AdminUserDetailsPage() {
           </div>
 
           <label className="field">
-            <span>Ban reason</span>
+            <span>{rt(locale, "Ban reason")}</span>
             <textarea
               className="field-control"
               disabled={deleted || isOwnAccount || pendingAction !== null}
@@ -709,7 +649,7 @@ export function AdminUserDetailsPage() {
                   banReason: event.target.value
                 }))
               }
-              placeholder="Explain why this user is being moderated"
+              placeholder={rt(locale, "Explain why this user is being moderated")}
               rows={3}
               value={banForm.banReason}
             />
@@ -723,7 +663,7 @@ export function AdminUserDetailsPage() {
               disabled={deleted || isOwnAccount || pendingAction !== null}
               type="submit"
             >
-              {pendingAction === "ban" ? "Saving ban..." : banned ? "Update ban" : "Ban user"}
+              {pendingAction === "ban" ? rt(locale, "Saving ban...") : banned ? rt(locale, "Update ban") : rt(locale, "Ban user")}
             </button>
             <button
               className="button button-secondary"
@@ -731,7 +671,7 @@ export function AdminUserDetailsPage() {
               onClick={() => void handleUnban()}
               type="button"
             >
-              {pendingAction === "unban" ? "Removing..." : "Unban user"}
+              {pendingAction === "unban" ? rt(locale, "Removing...") : rt(locale, "Unban user")}
             </button>
           </div>
         </form>
@@ -804,15 +744,15 @@ function toDatetimeLocalValue(value) {
   return localDate.toISOString().slice(0, 16);
 }
 
-function validateBanForm(form) {
+function validateBanForm(locale, form) {
   const reason = form.banReason.trim();
 
   if (reason.length < 3) {
-    return "Ban reason must be at least 3 characters long.";
+    return rt(locale, "Ban reason must be at least 3 characters long.");
   }
 
   if (!form.bannedPermanently && !form.bannedUntil) {
-    return "Choose a ban end date or enable permanent ban.";
+    return rt(locale, "Choose a ban end date or enable permanent ban.");
   }
 
   return null;
