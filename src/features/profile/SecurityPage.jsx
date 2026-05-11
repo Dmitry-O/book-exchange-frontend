@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../../shared/auth/AuthContext";
 import { useLocale } from "../../shared/i18n/LocaleContext";
+import { SignOutIcon, TrashIcon } from "../../shared/ui/Icons";
 
 const passwordHintText = {
   de:
@@ -12,25 +13,60 @@ const passwordHintText = {
     "От 8 до 64 символов, минимум одна строчная буква, одна заглавная, одна цифра, один спецсимвол и без пробелов."
 };
 
-const passwordFeedbackText = {
+const passwordFeedbackCopy = {
   de: {
-    invalid: "Das neue Passwort erfuellt die Anforderungen noch nicht.",
-    medium: "Passwort ist in Ordnung, koennte aber noch staerker sein.",
+    invalidPrefix: "Das Passwort braucht noch",
+    medium:
+      "Das Passwort erfüllt die Anforderungen. Für mehr Sicherheit empfehlen wir mindestens 12 Zeichen.",
     same: "Das neue Passwort muss sich vom aktuellen Passwort unterscheiden.",
-    strong: "Gutes Passwort. Du kannst es jetzt speichern."
+    strong: "Gutes Passwort. Du kannst es jetzt speichern.",
+    requirements: {
+      digit: "eine Zahl",
+      length: "8-64 Zeichen",
+      lower: "einen Kleinbuchstaben",
+      noSpace: "keine Leerzeichen",
+      symbol: "ein Sonderzeichen",
+      upper: "einen Grossbuchstaben"
+    }
   },
   en: {
-    invalid: "The new password does not meet the requirements yet.",
-    medium: "This password is acceptable, but it could be stronger.",
+    invalidPrefix: "Password still needs",
+    medium:
+      "The password meets the requirements. For better security, use at least 12 characters.",
     same: "The new password must be different from the current password.",
-    strong: "Strong password. You can save it now."
+    strong: "Strong password. You can save it now.",
+    requirements: {
+      digit: "a number",
+      length: "8-64 characters",
+      lower: "a lowercase letter",
+      noSpace: "no spaces",
+      symbol: "a special character",
+      upper: "an uppercase letter"
+    }
   },
   ru: {
-    invalid: "Новый пароль пока не соответствует требованиям.",
-    medium: "Пароль уже подходит, но его можно сделать сильнее.",
+    invalidPrefix: "Пароль должен содержать",
+    medium:
+      "Пароль подходит по требованиям. Для надёжности лучше сделать его длиннее: от 12 символов.",
     same: "Новый пароль должен отличаться от текущего.",
-    strong: "Хороший пароль. Его уже можно сохранить."
+    strong: "Хороший пароль. Его уже можно сохранить.",
+    summary:
+      "Пароль должен содержать: от 8 до 64 символов, цифру, строчную и заглавную буквы.",
+    requirements: {
+      digit: "цифру",
+      length: "от 8 до 64 символов",
+      lower: "строчную букву",
+      noSpace: "без пробелов",
+      symbol: "спецсимвол",
+      upper: "заглавную букву"
+    }
   }
+};
+
+const accountManagementHeading = {
+  de: "Kontoverwaltung",
+  en: "Account management",
+  ru: "Управление аккаунтом"
 };
 
 export function SecuritySettingsPanel() {
@@ -46,6 +82,7 @@ export function SecuritySettingsPanel() {
   const [passwordError, setPasswordError] = useState(null);
   const [deletePending, setDeletePending] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+  const accountManagementTitle = accountManagementHeading[locale] ?? accountManagementHeading.en;
   const hint = passwordHintText[locale] ?? passwordHintText.en;
   const passwordFeedback = getPasswordFeedback(
     locale,
@@ -113,9 +150,9 @@ export function SecuritySettingsPanel() {
   return (
     <article className="section-card profile-security-card">
       <div className="profile-security-stack">
-        <section className="content-stack">
+        <section className="content-stack profile-security-primary">
           <div className="profile-security-section-head">
-            <h2>{t("security.changePassword")}</h2>
+            <h2>{accountManagementTitle}</h2>
             <p className="muted-line">{hint}</p>
           </div>
 
@@ -141,10 +178,13 @@ export function SecuritySettingsPanel() {
                   >
                     {passwordFeedback.text}
                   </p>
-                ) : null}
+                ) : (
+                  <span aria-hidden="true" className="security-password-feedback-spacer" />
+                )}
               </div>
 
               <div className="security-password-action">
+                <span aria-hidden="true" className="security-password-action-label-spacer" />
                 <button
                   className="button button-compact security-action-button security-password-button"
                   disabled={!canSubmitPassword}
@@ -164,13 +204,14 @@ export function SecuritySettingsPanel() {
           </form>
         </section>
 
-        <section className="content-stack">
+        <section className="content-stack profile-security-session">
           <div className="profile-session-actions">
             <button
               className="button button-secondary button-compact security-action-button"
               onClick={() => void logout()}
               type="button"
             >
+              <SignOutIcon />
               {t("security.logoutCurrentSession")}
             </button>
             <button
@@ -179,6 +220,7 @@ export function SecuritySettingsPanel() {
               onClick={() => void handleDeleteAccount()}
               type="button"
             >
+              <TrashIcon />
               {deletePending ? t("security.deletingAccount") : t("security.deleteAccount")}
             </button>
           </div>
@@ -215,20 +257,39 @@ function getPasswordFeedback(locale, currentPassword, newPassword) {
     return null;
   }
 
-  const text = passwordFeedbackText[locale] ?? passwordFeedbackText.en;
+  const text = passwordFeedbackCopy[locale] ?? passwordFeedbackCopy.en;
   const hasWhitespace = /\s/.test(newPassword);
   const hasLower = /[a-z]/.test(newPassword);
   const hasUpper = /[A-Z]/.test(newPassword);
   const hasDigit = /\d/.test(newPassword);
   const hasSymbol = /[^A-Za-z0-9\s]/.test(newPassword);
-  const meetsRequirements =
-    newPassword.length >= 8 &&
-    newPassword.length <= 64 &&
-    !hasWhitespace &&
-    hasLower &&
-    hasUpper &&
-    hasDigit &&
-    hasSymbol;
+  const missingRequirements = [];
+
+  if (newPassword.length < 8 || newPassword.length > 64) {
+    missingRequirements.push(text.requirements.length);
+  }
+
+  if (!hasLower) {
+    missingRequirements.push(text.requirements.lower);
+  }
+
+  if (!hasUpper) {
+    missingRequirements.push(text.requirements.upper);
+  }
+
+  if (!hasDigit) {
+    missingRequirements.push(text.requirements.digit);
+  }
+
+  if (!hasSymbol) {
+    missingRequirements.push(text.requirements.symbol);
+  }
+
+  if (hasWhitespace) {
+    missingRequirements.push(text.requirements.noSpace);
+  }
+
+  const meetsRequirements = missingRequirements.length === 0;
 
   if (currentPassword && currentPassword === newPassword) {
     return {
@@ -241,7 +302,7 @@ function getPasswordFeedback(locale, currentPassword, newPassword) {
   if (!meetsRequirements) {
     return {
       canSubmit: false,
-      text: text.invalid,
+      text: text.summary ?? `${text.invalidPrefix}: ${missingRequirements.join(", ")}.`,
       tone: "danger"
     };
   }

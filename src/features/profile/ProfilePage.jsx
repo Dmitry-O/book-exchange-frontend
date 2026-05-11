@@ -3,6 +3,8 @@ import { useAuth } from "../../shared/auth/AuthContext";
 import { useLocale } from "../../shared/i18n/LocaleContext";
 import { trimFormPayload } from "../../shared/lib/format";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
+import { UserIcon } from "../../shared/ui/Icons";
+import { PageTitle } from "../../shared/ui/PageTitle";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 import { SecuritySettingsPanel } from "./SecurityPage";
 
@@ -143,14 +145,14 @@ export function ProfilePage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>{t("profile.title")}</h1>
+        <PageTitle icon={UserIcon}>{t("profile.title")}</PageTitle>
         <p>{t("profile.description")}</p>
       </header>
 
       <section className="detail-grid profile-settings-grid">
         <article className="section-card profile-data-card">
           <h2>{t("profile.currentData")}</h2>
-          <form className="content-stack" onSubmit={handleSubmit}>
+          <form className="content-stack profile-data-form" onSubmit={handleSubmit}>
             <ImageUploadField
               entityName={form.nickname || user.email}
               error={photoError}
