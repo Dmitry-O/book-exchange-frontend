@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../shared/api/config";
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { apiRequest } from "../../shared/api/http";
@@ -8,13 +8,14 @@ import { useAuth } from "../../shared/auth/AuthContext";
 import { useLocale } from "../../shared/i18n/LocaleContext";
 import { rt, rtf } from "../../shared/i18n/rawText";
 import { buildBookCategoryOptions, formatBookCategoryLabel, getBookCategoryTagStyle } from "../../shared/lib/bookCategory";
-import { getCityApiValue, getCityDisplayName } from "../../shared/lib/cities";
+import { getCityDisplayName, normalizeCityQueryValue } from "../../shared/lib/cities";
 import { formatDateTimeReadable, formatEnumLabel } from "../../shared/lib/format";
 import { useInfiniteScroll } from "../../shared/lib/useInfiniteScroll";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
 import { CityField } from "../../shared/ui/CityField";
 import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
-import { ArrowLeftIcon, GiftIcon, PencilIcon, TrashIcon } from "../../shared/ui/Icons";
+import { ArrowLeftIcon, BookIcon, GiftIcon, PencilIcon, TrashIcon } from "../../shared/ui/Icons";
+import { PageTitle } from "../../shared/ui/PageTitle";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
@@ -48,13 +49,16 @@ const infiniteBooksText = {
 
 const bookFormText = {
   de: {
-    cityRequired: "Wähle eine Stadt aus der Liste aus."
+    cityRequired: "Wähle eine Stadt aus der Liste aus.",
+    fillRequired: "Fülle zuerst alle Pflichtfelder aus."
   },
   en: {
-    cityRequired: "Choose a city from the list."
+    cityRequired: "Choose a city from the list.",
+    fillRequired: "Fill in all required fields first."
   },
   ru: {
-    cityRequired: "Выберите город из списка."
+    cityRequired: "Выберите город из списка.",
+    fillRequired: "Сначала заполните все обязательные поля."
   }
 };
 
@@ -90,7 +94,7 @@ export function MyBooksPage() {
       <header className="section-card">
         <div className="section-card-header">
           <div className="section-card-header-copy">
-            <h1>{rt(locale, "Manage your inventory")}</h1>
+            <PageTitle icon={BookIcon}>{rt(locale, "Manage your inventory")}</PageTitle>
             <p>{rt(locale, "Keep your active books updated and ready for exchanges.")}</p>
           </div>
           <div className="section-card-toolbar my-books-header-actions">
@@ -109,20 +113,18 @@ export function MyBooksPage() {
         <ErrorBlock error={booksQuery.error} title={rt(locale, "Books could not be loaded")} />
       ) : null}
 
-      {!booksQuery.isPending && !booksQuery.error && books.length === 0 ? (
-        <EmptyBlock
-          title={rt(locale, "You have not added books yet")}
-          description={rt(locale, "Create the first one to start testing the owner-facing CRUD flow.")}
-        />
-      ) : null}
+        {!booksQuery.isPending && !booksQuery.error && books.length === 0 ? (
+          <EmptyBlock
+            title={rt(locale, "You have not added books yet")}
+            description={rt(locale, "Add your first book so other users can notice it and offer an exchange.")}
+          />
+        ) : null}
 
       {books.length > 0 ? (
         <section className="book-grid">
           {books.map((book) => (
-            <article className="book-card" key={book.id}>
-              <Link className="book-card-cover-link" to={`/app/my-books/${book.id}`}>
-                <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
-              </Link>
+            <Link className="book-card book-card-link" key={book.id} to={`/app/my-books/${book.id}`}>
+              <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
 
               <div className="book-card-head">
                 <div className="book-card-statuses">
@@ -145,8 +147,10 @@ export function MyBooksPage() {
               </div>
 
               <h2>{book.name}</h2>
-              <p className="book-meta">{book.author || rt(locale, "Unknown author")}</p>
-            </article>
+              <p className="book-meta">
+                {formatAuthorYear(locale, book.author, book.publicationYear)}
+              </p>
+            </Link>
           ))}
         </section>
       ) : null}
@@ -174,6 +178,11 @@ export function CreateBookPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (!isRequiredBookFormComplete(form)) {
+      return;
+    }
+
     setPending(true);
     setError(null);
 
@@ -196,7 +205,14 @@ export function CreateBookPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>{rt(locale, "Add a book")}</h1>
+        <div className="book-detail-header-bar">
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back to my books")} className="back-link" to="/app/my-books">
+              <ArrowLeftIcon />
+            </Link>
+            <PageTitle icon={BookIcon}>{rt(locale, "Add a book")}</PageTitle>
+          </div>
+        </div>
         <p>{rt(locale, "Add the main details about your book and make it ready for the catalog.")}</p>
       </header>
 
@@ -216,18 +232,24 @@ export function CreateBookPage() {
 export function MyBookDetailsPage() {
   const { locale } = useLocale();
   const { user } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { bookId } = useParams();
   const [deletePending, setDeletePending] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+  const backTo = location.state?.backTo || "/app/my-books";
 
   const bookQuery = useBookDetails(bookId);
 
   async function handleDelete() {
     const book = bookQuery.data;
     const confirmed = window.confirm(
-      rtf(locale, 'Delete "{name}" from your books?', { name: book.name })
+      rtf(
+        locale,
+        'Delete "{name}" from your books? Any active exchange requests related to this book will be cancelled automatically.',
+        { name: book.name }
+      )
     );
 
     if (!confirmed) {
@@ -262,23 +284,44 @@ export function MyBookDetailsPage() {
   }
 
   const book = bookQuery.data;
+  const editLocked = Boolean(book.editLocked);
+  const editLockedReason = rt(
+    locale,
+    "This book cannot be edited because it already participates in an exchange or is in exchange history."
+  );
 
   return (
     <section className="content-stack">
       <header className="section-card book-detail-hero">
         <div className="book-detail-header-bar">
-          <Link aria-label={rt(locale, "Back to my books")} className="back-link" to="/app/my-books">
-            <ArrowLeftIcon />
-          </Link>
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back to my books")} className="back-link" to={backTo}>
+              <ArrowLeftIcon />
+            </Link>
+            <PageTitle icon={BookIcon}>{rt(locale, "Book overview")}</PageTitle>
+          </div>
 
           <div className="hero-icon-actions">
-            <Link
-              aria-label={rt(locale, "Edit book")}
-              className="icon-button icon-button-secondary"
-              to={`/app/my-books/${book.id}/edit`}
-            >
-              <PencilIcon />
-            </Link>
+            {editLocked ? (
+              <button
+                aria-label={rt(locale, "Edit book")}
+                className="icon-button icon-button-secondary"
+                disabled
+                title={editLockedReason}
+                type="button"
+              >
+                <PencilIcon />
+              </button>
+            ) : (
+              <Link
+                aria-label={rt(locale, "Edit book")}
+                className="icon-button icon-button-secondary"
+                title={rt(locale, "Edit book")}
+                to={`/app/my-books/${book.id}/edit`}
+              >
+                <PencilIcon />
+              </Link>
+            )}
             <button
               aria-label={rt(locale, "Delete book")}
               className="icon-button icon-button-danger"
@@ -474,12 +517,20 @@ export function EditBookPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>{rtf(locale, 'Edit "{name}"', { name: bookQuery.data.name })}</h1>
+        <div className="book-detail-header-bar">
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back to book")} className="back-link" to={`/app/my-books/${bookId}`}>
+              <ArrowLeftIcon />
+            </Link>
+            <PageTitle icon={BookIcon}>{rtf(locale, 'Edit "{name}"', { name: bookQuery.data.name })}</PageTitle>
+          </div>
+        </div>
         <p>{rt(locale, "Update the information your readers should see in the catalog.")}</p>
       </header>
 
       <BookForm
         canSubmit={hasChanges}
+        cancelTo={`/app/my-books/${bookId}`}
         error={error}
         form={form}
         infoMessage={infoMessage}
@@ -518,14 +569,15 @@ export function ExchangedBooksPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>{rt(locale, "Exchanged books")}</h1>
-        <p>{rt(locale, "Review the books that already completed an exchange.")}</p>
-
-        <div className="card-actions">
-          <Link className="button button-secondary" to="/app/my-books">
-            {rt(locale, "Back to active books")}
-          </Link>
+        <div className="book-detail-header-bar">
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back to active books")} className="back-link" to="/app/my-books">
+              <ArrowLeftIcon />
+            </Link>
+            <PageTitle icon={BookIcon}>{rt(locale, "Exchanged books")}</PageTitle>
+          </div>
         </div>
+        <p>{rt(locale, "Review the books that already completed an exchange.")}</p>
       </header>
 
       {booksQuery.isPending ? <LoadingBlock label={rt(locale, "Loading exchanged books")} /> : null}
@@ -543,33 +595,34 @@ export function ExchangedBooksPage() {
       {books.length > 0 ? (
         <section className="book-grid">
           {books.map((book) => (
-            <article className="book-card" key={book.id}>
-              <Link className="book-card-cover-link" to={`/app/my-books/${book.id}`}>
-                <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
-              </Link>
+            <Link className="book-card book-card-link" key={book.id} to={`/app/my-books/${book.id}`}>
+              <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
 
               <div className="book-card-head">
-                <span className="eyebrow">{rt(locale, "Exchanged")}</span>
-                <span className="subtle-chip">{book.city || rt(locale, "No city")}</span>
+                <div className="book-card-statuses">
+                  {book.isGift ? (
+                    <span
+                      aria-label={rt(locale, "Gift")}
+                      className="gift-icon-badge gift-icon-badge-small"
+                      title={rt(locale, "Gift")}
+                    >
+                      <GiftIcon />
+                    </span>
+                  ) : null}
+                  <span className="category-chip" style={getBookCategoryTagStyle(book.category)}>
+                    {formatBookCategoryLabel(book.category, locale, rt(locale, "No category"))}
+                  </span>
+                  <span className="subtle-chip">
+                    {book.city ? getCityDisplayName(book.city, locale) : rt(locale, "No city")}
+                  </span>
+                </div>
               </div>
 
               <h2>{book.name}</h2>
-              <p className="book-meta">
-                {book.author} / {formatBookCategoryLabel(book.category, locale, rt(locale, "No category"))} / {book.city}
+              <p className="book-meta book-meta-compact">
+                {formatAuthorYear(locale, book.author, book.publicationYear)}
               </p>
-              <p className="book-description">
-                {book.description || rt(locale, "No description stored for this book.")}
-              </p>
-
-                <div className="book-owner">
-                  <UserIdentityInline name={book.ownerNickname} photoUrl={book.ownerPhotoUrl} size="sm">
-                    <div>
-                      <strong>{book.ownerNickname || rt(locale, "Unknown owner")}</strong>
-                      <span>{rt(locale, "Publication year")}: {book.publicationYear}</span>
-                    </div>
-                  </UserIdentityInline>
-                </div>
-            </article>
+            </Link>
           ))}
         </section>
       ) : null}
@@ -585,8 +638,21 @@ export function ExchangedBooksPage() {
   );
 }
 
+function isRequiredBookFormComplete(form) {
+  return Boolean(
+    form.name?.trim() &&
+      form.description?.trim() &&
+      form.author?.trim() &&
+      form.category &&
+      String(form.publicationYear ?? "").trim() &&
+      form.city?.trim() &&
+      form.contactDetails?.trim()
+  );
+}
+
 function BookForm({
   canSubmit = true,
+  cancelTo = "/app/my-books",
   error,
   form,
   infoMessage,
@@ -602,6 +668,7 @@ function BookForm({
 }) {
   const metadataQuery = useMetadataQuery();
   const { locale } = useLocale();
+  const navigate = useNavigate();
   const text = bookFormText[locale] ?? bookFormText.en;
   const categoryOptions = buildBookCategoryOptions(
     metadataQuery.data?.bookCategories ?? [],
@@ -609,8 +676,10 @@ function BookForm({
     rt(locale, "Select category"),
     form.category
   );
-  const cityError = form.city && !getCityApiValue(form.city) ? text.cityRequired : "";
-  const canSave = canSubmit && !cityError;
+  const createRequiredComplete = mode !== "create" || isRequiredBookFormComplete(form);
+  const disabledReason = !createRequiredComplete ? text.fillRequired : "";
+  const canSave = canSubmit && createRequiredComplete;
+  const canCancel = mode !== "edit" || canSubmit;
 
   return (
     <section className="section-card">
@@ -621,12 +690,19 @@ function BookForm({
             <p>{rt(locale, "Update the information your readers should see in the catalog.")}</p>
           </div>
           <div className="section-card-toolbar">
-            <button className="button" disabled={pending || !canSave} type="submit">
-              {pending ? rt(locale, "Saving...") : submitLabel}
-            </button>
-            <Link className="button button-secondary" to="/app/my-books">
+            <span className="button-tooltip-wrapper" title={!canSave ? disabledReason : undefined}>
+              <button className="button" disabled={pending || !canSave} type="submit">
+                {pending ? rt(locale, "Saving...") : submitLabel}
+              </button>
+            </span>
+            <button
+              className="button button-secondary"
+              disabled={pending || !canCancel}
+              onClick={() => navigate(cancelTo)}
+              type="button"
+            >
               {rt(locale, "Cancel")}
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -647,37 +723,35 @@ function BookForm({
           </div>
 
           <div className="editor-column editor-column-grow">
-            <div className="editor-panel editor-panel-form">
-              <h3>{rt(locale, "Book overview")}</h3>
+            <div className="editor-panel editor-panel-plain editor-panel-form">
               <div className="filters-grid editor-form-grid">
                 <Field
-                  label={formatEnumLabel("NAME")}
+                  label={formatRequiredLabel(formatEnumLabel("NAME"), mode === "create")}
                   onChange={(value) => onChange((current) => ({ ...current, name: value }))}
                   required={mode === "create"}
                   value={form.name}
                 />
                 <Field
-                  label={formatEnumLabel("AUTHOR")}
+                  label={formatRequiredLabel(formatEnumLabel("AUTHOR"), mode === "create")}
                   onChange={(value) => onChange((current) => ({ ...current, author: value }))}
                   required={mode === "create"}
                   value={form.author}
                 />
                 <SelectField
-                  label={formatEnumLabel("CATEGORY")}
+                  label={formatRequiredLabel(formatEnumLabel("CATEGORY"), mode === "create")}
                   onChange={(value) => onChange((current) => ({ ...current, category: value }))}
                   options={categoryOptions}
                   required={mode === "create"}
                   value={form.category}
                 />
                 <CityField
-                  error={cityError}
-                  label={formatEnumLabel("CITY")}
+                  label={formatRequiredLabel(formatEnumLabel("CITY"), mode === "create")}
                   onChange={(value) => onChange((current) => ({ ...current, city: value }))}
                   required={mode === "create"}
                   value={form.city}
                 />
                 <Field
-                  label={rt(locale, "Publication year")}
+                  label={formatRequiredLabel(rt(locale, "Publication year"), mode === "create")}
                   onChange={(value) =>
                     onChange((current) => ({ ...current, publicationYear: value }))
                   }
@@ -696,7 +770,7 @@ function BookForm({
                   />
                 </label>
                 <label className="field editor-field-span-full editor-textarea-field">
-                  <span>{formatEnumLabel("DESCRIPTION")}</span>
+                  {formatRequiredLabel(formatEnumLabel("DESCRIPTION"), mode === "create")}
                   <textarea
                     className="field-control field-control-textarea"
                     onChange={(event) =>
@@ -708,7 +782,7 @@ function BookForm({
                   />
                 </label>
                 <label className="field editor-field-span-full editor-textarea-field">
-                  <span>{rt(locale, "Contact details")}</span>
+                  {formatRequiredLabel(rt(locale, "Contact details"), mode === "create")}
                   <textarea
                     className="field-control"
                     onChange={(event) =>
@@ -767,6 +841,15 @@ function SelectField({ label, onChange, options, required = false, value }) {
   );
 }
 
+function formatRequiredLabel(label, required) {
+  return (
+    <span className="field-label">
+      <span>{label}</span>
+      {required ? <span className="field-required-mark">*</span> : null}
+    </span>
+  );
+}
+
 function useBookDetails(bookId) {
   return useQuery({
     queryKey: ["my-book", String(bookId)],
@@ -807,7 +890,7 @@ function toCreatePayload(form) {
     category: form.category.trim(),
     publicationYear: Number(form.publicationYear),
     photoBase64: normalizeOptionalImage(form.photoBase64),
-    city: getCityApiValue(form.city) || "",
+    city: normalizeCityQueryValue(form.city),
     contactDetails: form.contactDetails.trim(),
     isGift: Boolean(form.isGift)
   };
@@ -840,7 +923,7 @@ function toUpdatePayload(form, initialForm) {
     }
 
     if (field === "city") {
-      next.city = getCityApiValue(currentValue) || "";
+      next.city = normalizeCityQueryValue(currentValue);
       return;
     }
 
@@ -898,4 +981,10 @@ function normalizeImageChange(value) {
 
 function renderValue(locale, value) {
   return value === null || value === undefined || value === "" ? rt(locale, "Not available") : value;
+}
+
+function formatAuthorYear(locale, author, publicationYear) {
+  const authorLabel = author || rt(locale, "Unknown author");
+
+  return publicationYear ? `${authorLabel}, ${publicationYear}` : authorLabel;
 }

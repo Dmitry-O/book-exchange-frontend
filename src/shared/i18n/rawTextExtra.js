@@ -194,6 +194,11 @@ export const EXTRA_RAW_TEXT = {
     de: "Buch wurde gelöscht.",
     ru: "Книга удалена."
   },
+  "Book deleted status": {
+    en: "Deleted",
+    de: "Gelöscht",
+    ru: "Удалена"
+  },
   "Book metadata could not be loaded": {
     en: "Book metadata could not be loaded",
     de: "Buch-Metadaten konnten nicht geladen werden",
@@ -209,6 +214,16 @@ export const EXTRA_RAW_TEXT = {
     de: "Buchtitel",
     ru: "Название книги"
   },
+  "Back to active books": {
+    en: "Back to active books",
+    de: "Zurück zu aktiven Büchern",
+    ru: "Вернуться к активным книгам"
+  },
+  "Back to book": {
+    en: "Back to book",
+    de: "Zurück zum Buch",
+    ru: "Вернуться к книге"
+  },
   "Book overview": {
     en: "Book overview",
     de: "Buchüberblick",
@@ -223,6 +238,11 @@ export const EXTRA_RAW_TEXT = {
     en: "Book restored.",
     de: "Buch wurde wiederhergestellt.",
     ru: "Книга восстановлена."
+  },
+  "Cancel": {
+    en: "Cancel",
+    de: "Abbrechen",
+    ru: "Отмена"
   },
   "Book type": {
     en: "Book type",
@@ -388,6 +408,16 @@ export const EXTRA_RAW_TEXT = {
     en: "Loading exchange history details",
     de: "Details des Tauschverlaufs werden geladen",
     ru: "Загрузка деталей истории обмена"
+  },
+  "Exchange history item": {
+    en: "Exchange history item",
+    de: "Tauschverlaufseintrag",
+    ru: "История обмена"
+  },
+  "Review the final state of this exchange, its status, and the books involved.": {
+    en: "Review the final state of this exchange, its status, and the books involved.",
+    de: "Hier siehst du den finalen Stand dieses Tauschs, seinen Status und die beteiligten Bücher.",
+    ru: "Здесь показан итог этого обмена, его статус и книги, которые участвовали в запросе."
   },
   "No": {
     en: "No",
@@ -1210,6 +1240,16 @@ export const EXTRA_RAW_TEXT = {
     en: "Untitled book",
     de: "Unbenanntes Buch",
     ru: "Книга без названия"
+  },
+  "Select category": {
+    en: "Select category",
+    de: "Kategorie auswählen",
+    ru: "Выберите категорию"
+  },
+  "Street, phone, messenger or another contact channel": {
+    en: "Street, phone, messenger or another contact channel",
+    de: "Straße, Telefon, Messenger oder ein anderer Kontaktweg",
+    ru: "Улица, телефон, мессенджер или другой способ связи"
   },
   "User ban removed.": {
     en: "User ban removed.",

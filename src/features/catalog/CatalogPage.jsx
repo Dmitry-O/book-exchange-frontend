@@ -181,9 +181,6 @@ export function CatalogPage() {
   const hasPendingFilterChanges = !areCatalogFiltersEqual(normalizedFilters, normalizedDraftFilters);
   const canSearch = normalizedSearchText.length === 0 || normalizedSearchText.length >= 3;
   const hasSearchChanges = normalizedSearchText !== appliedSearchText;
-  const hasAppliedCatalogContext =
-    Boolean(appliedSearchText) || !areCatalogFiltersEqual(normalizedFilters, normalizedInitialFilters);
-
   const loadMoreRef = useInfiniteScroll({
     enabled: !booksQuery.isPending && !booksQuery.error,
     hasNextPage: booksQuery.hasNextPage,
@@ -203,8 +200,9 @@ export function CatalogPage() {
       return;
     }
 
-    setDraftFilters(normalizedDraftFilters);
-    setFilters(normalizedDraftFilters);
+    const nextFilters = prepareCatalogFiltersForState(draftFilters);
+    setDraftFilters(nextFilters);
+    setFilters(nextFilters);
   }
 
   function handleResetFilters() {
@@ -345,11 +343,7 @@ export function CatalogPage() {
       </section>
 
       <div className="catalog-results-toolbar">
-        {hasAppliedCatalogContext ? (
-          <span className="muted-line">{t("catalog.booksMatched", { count: totalElements })}</span>
-        ) : (
-          <span />
-        )}
+        <span className="muted-line">{t("catalog.booksMatched", { count: totalElements })}</span>
 
         <div className="catalog-sort-controls">
           <select
@@ -407,10 +401,8 @@ export function CatalogPage() {
         <>
           <section className="book-grid">
             {books.map((book) => (
-              <article className="book-card" key={book.id}>
-                <Link className="book-card-cover-link" to={`/book/${book.id}`}>
-                  <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
-                </Link>
+              <Link className="book-card book-card-link" key={book.id} to={`/book/${book.id}`}>
+                <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
 
                 <div className="book-card-head">
                   <div className="book-card-statuses">
@@ -434,7 +426,7 @@ export function CatalogPage() {
 
                 <h2>{book.name}</h2>
                 <p className="book-meta book-meta-compact">
-                  {book.author || rt(locale, "Unknown author")} / {book.publicationYear || t("catalog.unknownYear")}
+                  {formatAuthorYear(locale, book.author, book.publicationYear, t("catalog.unknownYear"))}
                 </p>
 
                 <div className="book-owner">
@@ -442,7 +434,7 @@ export function CatalogPage() {
                     <strong>{book.ownerNickname || t("catalog.unknownOwner")}</strong>
                   </UserIdentityInline>
                 </div>
-              </article>
+              </Link>
             ))}
           </section>
 
@@ -468,8 +460,22 @@ function normalizeCatalogFilters(filters) {
   };
 }
 
+function prepareCatalogFiltersForState(filters) {
+  return {
+    ...filters,
+    author: String(filters.author ?? "").trim(),
+    publicationYear: sanitizePublicationYearInput(filters.publicationYear)
+  };
+}
+
 function areCatalogFiltersEqual(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function formatAuthorYear(locale, author, publicationYear, fallbackYear) {
+  const authorLabel = author || rt(locale, "Unknown author");
+
+  return publicationYear ? `${authorLabel}, ${publicationYear}` : `${authorLabel}, ${fallbackYear}`;
 }
 
 function Field({ className = "", label, onChange, value }) {

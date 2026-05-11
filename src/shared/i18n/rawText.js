@@ -35,6 +35,11 @@ const RAW_TEXT = {
     en: "Add new book",
     ru: "Добавить новую книгу"
   },
+  "Add your first book so other users can notice it and offer an exchange.": {
+    de: "Füge dein erstes Buch hinzu, damit andere Nutzer es sehen und einen Tausch anbieten können.",
+    en: "Add your first book so other users can notice it and offer an exchange.",
+    ru: "Добавьте свою первую книгу, чтобы другие пользователи могли заметить её и предложить обмен."
+  },
   "Add the main details about your book and make it ready for the catalog.": {
     de: "Füge die wichtigsten Angaben zu deinem Buch hinzu und bereite es für den Katalog vor.",
     en: "Add the main details about your book and make it ready for the catalog.",
@@ -49,6 +54,11 @@ const RAW_TEXT = {
     de: "Dieses Angebot annehmen und die Bücher als getauscht markieren?",
     en: "Approve this offer and mark the books as exchanged?",
     ru: "Принять это предложение и пометить книги как обменённые?"
+  },
+  "Accept this offer and automatically decline all other possible offers related to this book?": {
+    de: "Dieses Angebot annehmen und alle anderen möglichen Angebote für dieses Buch automatisch ablehnen?",
+    en: "Accept this offer and automatically decline all other possible offers related to this book?",
+    ru: "Принять это предложение и отклонить все другие возможные предложения связанные с этой книгой?"
   },
   "Book could not be loaded": {
     de: "Buch konnte nicht geladen werden",
@@ -140,6 +150,11 @@ const RAW_TEXT = {
     en: "Delete \"{name}\" from your books?",
     ru: "Удалить «{name}» из ваших книг?"
   },
+  "Delete \"{name}\" from your books? Any active exchange requests related to this book will be cancelled automatically.": {
+    de: "\"{name}\" aus deinen Büchern löschen? Alle aktiven Tauschanfragen zu diesem Buch werden automatisch storniert.",
+    en: "Delete \"{name}\" from your books? Any active exchange requests related to this book will be cancelled automatically.",
+    ru: "Удалить «{name}» из ваших книг? Все активные запросы на обмен, связанные с этой книгой, будут автоматически отменены."
+  },
   "Delete request failed": {
     de: "Löschanfrage fehlgeschlagen",
     en: "Delete request failed",
@@ -173,12 +188,12 @@ const RAW_TEXT = {
   "Exchanged books": {
     de: "Getauschte Bücher",
     en: "Exchanged books",
-    ru: "Обменённые книги"
+    ru: "Обменянные книги"
   },
   "Exchanged books could not be loaded": {
     de: "Getauschte Bücher konnten nicht geladen werden",
     en: "Exchanged books could not be loaded",
-    ru: "Не удалось загрузить обменённые книги"
+    ru: "Не удалось загрузить обменянные книги"
   },
   "Exchange": {
     de: "Tausch",
@@ -238,7 +253,7 @@ const RAW_TEXT = {
   "Loading exchanged books": {
     de: "Getauschte Bücher werden geladen",
     en: "Loading exchanged books",
-    ru: "Загрузка обменённых книг"
+    ru: "Загрузка обменянных книг"
   },
   "Loading exchange history": {
     de: "Tauschverlauf wird geladen",
@@ -270,10 +285,20 @@ const RAW_TEXT = {
     en: "Loading your requests",
     ru: "Загрузка ваших запросов"
   },
+  "Loading more updates": {
+    de: "Weitere Updates werden geladen",
+    en: "Loading more updates",
+    ru: "Загружаем ещё обновления"
+  },
   "Manage your inventory": {
     de: "Verwalte deinen Bestand",
     en: "Manage your inventory",
     ru: "Управляйте своими книгами"
+  },
+  "Mark all as read": {
+    de: "Alles als gelesen markieren",
+    en: "Mark all as read",
+    ru: "Отметить всё как прочитанное"
   },
   "Keep your active books updated and ready for exchanges.": {
     de: "Halte deine aktiven Bücher aktuell und bereit für Tauschaktionen.",
@@ -343,7 +368,7 @@ const RAW_TEXT = {
   "No exchanged books yet": {
     de: "Noch keine getauschten Bücher",
     en: "No exchanged books yet",
-    ru: "Пока нет обменённых книг"
+    ru: "Пока нет обменянных книг"
   },
   "No reports could be loaded": {
     de: "Meldungen konnten nicht geladen werden",
@@ -465,6 +490,11 @@ const RAW_TEXT = {
     en: "Save changes",
     ru: "Сохранить изменения"
   },
+  "Soft-delete this book from the moderation console? Any active exchange requests related to this book will be cancelled automatically.": {
+    de: "Dieses Buch in der Moderationsansicht weich löschen? Alle aktiven Tauschanfragen zu diesem Buch werden automatisch storniert.",
+    en: "Soft-delete this book from the moderation console? Any active exchange requests related to this book will be cancelled automatically.",
+    ru: "Удалить эту книгу через панель модерации? Все активные запросы на обмен, связанные с этой книгой, будут автоматически отменены."
+  },
   "Select one of your own books and create a request for this listing with `POST /request`.": {
     de: "Wähle eines deiner eigenen Bücher aus und erstelle mit `POST /request` eine Anfrage für dieses Angebot.",
     en: "Select one of your own books and create a request for this listing with `POST /request`.",
@@ -494,6 +524,11 @@ const RAW_TEXT = {
     de: "Dies ist dein eigenes Angebot, поэтому функции жалобы здесь скрыты.",
     en: "This is your own listing, so reporting actions are intentionally hidden here.",
     ru: "Это ваше собственное объявление, поэтому действия жалобы здесь скрыты."
+  },
+  "This book cannot be edited because it already participates in an exchange or is in exchange history.": {
+    de: "Dieses Buch kann nicht bearbeitet werden, weil es bereits an einem Tausch beteiligt ist oder in der Tauschhistorie steht.",
+    en: "This book cannot be edited because it already participates in an exchange or is in exchange history.",
+    ru: "Эту книгу нельзя редактировать, потому что она уже участвует в обмене или находится в истории обменов."
   },
   "Try broader filters or remove some filters.": {
     de: "Versuche breitere Filter oder entferne einige Filter.",

@@ -86,8 +86,9 @@ function MediaFrame({
   const text = mediaText[locale] ?? mediaText.en;
   const [isOpen, setIsOpen] = useState(false);
   const [hideLegacyMockImage, setHideLegacyMockImage] = useState(false);
+  const [failedToLoad, setFailedToLoad] = useState(false);
   const src = resolveMediaUrl(photoUrl, { kind: shape, uploadedOnly });
-  const effectiveSrc = hideLegacyMockImage ? "" : src;
+  const effectiveSrc = hideLegacyMockImage || failedToLoad ? "" : src;
   const classes = ["media-frame", `media-frame-${shape}`, `media-frame-${size}`, className]
     .filter(Boolean)
     .join(" ");
@@ -99,6 +100,7 @@ function MediaFrame({
     let cancelled = false;
 
     setHideLegacyMockImage(false);
+    setFailedToLoad(false);
 
     if (!src || !detectLegacyMockImage || shape !== "book") {
       return () => {
@@ -136,11 +138,21 @@ function MediaFrame({
               onClick={() => setIsOpen(true)}
               type="button"
             >
-              <img alt={alt} className="media-image" src={effectiveSrc} />
+              <img
+                alt={alt}
+                className="media-image"
+                onError={() => setFailedToLoad(true)}
+                src={effectiveSrc}
+              />
               <span className="media-expand-hint">{text.open}</span>
             </button>
           ) : (
-            <img alt={alt} className="media-image" src={effectiveSrc} />
+            <img
+              alt={alt}
+              className="media-image"
+              onError={() => setFailedToLoad(true)}
+              src={effectiveSrc}
+            />
           )
         ) : (
           renderPlaceholder(shape, label, subtitle, placeholderVariant)
