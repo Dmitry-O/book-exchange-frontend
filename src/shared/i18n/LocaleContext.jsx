@@ -101,7 +101,12 @@ const messages = {
       books: "Books",
       reports: "Reports",
       exchanges: "Exchanges",
+      manageUsers: "User management",
+      manageBooks: "Book management",
+      manageReports: "Report management",
+      manageExchanges: "Exchange management",
       admin: "Admin",
+      superAdmin: "Super admin",
       moderation: "Moderation",
       openAdminArea: "Open admin area",
       logout: "Logout",
@@ -118,7 +123,7 @@ const messages = {
       workspaceError: "Your workspace could not be loaded",
       checkingAdmin: "Checking admin access",
       refreshingAdmin: "Refreshing admin access",
-      adminError: "Admin access could not be loaded"
+      adminError: "Something went wrong"
     },
     auth: {
       signInEyebrow: "Sign in",
@@ -329,7 +334,12 @@ const messages = {
       books: "Bücher",
       reports: "Meldungen",
       exchanges: "Tausche",
+      manageUsers: "Benutzerverwaltung",
+      manageBooks: "Buchverwaltung",
+      manageReports: "Beschwerdeverwaltung",
+      manageExchanges: "Tauschverwaltung",
       admin: "Admin",
+      superAdmin: "Super-Admin",
       moderation: "Moderation",
       openAdminArea: "Adminbereich öffnen",
       logout: "Abmelden",
@@ -346,7 +356,7 @@ const messages = {
       workspaceError: "Der Arbeitsbereich konnte nicht geladen werden",
       checkingAdmin: "Adminzugriff wird geprüft",
       refreshingAdmin: "Adminzugriff wird aktualisiert",
-      adminError: "Der Adminzugriff konnte nicht geladen werden"
+      adminError: "Etwas ist schiefgelaufen"
     },
     auth: {
       signInEyebrow: "Anmelden",
@@ -558,7 +568,12 @@ const messages = {
       books: "Книги",
       reports: "Жалобы",
       exchanges: "Обмены",
+      manageUsers: "Управление пользователями",
+      manageBooks: "Управление книгами",
+      manageReports: "Управление жалобами",
+      manageExchanges: "Управление обменами",
       admin: "Админ",
+      superAdmin: "Супер админ",
       moderation: "Модерация",
       openAdminArea: "Открыть админку",
       logout: "Выйти",
@@ -575,7 +590,7 @@ const messages = {
       workspaceError: "Не удалось загрузить рабочее пространство",
       checkingAdmin: "Проверка доступа администратора",
       refreshingAdmin: "Обновление админ-сессии",
-      adminError: "Не удалось загрузить админ-доступ"
+      adminError: "Что-то пошло не так"
     },
     auth: {
       signInEyebrow: "Вход",

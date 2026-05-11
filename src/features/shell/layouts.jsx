@@ -1,31 +1,50 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useMetadataQuery, useUnreadUpdatesSummaryQuery } from "../../shared/api/hooks";
+import {
+  useAdminOpenReportsSummaryQuery,
+  useMetadataQuery,
+  useUnreadUpdatesSummaryQuery
+} from "../../shared/api/hooks";
 import { useAuth } from "../../shared/auth/AuthContext";
 import { useLocale } from "../../shared/i18n/LocaleContext";
 import { getLocaleLabel } from "../../shared/i18n/locale";
 import { UserAvatar } from "../../shared/ui/Media";
+import {
+  BellIcon,
+  BookIcon,
+  AdminBadgeIcon,
+  FlagIcon,
+  MenuIcon,
+  SignOutIcon,
+  SwapIcon,
+  UserIcon
+} from "../../shared/ui/Icons";
 
 const BASE_NAV_LINKS = [
   { to: "/", labelKey: "common.home", end: true },
   { to: "/catalog", labelKey: "common.catalog" }
 ];
 
+const USER_MENU_OPEN_EVENT = "book-exchange:user-menu-open";
+
 const USER_MENU_LINKS = [
-  { to: "/app/profile", labelKey: "shell.profile" },
-  { to: "/app/updates", labelKey: "shell.updates", badge: "updates" },
-  { to: "/app/my-reports", labelKey: "shell.myReports" },
-  { to: "/app/my-books", labelKey: "shell.myBooks" },
-  { to: "/app/exchanges/requests", labelKey: "shell.requests" },
-  { to: "/app/exchanges/offers", labelKey: "shell.offers" },
-  { to: "/app/history", labelKey: "shell.history" }
+  { to: "/app/profile", labelKey: "shell.profile", icon: UserIcon },
+  { to: "/app/updates", labelKey: "shell.updates", badge: "updates", icon: BellIcon },
+  { to: "/app/my-reports", labelKey: "shell.myReports", icon: FlagIcon },
+  { to: "/app/my-books", labelKey: "shell.myBooks", icon: BookIcon },
+  {
+    to: "/app/exchanges",
+    labelKey: "shell.exchanges",
+    icon: SwapIcon,
+    matchPrefixes: ["/app/exchanges", "/app/history"]
+  }
 ];
 
 const ADMIN_MENU_LINKS = [
-  { to: "/admin/users", labelKey: "shell.users" },
-  { to: "/admin/books", labelKey: "shell.books" },
-  { to: "/admin/reports", labelKey: "shell.reports" },
-  { to: "/admin/exchanges", labelKey: "shell.exchanges" }
+  { to: "/admin/users", labelKey: "shell.manageUsers", icon: UserIcon },
+  { to: "/admin/books", labelKey: "shell.manageBooks", icon: BookIcon },
+  { to: "/admin/reports", labelKey: "shell.manageReports", icon: FlagIcon },
+  { to: "/admin/exchanges", labelKey: "shell.manageExchanges", icon: SwapIcon }
 ];
 
 export function PublicLayout() {
@@ -57,9 +76,10 @@ export function AppLayout() {
 function AppHeader({ availableLocales }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin, isAuthenticated, logout, updateProfile, user } = useAuth();
+  const { isAdmin, isAuthenticated, isSuperAdmin, logout, updateProfile, user } = useAuth();
   const { locale, locales, setLocale, t } = useLocale();
   const unreadQuery = useUnreadUpdatesSummaryQuery(isAuthenticated);
+  const adminOpenReportsQuery = useAdminOpenReportsSummaryQuery(isAuthenticated && isAdmin);
   const [menuOpen, setMenuOpen] = useState(false);
   const [localeMenuOpen, setLocaleMenuOpen] = useState(false);
   const [localePending, setLocalePending] = useState(false);
@@ -67,6 +87,8 @@ function AppHeader({ availableLocales }) {
   const localeRef = useRef(null);
 
   const unreadCount = unreadQuery.data?.totalElements ?? 0;
+  const adminOpenReportsCount = adminOpenReportsQuery.data?.totalElements ?? 0;
+  const userMenuBadgeCount = unreadCount + (isAdmin ? adminOpenReportsCount : 0);
   const localeOptions = availableLocales?.length ? availableLocales : locales;
 
   useEffect(() => {
@@ -138,12 +160,18 @@ function AppHeader({ availableLocales }) {
     const adminItems = isAdmin
       ? ADMIN_MENU_LINKS.map((item) => ({
           ...item,
-          label: t(item.labelKey)
+          admin: true,
+          label: t(item.labelKey),
+          badgeTone: item.to === "/admin/reports" ? "danger" : "default",
+          badgeValue:
+            item.to === "/admin/reports" && adminOpenReportsCount > 0
+              ? adminOpenReportsCount
+              : null
         }))
       : [];
 
     return { items, adminItems };
-  }, [isAdmin, t, unreadCount]);
+  }, [adminOpenReportsCount, isAdmin, t, unreadCount]);
 
   return (
     <header className="topbar topbar-unified">
@@ -174,26 +202,58 @@ function AppHeader({ availableLocales }) {
 
         {isAuthenticated ? (
           <div className="user-menu" ref={menuRef}>
-            <button
-              aria-expanded={menuOpen}
-              className="user-chip user-chip-button"
-              onClick={() => setMenuOpen((current) => !current)}
-              type="button"
-            >
-              <UserAvatar name={user?.nickname ?? user?.email} photoUrl={user?.photoUrl} size="sm" />
-              <div className="user-chip-copy">
-                <span>{user?.nickname ?? t("shell.unknownUser")}</span>
-                <small>{user?.email ?? t("shell.noEmail")}</small>
-              </div>
-              {isAdmin ? <span className="status-pill status-pill-success">{t("shell.admin")}</span> : null}
-            </button>
+            <div className={menuOpen ? "user-menu-shell user-menu-shell-open" : "user-menu-shell"}>
+              <button
+                className="user-chip user-chip-button"
+                onClick={() => navigate("/app/profile")}
+                type="button"
+              >
+                <span className="user-chip-avatar-wrap">
+                  <UserAvatar name={user?.nickname ?? user?.email} photoUrl={user?.photoUrl} size="sm" />
+                </span>
+                <div className="user-chip-copy">
+                  <span>{user?.nickname ?? t("shell.unknownUser")}</span>
+                  <small>{user?.email ?? t("shell.noEmail")}</small>
+                </div>
+                {isSuperAdmin ? (
+                  <span className="status-pill status-pill-super-admin">{t("shell.superAdmin")}</span>
+                ) : isAdmin ? (
+                  <span className="status-pill status-pill-success">{t("shell.admin")}</span>
+                ) : null}
+              </button>
+
+              <button
+                aria-expanded={menuOpen}
+                aria-label={t("shell.workspace")}
+                className={`icon-button user-menu-toggle${menuOpen ? " user-menu-toggle-active" : ""}`}
+                onClick={() => {
+                  setMenuOpen((current) => {
+                    const next = !current;
+
+                    if (next && typeof window !== "undefined") {
+                      window.dispatchEvent(new Event(USER_MENU_OPEN_EVENT));
+                    }
+
+                    return next;
+                  });
+                }}
+                type="button"
+              >
+                <MenuIcon />
+                {userMenuBadgeCount > 0 ? (
+                  <span className="user-menu-toggle-badge">{userMenuBadgeCount}</span>
+                ) : null}
+              </button>
+            </div>
 
             {menuOpen ? (
               <div className="topbar-menu">
                 <div className="topbar-menu-group">
                   {activeMenuLinks.items.map((item) => (
                     <MenuLink
+                      active={isMenuLinkActive(location.pathname, item)}
                       badgeValue={item.badgeValue}
+                      icon={item.icon}
                       key={item.to}
                       label={item.label}
                       navigate={navigate}
@@ -206,7 +266,16 @@ function AppHeader({ availableLocales }) {
                   <div className="topbar-menu-group">
                     <span className="topbar-menu-label">{t("shell.admin")}</span>
                     {activeMenuLinks.adminItems.map((item) => (
-                      <MenuLink key={item.to} label={item.label} navigate={navigate} to={item.to} />
+                      <MenuLink
+                        active={isMenuLinkActive(location.pathname, item)}
+                        admin={item.admin}
+                        badgeValue={item.badgeValue}
+                        icon={item.icon}
+                        key={item.to}
+                        label={item.label}
+                        navigate={navigate}
+                        to={item.to}
+                      />
                     ))}
                   </div>
                 ) : null}
@@ -217,7 +286,12 @@ function AppHeader({ availableLocales }) {
                     onClick={() => void logout()}
                     type="button"
                   >
-                    {t("shell.logout")}
+                    <span className="topbar-menu-item-main">
+                      <span className="topbar-menu-item-icon">
+                        <SignOutIcon />
+                      </span>
+                      <span>{t("shell.logout")}</span>
+                    </span>
                   </button>
                 </div>
               </div>
@@ -297,13 +371,59 @@ function LocalePicker({
   );
 }
 
-function MenuLink({ badgeValue = null, label, navigate, to }) {
+function MenuLink({
+  active = false,
+  admin = false,
+  badgeTone = "default",
+  badgeValue = null,
+  icon: Icon,
+  label,
+  navigate,
+  to
+}) {
+  const className = [
+    "topbar-menu-item",
+    admin ? "topbar-menu-item-admin" : "topbar-menu-item-user",
+    active ? "topbar-menu-item-active" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <button className="topbar-menu-item" onClick={() => navigate(to)} type="button">
-      <span>{label}</span>
-      {badgeValue ? <span className="badge">{badgeValue}</span> : null}
+    <button
+      aria-current={active ? "page" : undefined}
+      className={className}
+      onClick={() => navigate(to)}
+      type="button"
+    >
+      <span className="topbar-menu-item-main">
+        {Icon ? (
+          <span
+            className={
+              admin
+                ? "topbar-menu-item-icon topbar-menu-item-icon-admin"
+                : "topbar-menu-item-icon"
+            }
+          >
+            <Icon />
+            {admin ? (
+              <span className="admin-icon-badge admin-icon-badge-menu">
+                <AdminBadgeIcon />
+              </span>
+            ) : null}
+          </span>
+        ) : null}
+        <span>{label}</span>
+      </span>
+      {badgeValue ? <span className={badgeTone === "danger" ? "badge badge-danger" : "badge"}>{badgeValue}</span> : null}
     </button>
   );
+}
+
+function isMenuLinkActive(pathname, item) {
+  const paths = [item.to, ...(item.matchPrefixes ?? [])];
+
+  return paths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 function LocaleFlagIcon({ locale }) {

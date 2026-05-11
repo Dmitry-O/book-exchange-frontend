@@ -74,6 +74,259 @@ export function RestoreIcon() {
   );
 }
 
+export function HistoryIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <circle
+        cx="12"
+        cy="12"
+        fill="none"
+        r="7.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M12 8v4l2.8 2"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M4.8 7.2 3 7V3.8"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M3.4 7A9.2 9.2 0 0 1 12 3"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function OutgoingIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M4 12.5 20 5l-4.8 15-3.3-6.6L4 12.5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M11.9 13.4 20 5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function IncomingIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M5 13.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M5 13.5h4l1.5 2h3l1.5-2h4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M12 4v8m0 0-3-3m3 3 3-3"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function BellIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M6.5 10.8a5.5 5.5 0 0 1 11 0v3.7l1.5 2.5H5l1.5-2.5v-3.7Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M10 20a2.2 2.2 0 0 0 4 0"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function MenuIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M5 7h14M5 12h14M5 17h14"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function SignOutIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M13 8l4 4-4 4M17 12H9"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function AdminBadgeIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M12 3 19 6v5.4c0 4.1-2.7 7.8-7 9.6-4.3-1.8-7-5.5-7-9.6V6l7-3Z"
+        fill="currentColor"
+      />
+      <path
+        d="m9 12 2 2 4-4"
+        fill="none"
+        stroke="#fff"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function AdminGrantedIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M8.2 11a3.1 3.1 0 1 0 0-6.2 3.1 3.1 0 0 0 0 6.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M3.9 19.2a5.3 5.3 0 0 1 8.5-4.2"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M16.6 4.7 20 5.9v2.7c0 2.2-1.4 4.1-3.4 5-2-.9-3.4-2.8-3.4-5V5.9l3.4-1.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M16.6 7.1v3.1M15 8.65h3.2"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+export function AdminRevokedIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M8.2 11a3.1 3.1 0 1 0 0-6.2 3.1 3.1 0 0 0 0 6.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M3.9 19.2a5.3 5.3 0 0 1 8.5-4.2"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M16.6 4.7 20 5.9v2.7c0 2.2-1.4 4.1-3.4 5-2-.9-3.4-2.8-3.4-5V5.9l3.4-1.2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M15 8.65h3.2"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
 export function RefreshIcon() {
   return (
     <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
@@ -344,6 +597,223 @@ export function GiftIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function DeletedUserIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M5 20a7 7 0 0 1 8.7-6.8"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="m15.5 15.5 4 4M19.5 15.5l-4 4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+export function UserBlockedIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M5 20a7 7 0 0 1 14 0"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M16.5 8.5h4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function UserRestoredIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M5 20a7 7 0 0 1 14 0"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="m16.2 8.6 1.6 1.6 3.2-3.2"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+export function EnvelopeClosedIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M4.5 7.5h15v10h-15z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="m5 8 7 5.3L19 8"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function EnvelopeOpenIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M4.5 10.2 12 5l7.5 5.2V19h-15v-8.8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="m5 11 7 5 7-5M4.8 18.5l5.3-4M19.2 18.5l-5.3-4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function MarkReadIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M4.5 7.5h15v10h-15z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="m5 8 7 5.3L19 8"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="m9.5 14.8 1.9 1.9 3.6-3.6"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+export function RequestGiftIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M8.2 3.9h7.6v6.5H8.2z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.25"
+      />
+      <path
+        d="M12 3.9v6.5M7.4 6.6h9.2"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.25"
+      />
+      <path
+        d="M9.5 3.9s-1.2-.7-1.2-1.7a1.2 1.2 0 0 1 2.2-.5L12 3.9M14.5 3.9s1.2-.7 1.2-1.7a1.2 1.2 0 0 0-2.2-.5L12 3.9"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.15"
+      />
+      <path
+        d="M4.2 14.7h3.4l2.2 1.8h4.5c1 0 1.7-.7 1.7-1.7h-4.4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.25"
+      />
+      <path
+        d="M4.2 14.7c1.9-.9 3.5-.7 5.2.6l.7.6M7.5 17.2c1.4 2.1 3.1 3 5.8 3h2.1c1.4 0 2.8-.5 3.9-1.5l1.1-1a1.25 1.25 0 0 0-1.6-1.9l-3 2.1"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.25"
       />
     </svg>
   );
