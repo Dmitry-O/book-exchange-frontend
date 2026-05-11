@@ -15,9 +15,9 @@ let authBridge = {
 let refreshPromise = null;
 
 const TRANSPORT_ERROR_TEXT = {
-  de: "Verbindung zum Server fehlgeschlagen. Prüfe, ob das Backend läuft, und versuche es erneut.",
-  en: "Could not connect to the server. Check that the backend is running and try again.",
-  ru: "Не удалось подключиться к серверу. Проверьте, что бэкенд запущен, и попробуйте снова."
+  de: "Etwas ist schiefgelaufen. Bitte versuche es später noch einmal.",
+  en: "Something went wrong. Please try again a little later.",
+  ru: "Что-то пошло не так. Попробуйте повторить чуть позже."
 };
 
 const ABORTED_REQUEST_TEXT = {
@@ -126,7 +126,9 @@ async function performRequest(endpoint, options, canRefresh) {
       await refreshAccessToken(session.refreshToken);
       return performRequest(endpoint, options, false);
     } catch (error) {
-      clearAuthSession();
+      if (isAuthTerminalError(error)) {
+        clearAuthSession();
+      }
       throw error;
     }
   }
@@ -223,7 +225,7 @@ function clearAuthSession() {
 }
 
 function isAuthTerminalError(error) {
-  return error instanceof ApiClientError;
+  return error instanceof ApiClientError && [400, 401, 403, 404].includes(error.status);
 }
 
 async function parsePayload(response) {

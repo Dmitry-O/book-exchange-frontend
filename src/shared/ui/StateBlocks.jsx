@@ -22,11 +22,12 @@ export function ErrorBlock({ error, title }) {
   );
 }
 
-export function EmptyBlock({ title, description }) {
+export function EmptyBlock({ title, description, actions = null }) {
   return (
     <div className="state-block">
       <h3>{title}</h3>
       <p>{description}</p>
+      {actions}
     </div>
   );
 }

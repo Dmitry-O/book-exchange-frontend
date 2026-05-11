@@ -8,9 +8,33 @@ export function useInfiniteScroll({
   rootMargin = "320px"
 }) {
   const triggerRef = useRef(null);
+  const onLoadMoreRef = useRef(onLoadMore);
+  const isFetchingRef = useRef(isFetchingNextPage);
+  const requestLockedRef = useRef(false);
+  const intersectingRef = useRef(false);
 
   useEffect(() => {
-    if (!enabled || !hasNextPage || isFetchingNextPage || typeof onLoadMore !== "function") {
+    onLoadMoreRef.current = onLoadMore;
+  }, [onLoadMore]);
+
+  useEffect(() => {
+    isFetchingRef.current = isFetchingNextPage;
+
+    if (!isFetchingNextPage) {
+      requestLockedRef.current = false;
+    }
+  }, [isFetchingNextPage]);
+
+  useEffect(() => {
+    if (!enabled || !hasNextPage) {
+      requestLockedRef.current = false;
+      intersectingRef.current = false;
+    }
+  }, [enabled, hasNextPage]);
+
+  useEffect(() => {
+    if (!enabled || !hasNextPage || typeof onLoadMoreRef.current !== "function") {
+      requestLockedRef.current = false;
       return undefined;
     }
 
@@ -22,9 +46,24 @@ export function useInfiniteScroll({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
-          onLoadMore();
+        const entry = entries[0];
+
+        if (!entry) {
+          return;
         }
+
+        if (!entry.isIntersecting) {
+          intersectingRef.current = false;
+          return;
+        }
+
+        if (intersectingRef.current || requestLockedRef.current || isFetchingRef.current) {
+          return;
+        }
+
+        intersectingRef.current = true;
+        requestLockedRef.current = true;
+        onLoadMoreRef.current?.();
       },
       { rootMargin }
     );
@@ -32,7 +71,7 @@ export function useInfiniteScroll({
     observer.observe(node);
 
     return () => observer.disconnect();
-  }, [enabled, hasNextPage, isFetchingNextPage, onLoadMore, rootMargin]);
+  }, [enabled, hasNextPage, rootMargin]);
 
   return triggerRef;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../shared/api/config";
 import { apiRequest } from "../../shared/api/http";
 import { useAuth } from "../../shared/auth/AuthContext";
@@ -10,9 +10,69 @@ import { formatBookCategoryLabel, getBookCategoryTagStyle } from "../../shared/l
 import { getCityDisplayName } from "../../shared/lib/cities";
 import { formatEnumLabel } from "../../shared/lib/format";
 import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
-import { ArrowLeftIcon, GiftIcon, SwapIcon } from "../../shared/ui/Icons";
+import { ArrowLeftIcon, GiftIcon, HistoryIcon, IncomingIcon, OutgoingIcon, RequestGiftIcon, SwapIcon } from "../../shared/ui/Icons";
+import { PageTitle } from "../../shared/ui/PageTitle";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
+
+const EXCHANGE_TABS = ["requests", "offers", "history"];
+
+const exchangeTabsText = {
+  de: {
+    emptyCatalogCta: "Zum Katalog",
+    emptyHistoryDescription:
+      "Deine abgeschlossenen Tausche erscheinen hier, sobald die ersten Austauschvorgänge beendet sind.",
+    emptyHistoryTitle: "Deine Tauschhistorie ist noch leer",
+    emptyOffersDescription:
+      "Sobald dir jemand einen Büchertausch anbietet oder dein Buch als Geschenk anfragt, erscheinen die Angebote hier.",
+    emptyOffersTitle: "Du hast noch keine Tauschangebote",
+    emptyRequestsDescription:
+      "Öffne den Katalog, wenn du ein weiteres Buch zum Tauschen oder Verschenken finden möchtest.",
+    emptyRequestsTitle: "Du hast noch keine Tauschanfragen",
+    historyTab: "Verlauf",
+    offersTab: "Angebote",
+    requestsTab: "Anfragen",
+    subtitle:
+      "Wechsle hier zwischen deinen Anfragen, eingehenden Angeboten und der bisherigen Tauschhistorie.",
+    title: "Tausche"
+  },
+  en: {
+    emptyCatalogCta: "Open catalog",
+    emptyHistoryDescription:
+      "Completed exchanges will appear here once your first exchange flow reaches a final result.",
+    emptyHistoryTitle: "Your exchange history is still empty",
+    emptyOffersDescription:
+      "Incoming exchange offers and gift requests for your books will appear here.",
+    emptyOffersTitle: "You do not have any exchange offers yet",
+    emptyRequestsDescription:
+      "Open the catalog when you want to find another book for exchange or gift.",
+    emptyRequestsTitle: "You do not have any exchange requests yet",
+    historyTab: "History",
+    offersTab: "Offers",
+    requestsTab: "Requests",
+    subtitle:
+      "Switch here between your requests, incoming offers, and completed exchange history.",
+    title: "Exchanges"
+  },
+  ru: {
+    emptyCatalogCta: "Перейти в каталог",
+    emptyHistoryDescription:
+      "Здесь появятся завершённые обмены, когда у вас появятся первые подтверждённые или отклонённые результаты.",
+    emptyHistoryTitle: "Ваша история обмена книгами ещё пуста",
+    emptyOffersDescription:
+      "Когда кто-то предложит вам обмен или запросит вашу книгу в подарок, это появится здесь.",
+    emptyOffersTitle: "У вас ещё нет предложений по обмену книг",
+    emptyRequestsDescription:
+      "Откройте каталог, если хотите найти ещё одну книгу для обмена или в подарок.",
+    emptyRequestsTitle: "У вас ещё нет запросов по обмену книг",
+    historyTab: "История",
+    offersTab: "Предложения",
+    requestsTab: "Запросы",
+    subtitle:
+      "Здесь можно быстро переключаться между вашими запросами, входящими предложениями и историей обменов.",
+    title: "Обмены"
+  }
+};
 
 const exchangeUiText = {
   de: {
@@ -83,150 +143,103 @@ const exchangeUiText = {
   }
 };
 
-export function RequestsPage() {
+export function ExchangesPage() {
   const { locale } = useLocale();
-  const [pageIndex, setPageIndex] = useState(0);
-
-  const requestsQuery = useQuery({
-    queryKey: ["requests", pageIndex],
-    queryFn: async () => {
-      const response = await apiRequest(
-        `/request?pageIndex=${pageIndex}&pageSize=${DEFAULT_LIST_PAGE_SIZE}`,
-        { auth: true }
-      );
-
-      return response.data;
-    }
-  });
-
-  return (
-    <ExchangeListPage
-      emptyDescription={rt(
-        locale,
-        "Create a request from any public book page after selecting one of your own books."
-      )}
-      emptyTitle={rt(locale, "No active requests")}
-      fallbackStatus="PENDING"
-      items={requestsQuery.data?.content ?? []}
-      loadingLabel={rt(locale, "Loading your requests")}
-      page={pageIndex}
-      query={requestsQuery}
-      routeBase="/app/exchanges/requests"
-      setPage={setPageIndex}
-      summary={rt(
-        locale,
-        "Track the exchange requests you already sent to other users."
-      )}
-      title={rt(locale, "Requests you sent")}
-    />
-  );
-}
-
-export function OffersPage() {
-  const { locale } = useLocale();
-  const [pageIndex, setPageIndex] = useState(0);
-
-  const offersQuery = useQuery({
-    queryKey: ["offers", pageIndex],
-    queryFn: async () => {
-      const response = await apiRequest(
-        `/offer?pageIndex=${pageIndex}&pageSize=${DEFAULT_LIST_PAGE_SIZE}`,
-        { auth: true }
-      );
-
-      return response.data;
-    }
-  });
-
-  return (
-    <ExchangeListPage
-      emptyDescription={rt(locale, "When someone asks for one of your books, the offer will appear here.")}
-      emptyTitle={rt(locale, "No active offers")}
-      fallbackStatus="PENDING"
-      items={offersQuery.data?.content ?? []}
-      loadingLabel={rt(locale, "Loading your offers")}
-      page={pageIndex}
-      query={offersQuery}
-      routeBase="/app/exchanges/offers"
-      setPage={setPageIndex}
-      summary={rt(
-        locale,
-        "Review incoming offers and decide whether to approve or decline them."
-      )}
-      title={rt(locale, "Offers waiting for your decision")}
-    />
-  );
-}
-
-export function HistoryPage() {
-  const { locale } = useLocale();
-  const [pageIndex, setPageIndex] = useState(0);
-
-  const historyQuery = useQuery({
-    queryKey: ["history", pageIndex],
-    queryFn: async () => {
-      const response = await apiRequest(
-        `/history?pageIndex=${pageIndex}&pageSize=${DEFAULT_LIST_PAGE_SIZE}`,
-        { auth: true }
-      );
-
-      return response.data;
-    }
-  });
-
-  const items = historyQuery.data?.content ?? [];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = resolveExchangeTab(searchParams.get("tab"));
+  const text = getExchangeTabsText(locale);
 
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>{rt(locale, "Resolved exchanges")}</h1>
-        <p>{rt(locale, "See approved and declined exchanges in one place.")}</p>
+        <PageTitle icon={SwapIcon}>{text.title}</PageTitle>
+        <p>{text.subtitle}</p>
       </header>
 
-      {historyQuery.isPending ? <LoadingBlock label={rt(locale, "Loading exchange history")} /> : null}
-      {historyQuery.error ? (
-        <ErrorBlock error={historyQuery.error} title={rt(locale, "Exchange history could not be loaded")} />
-      ) : null}
+      <section className="section-card exchange-tabs-card">
+        <div className="exchange-tabs" role="tablist">
+          {EXCHANGE_TABS.map((tab) => {
+            const Icon = resolveExchangeTabIcon(tab);
+            const selected = tab === activeTab;
 
-      {!historyQuery.isPending && !historyQuery.error && items.length === 0 ? (
-        <EmptyBlock
-          description={rt(
-            locale,
-            "Approved and declined exchanges will appear here after the pending flow is resolved."
-          )}
-          title={rt(locale, "No resolved exchanges yet")}
-        />
-      ) : null}
+            return (
+              <button
+                aria-selected={selected}
+                className={selected ? "exchange-tab exchange-tab-active" : "exchange-tab"}
+                key={tab}
+                onClick={() => setSearchParams({ tab })}
+                role="tab"
+                type="button"
+              >
+                <Icon />
+                <span>{resolveExchangeTabLabel(text, tab)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
-      {items.length > 0 ? (
-        <section className="list-stack">
-          {items.map((item) => (
-            <ExchangeListCard
-              fallbackStatus={null}
-              item={item}
-              key={item.id}
-              locale={locale}
-              to={`/app/history/${item.id}`}
-            />
-          ))}
-        </section>
-      ) : null}
-
-      {!historyQuery.isPending && !historyQuery.error && (historyQuery.data?.totalPages ?? 0) > 1 ? (
-        <Pagination onChange={setPageIndex} page={pageIndex} totalPages={historyQuery.data.totalPages} />
-      ) : null}
+      <ExchangeTabPanel tab={activeTab} />
     </section>
+  );
+}
+
+export function RequestsPage() {
+  return <Navigate replace to="/app/exchanges?tab=requests" />;
+}
+
+export function OffersPage() {
+  return <Navigate replace to="/app/exchanges?tab=offers" />;
+}
+
+export function HistoryPage() {
+  return <Navigate replace to="/app/exchanges?tab=history" />;
+}
+
+function ExchangeTabPanel({ tab }) {
+  const { locale } = useLocale();
+  const [pageIndex, setPageIndex] = useState(0);
+  const text = getExchangeTabsText(locale);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [tab]);
+
+  const query = useExchangeCollectionQuery(tab, pageIndex);
+  const config = getExchangeTabConfig(locale, tab, text);
+
+  return (
+    <ExchangeListPage
+      emptyAction={
+        <Link className="button button-secondary" to="/catalog">
+          {text.emptyCatalogCta}
+        </Link>
+      }
+      emptyDescription={config.emptyDescription}
+      emptyTitle={config.emptyTitle}
+      fallbackStatus={config.fallbackStatus}
+      items={query.data?.content ?? []}
+      loadingLabel={config.loadingLabel}
+      page={pageIndex}
+      query={query}
+      routeBase={config.routeBase}
+      setPage={setPageIndex}
+      showHeader={false}
+      title={config.title}
+      type={config.type}
+    />
   );
 }
 
 export function RequestDetailsPage() {
   const { locale } = useLocale();
-  const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { exchangeId } = useParams();
   const detailQuery = useExchangeDetails("request", exchangeId);
   const [pendingAction, setPendingAction] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [actionMessage, setActionMessage] = useState("");
 
   useEffect(() => {
     if (!detailQuery.data) {
@@ -247,6 +260,7 @@ export function RequestDetailsPage() {
 
     setPendingAction(true);
     setActionError(null);
+    setActionMessage("");
 
     try {
       await apiRequest(`/request/${exchange.id}/decline`, {
@@ -256,7 +270,8 @@ export function RequestDetailsPage() {
       });
 
       await invalidateExchangeCollections(queryClient);
-      navigate(`/app/history/${exchange.id}`, { replace: true });
+      await detailQuery.refetch();
+      setActionMessage(getExchangeActionMessage(locale, "requestDeclined"));
     } catch (error) {
       setActionError(error);
     } finally {
@@ -267,6 +282,7 @@ export function RequestDetailsPage() {
   return (
     <ExchangeDetailsPage
       actionError={actionError}
+      actionMessage={actionMessage}
       actions={
         detailQuery.data?.status === "PENDING" ? (
           <button
@@ -280,22 +296,25 @@ export function RequestDetailsPage() {
         ) : null
       }
       detailQuery={detailQuery}
-      backTo="/app/exchanges/requests"
+      backTo={location.state?.backTo || "/app/exchanges?tab=requests"}
       relation="SENDER"
       subtitle={getExchangeUiText(locale).requestSubtitle}
       title={rt(locale, "Request details")}
+      titleIcon={OutgoingIcon}
     />
   );
 }
 
 export function OfferDetailsPage() {
   const { locale } = useLocale();
+  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { exchangeId } = useParams();
   const detailQuery = useExchangeDetails("offer", exchangeId);
   const [pendingAction, setPendingAction] = useState(null);
   const [actionError, setActionError] = useState(null);
+  const [actionMessage, setActionMessage] = useState("");
 
   useEffect(() => {
     if (!detailQuery.data) {
@@ -310,7 +329,7 @@ export function OfferDetailsPage() {
     const exchange = detailQuery.data;
     const confirmed = window.confirm(
       action === "approve"
-        ? rt(locale, "Approve this offer and mark the books as exchanged?")
+        ? rt(locale, "Accept this offer and automatically decline all other possible offers related to this book?")
         : rt(locale, "Decline this offer?")
     );
 
@@ -320,6 +339,7 @@ export function OfferDetailsPage() {
 
     setPendingAction(action);
     setActionError(null);
+    setActionMessage("");
 
     try {
       await apiRequest(`/offer/${exchange.id}/${action}`, {
@@ -329,7 +349,16 @@ export function OfferDetailsPage() {
       });
 
       await invalidateExchangeCollections(queryClient);
-      navigate(`/app/history/${exchange.id}`, { replace: true });
+      if (action === "approve") {
+        navigate(`/app/history/${exchange.id}`, {
+          replace: true,
+          state: { backTo: "/app/exchanges?tab=history" }
+        });
+        return;
+      }
+
+      await detailQuery.refetch();
+      setActionMessage(getExchangeActionMessage(locale, "offerDeclined"));
     } catch (error) {
       setActionError(error);
     } finally {
@@ -340,6 +369,7 @@ export function OfferDetailsPage() {
   return (
     <ExchangeDetailsPage
       actionError={actionError}
+      actionMessage={actionMessage}
       actions={
         detailQuery.data?.status === "PENDING" ? (
           <>
@@ -363,16 +393,18 @@ export function OfferDetailsPage() {
         ) : null
       }
       detailQuery={detailQuery}
-      backTo="/app/exchanges/offers"
+      backTo={location.state?.backTo || "/app/exchanges?tab=offers"}
       relation="RECEIVER"
       subtitle={getExchangeUiText(locale).offerSubtitle}
       title={rt(locale, "Offer details")}
+      titleIcon={IncomingIcon}
     />
   );
 }
 
 export function HistoryDetailsPage() {
   const { locale } = useLocale();
+  const location = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { exchangeId } = useParams();
@@ -422,8 +454,8 @@ export function HistoryDetailsPage() {
   const ownUserName = user?.nickname || ownBook?.ownerNickname || rt(locale, "Unknown owner");
   const ownUserPhotoUrl = user?.photoUrl || ownBook?.ownerPhotoUrl || "";
   const otherUserPhotoUrl = otherBook?.ownerPhotoUrl || "";
-  const isGiftExchange = !ownBook && Boolean(otherBook?.isGift);
-  const giftNotice = getGiftNotice(locale, currentRole);
+  const isGiftExchange = !exchange.senderBook && Boolean(exchange.receiverBook?.isGift);
+  const giftNotice = getGiftNotice(locale, currentRole, otherUserName);
   const heroMessage =
     exchange.status === "APPROVED"
       ? formatTemplate(text.historySuccess, {
@@ -436,49 +468,61 @@ export function HistoryDetailsPage() {
     <section className="content-stack">
       <header className="section-card book-detail-hero">
         <div className="book-detail-header-bar">
-          <Link aria-label={rt(locale, "Back to history")} className="back-link" to="/app/history">
-            <ArrowLeftIcon />
-          </Link>
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back to history")} className="back-link" to={location.state?.backTo || "/app/exchanges?tab=history"}>
+              <ArrowLeftIcon />
+            </Link>
+            <PageTitle icon={HistoryIcon}>{rt(locale, "Exchange history item")}</PageTitle>
+          </div>
           <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
             {formatExchangeStatusLabel(locale, exchange.status)}
           </span>
         </div>
-        <h1>{rt(locale, "Resolved exchanges")}</h1>
-        <p>{text.historyReadonly}</p>
-        <p className="muted-line">{heroMessage}</p>
+        <p>{rt(locale, "Review the final state of this exchange, its status, and the books involved.")}</p>
+        {exchange.status === "APPROVED" ? <p className="muted-line">{heroMessage}</p> : null}
       </header>
 
       <section className="exchange-detail-books">
-        {isGiftExchange ? (
-          <ExchangeGiftNoticeCard label={giftNotice.label} text={giftNotice.text} />
+        {currentRole === "SENDER" && isGiftExchange ? (
+          <ExchangeGiftNoticeCard
+            eyebrow={giftNotice.eyebrow}
+            ownerName={ownUserName}
+            ownerPhotoUrl={ownUserPhotoUrl}
+            text={giftNotice.text}
+            title={giftNotice.title}
+          />
         ) : (
           <ExchangeBookCard
             book={ownBook}
             label={text.yourBook}
             ownerName={ownUserName}
             ownerPhotoUrl={ownUserPhotoUrl}
+            showContactDetails={exchange.status === "APPROVED"}
           />
         )}
 
-        {!isGiftExchange ? (
-          <span aria-hidden="true" className="exchange-preview-swap-icon exchange-detail-swap-icon">
-            <SwapIcon />
-          </span>
-        ) : null}
+        <span aria-hidden="true" className="exchange-preview-swap-icon exchange-detail-swap-icon">
+          <SwapIcon />
+        </span>
 
-        <ExchangeBookCard
-          book={otherBook}
-          label={formatTemplate(text.bookOfUser, { name: otherUserName })}
-          ownerName={otherUserName}
-          ownerPhotoUrl={otherUserPhotoUrl}
-        />
+        {currentRole === "RECEIVER" && isGiftExchange ? (
+          <ExchangeGiftNoticeCard
+            eyebrow={giftNotice.eyebrow}
+            ownerName={otherUserName}
+            ownerPhotoUrl={otherUserPhotoUrl}
+            text={giftNotice.text}
+            title={giftNotice.title}
+          />
+        ) : (
+          <ExchangeBookCard
+            book={otherBook}
+            label={formatTemplate(text.bookOfUser, { name: otherUserName })}
+            ownerName={otherUserName}
+            ownerPhotoUrl={otherUserPhotoUrl}
+            showContactDetails={exchange.status === "APPROVED"}
+          />
+        )}
       </section>
-
-      <div className="card-actions">
-        <Link className="button button-secondary" to="/app/history">
-          {rt(locale, "Back to history")}
-        </Link>
-      </div>
     </section>
   );
 }
@@ -495,6 +539,29 @@ export function RequestCreationCard({ book }) {
 
   const isOwnBook = isAuthenticated && user?.id === book.ownerUserId;
 
+  const requestsQuery = useQuery({
+    queryKey: ["request-create", "requests", book.id],
+    enabled: isAuthenticated && !isOwnBook,
+    queryFn: async () => {
+      const content = [];
+      let pageIndex = 0;
+      let totalPages = 1;
+
+      while (pageIndex < totalPages) {
+        const response = await apiRequest(`/request?pageIndex=${pageIndex}&pageSize=100`, {
+          auth: true
+        });
+        const page = response.data ?? {};
+
+        content.push(...(page.content ?? []));
+        totalPages = page.totalPages ?? 0;
+        pageIndex += 1;
+      }
+
+      return { content };
+    }
+  });
+
   const myBooksQuery = useQuery({
     queryKey: ["request-create", "my-books"],
     enabled: isAuthenticated && !isOwnBook && !book.isGift,
@@ -508,22 +575,43 @@ export function RequestCreationCard({ book }) {
   });
 
   const myBooks = myBooksQuery.data?.content ?? [];
+  const pendingRequests = requestsQuery.data?.content ?? [];
+  const blockedSenderBookIds = new Set(
+    pendingRequests
+      .filter(
+        (item) =>
+          Number(item?.receiverBookId) === Number(book.id) &&
+          Number(item?.otherUserId) === Number(book.ownerUserId) &&
+          item?.senderBookId !== null &&
+          item?.senderBookId !== undefined
+      )
+      .map((item) => String(item.senderBookId))
+  );
+  const hasExistingGiftRequest = pendingRequests.some(
+    (item) =>
+      Number(item?.receiverBookId) === Number(book.id) &&
+      Number(item?.otherUserId) === Number(book.ownerUserId) &&
+      (item?.senderBookId === null || item?.senderBookId === undefined)
+  );
+  const selectableMyBooks = myBooks.filter(
+    (item) => !item.isGift && !blockedSenderBookIds.has(String(item.id))
+  );
 
   useEffect(() => {
-    if (book.isGift || myBooks.length === 0) {
+    if (book.isGift || selectableMyBooks.length === 0) {
       setSenderBookId("");
       return;
     }
 
     setSenderBookId((current) =>
-      myBooks.some((item) => String(item.id) === current) ? current : ""
+      selectableMyBooks.some((item) => String(item.id) === current) ? current : ""
     );
-  }, [book.isGift, myBooks]);
+  }, [book.isGift, selectableMyBooks]);
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!book.isGift && !senderBookId) {
+    if ((!book.isGift && !senderBookId) || (book.isGift && hasExistingGiftRequest)) {
       return;
     }
 
@@ -542,7 +630,7 @@ export function RequestCreationCard({ book }) {
       });
 
       await invalidateExchangeCollections(queryClient);
-      navigate(`/app/exchanges/requests/${response.data.id}`, { replace: true });
+      navigate("/app/exchanges?tab=requests", { replace: true });
     } catch (nextError) {
       setError(nextError);
     } finally {
@@ -571,22 +659,26 @@ export function RequestCreationCard({ book }) {
     return null;
   }
 
-  if (!book.isGift && myBooksQuery.isPending) {
-    return <LoadingBlock label={rt(locale, "Loading your books for exchange")} />;
+  if (requestsQuery.isPending || (!book.isGift && myBooksQuery.isPending)) {
+    return <LoadingBlock label={rt(locale, "Preparing exchange request")} />;
+  }
+
+  if (requestsQuery.error) {
+    return <ErrorBlock error={requestsQuery.error} title={rt(locale, "Exchange request data could not be loaded")} />;
   }
 
   if (!book.isGift && myBooksQuery.error) {
     return <ErrorBlock error={myBooksQuery.error} title={rt(locale, "Your books could not be loaded")} />;
   }
 
-  if (!book.isGift && myBooks.length === 0) {
+  if (!book.isGift && selectableMyBooks.length === 0) {
     return (
       <section className="section-card">
         <h2>{rt(locale, "No active books available")}</h2>
-        <p>{rt(locale, "Add one of your own books first, then come back here to create a request.")}</p>
+        <p>{text.noEligibleBooks}</p>
         <div className="card-actions">
           <Link className="button" to="/app/my-books/new">
-            {rt(locale, "Add my first book")}
+            {rt(locale, "Add new book")}
           </Link>
         </div>
       </section>
@@ -594,20 +686,20 @@ export function RequestCreationCard({ book }) {
   }
 
   return (
-    <section className="section-card">
+    <section className="section-card request-creation-card">
       <h2>{book.isGift ? text.giftHeading : text.exchangeHeading}</h2>
-      <p>{book.isGift ? text.giftDescription : text.exchangeDescription}</p>
+      <p className="request-creation-description">{book.isGift ? text.giftDescription : text.exchangeDescription}</p>
 
       <form className="content-stack" onSubmit={handleSubmit}>
         {!book.isGift ? (
           <section className="request-book-picker-shell">
             <div className="row-between">
               <h3>{text.myBooksHeading}</h3>
-              <span className="muted-line">{myBooks.length}</span>
+              <span className="muted-line">{selectableMyBooks.length}</span>
             </div>
 
             <div className="request-book-picker-grid">
-              {myBooks.map((item) => {
+              {selectableMyBooks.map((item) => {
                 const selected = senderBookId === String(item.id);
 
                 return (
@@ -633,10 +725,17 @@ export function RequestCreationCard({ book }) {
           </section>
         ) : null}
 
+        {book.isGift && hasExistingGiftRequest ? (
+          <p className="inline-message inline-message-error">{text.giftRequestExists}</p>
+        ) : null}
         {error ? <p className="inline-message inline-message-error">{error.message}</p> : null}
 
         <div className="card-actions">
-          <button className="button" disabled={pending || (!book.isGift && !senderBookId)} type="submit">
+          <button
+            className="button"
+            disabled={pending || (!book.isGift && !senderBookId) || (book.isGift && hasExistingGiftRequest)}
+            type="submit"
+          >
             {pending
               ? rt(locale, "Creating request...")
               : book.isGift
@@ -663,8 +762,11 @@ const requestCreationText = {
     giftEmptyState:
       "Für diese Anfrage erwartet die aktuelle API noch mindestens ein eigenes Buch. Füge zuerst eines hinzu und versuche es dann erneut.",
     giftHeading: "Buch anfragen",
+    giftRequestExists: "Für diese Buchseite hast du bereits einen aktiven Geschenkantrag erstellt.",
     giftNote: "Dieses Buch ist als Geschenk markiert. Du kannst es direkt ohne Gegenvorschlag anfragen.",
     myBooksHeading: "Deine Bücher",
+    noEligibleBooks:
+      "Für dieses Buch gibt es gerade keine freie eigene Gegenbuch-Option mehr. Füge ein neues Buch hinzu und versuche es erneut.",
     requestButton: "Buch anfragen"
   },
   en: {
@@ -677,8 +779,11 @@ const requestCreationText = {
     giftEmptyState:
       "The current API still expects at least one of your own books for this request, so add one first and try again.",
     giftHeading: "Request this book",
+    giftRequestExists: "You already have an active gift request for this book.",
     giftNote: "This listing is marked as a gift, so you can request it directly without a counter-offer.",
     myBooksHeading: "Your books",
+    noEligibleBooks:
+      "There is no available book left for a new request to this listing. Add another book and try again.",
     requestButton: "Request book"
   },
   ru: {
@@ -691,13 +796,17 @@ const requestCreationText = {
     giftEmptyState:
       "Сейчас API всё ещё ожидает хотя бы одну вашу книгу для такого запроса, поэтому сначала добавьте её в профиль.",
     giftHeading: "Запросить книгу",
+    giftRequestExists: "У вас уже есть активный запрос на получение этой книги в подарок.",
     giftNote: "Эта книга доступна в дар, поэтому её можно запросить сразу без встречной книги.",
     myBooksHeading: "Выберите свою книгу",
+    noEligibleBooks:
+      "Для этой книги у вас сейчас не осталось доступной книги для нового запроса. Добавьте новую книгу и попробуйте снова.",
     requestButton: "Запросить книгу"
   }
 };
 
 function ExchangeListPage({
+  emptyAction = null,
   emptyDescription,
   emptyTitle,
   items,
@@ -707,35 +816,44 @@ function ExchangeListPage({
   query,
   routeBase,
   setPage,
+  showHeader = true,
   summary,
-  title
+  title,
+  titleIcon,
+  type
 }) {
   const { locale } = useLocale();
 
   return (
     <section className="content-stack">
-      <header className="section-card">
-        <h1>{title}</h1>
-        <p>{summary}</p>
-      </header>
+      {showHeader ? (
+        <header className="section-card">
+          <PageTitle icon={titleIcon}>{title}</PageTitle>
+          <p>{summary}</p>
+        </header>
+      ) : null}
 
       {query.isPending ? <LoadingBlock label={loadingLabel} /> : null}
       {query.error ? (
-        <ErrorBlock error={query.error} title={rtf(locale, "{title} could not be loaded", { title })} />
+        <ErrorBlock
+          error={query.error}
+          title={rtf(locale, "{title} could not be loaded", { title: title ?? rt(locale, "Exchanges") })}
+        />
       ) : null}
 
       {!query.isPending && !query.error && items.length === 0 ? (
-        <EmptyBlock description={emptyDescription} title={emptyTitle} />
+        <EmptyBlock actions={emptyAction} description={emptyDescription} title={emptyTitle} />
       ) : null}
 
       {items.length > 0 ? (
-        <section className="list-stack">
+        <section className="exchange-card-grid">
           {items.map((item) => (
             <ExchangeListCard
               fallbackStatus={fallbackStatus}
               item={item}
               key={item.id}
               locale={locale}
+              type={type}
               to={`${routeBase}/${item.id}`}
             />
           ))}
@@ -749,14 +867,96 @@ function ExchangeListPage({
   );
 }
 
+function useExchangeCollectionQuery(tab, pageIndex) {
+  return useQuery({
+    queryKey: [tab, pageIndex],
+    queryFn: async () => {
+      const endpoint = tab === "offers" ? "offer" : tab === "history" ? "history" : "request";
+      const response = await apiRequest(
+        `/${endpoint}?pageIndex=${pageIndex}&pageSize=${DEFAULT_LIST_PAGE_SIZE}`,
+        { auth: true }
+      );
+
+      return response.data;
+    }
+  });
+}
+
+function getExchangeTabConfig(locale, tab, text) {
+  if (tab === "offers") {
+    return {
+      emptyDescription: text.emptyOffersDescription,
+      emptyTitle: text.emptyOffersTitle,
+      fallbackStatus: "PENDING",
+      loadingLabel: rt(locale, "Loading your offers"),
+      routeBase: "/app/exchanges/offers",
+      title: text.offersTab,
+      type: "offer"
+    };
+  }
+
+  if (tab === "history") {
+    return {
+      emptyDescription: text.emptyHistoryDescription,
+      emptyTitle: text.emptyHistoryTitle,
+      fallbackStatus: null,
+      loadingLabel: rt(locale, "Loading exchange history"),
+      routeBase: "/app/history",
+      title: text.historyTab,
+      type: "history"
+    };
+  }
+
+  return {
+    emptyDescription: text.emptyRequestsDescription,
+    emptyTitle: text.emptyRequestsTitle,
+    fallbackStatus: "PENDING",
+    loadingLabel: rt(locale, "Loading your requests"),
+    routeBase: "/app/exchanges/requests",
+    title: text.requestsTab,
+    type: "request"
+  };
+}
+
+function resolveExchangeTab(value) {
+  return EXCHANGE_TABS.includes(value) ? value : "requests";
+}
+
+function resolveExchangeTabIcon(tab) {
+  if (tab === "offers") {
+    return IncomingIcon;
+  }
+
+  if (tab === "history") {
+    return HistoryIcon;
+  }
+
+  return OutgoingIcon;
+}
+
+function resolveExchangeTabLabel(text, tab) {
+  if (tab === "offers") {
+    return text.offersTab;
+  }
+
+  if (tab === "history") {
+    return text.historyTab;
+  }
+
+  return text.requestsTab;
+}
+
 function ExchangeDetailsPage({
   actionError,
+  actionMessage,
   actions,
   backTo,
   detailQuery,
   relation,
+  showContactDetails = false,
   subtitle,
-  title
+  title,
+  titleIcon
 }) {
   const { locale } = useLocale();
   const { user } = useAuth();
@@ -778,63 +978,87 @@ function ExchangeDetailsPage({
   const ownUserName = user?.nickname || ownBook?.ownerNickname || rt(locale, "Unknown owner");
   const ownUserPhotoUrl = user?.photoUrl || ownBook?.ownerPhotoUrl || "";
   const otherUserPhotoUrl = otherBook?.ownerPhotoUrl || "";
-  const isGiftExchange = !ownBook && Boolean(otherBook?.isGift);
-  const giftNotice = getGiftNotice(locale, currentRole);
+  const isGiftExchange = !exchange.senderBook && Boolean(exchange.receiverBook?.isGift);
+  const giftNotice = getGiftNotice(locale, currentRole, otherUserName);
 
   return (
     <section className="content-stack">
       <header className="section-card book-detail-hero">
         <div className="book-detail-header-bar">
-          <Link aria-label={rt(locale, "Back")} className="back-link" to={backTo}>
-            <ArrowLeftIcon />
-          </Link>
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back")} className="back-link" to={backTo}>
+              <ArrowLeftIcon />
+            </Link>
+            <PageTitle icon={titleIcon}>{title}</PageTitle>
+          </div>
           <div className="hero-icon-actions">
-            {actions}
             <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
               {formatExchangeStatusLabel(locale, exchange.status)}
             </span>
           </div>
         </div>
-        <h1>{title}</h1>
-        <p>{subtitle}</p>
+        <div className="exchange-detail-hero-row">
+          <p>{subtitle}</p>
+          {actions ? <div className="card-actions exchange-detail-actions">{actions}</div> : null}
+        </div>
       </header>
 
+      {actionMessage ? <p className="inline-message inline-message-success">{actionMessage}</p> : null}
       {actionError ? <ErrorBlock error={actionError} title={rt(locale, "Exchange action failed")} /> : null}
 
       <section className="exchange-detail-books">
-        {isGiftExchange ? (
-          <ExchangeGiftNoticeCard label={giftNotice.label} text={giftNotice.text} />
+        {currentRole === "SENDER" && isGiftExchange ? (
+          <ExchangeGiftNoticeCard
+            eyebrow={giftNotice.eyebrow}
+            ownerName={ownUserName}
+            ownerPhotoUrl={ownUserPhotoUrl}
+            text={giftNotice.text}
+            title={giftNotice.title}
+          />
         ) : (
           <ExchangeBookCard
             book={ownBook}
             label={text.yourBook}
             ownerName={ownUserName}
             ownerPhotoUrl={ownUserPhotoUrl}
+            showContactDetails={showContactDetails}
           />
         )}
 
-        {!isGiftExchange ? (
-          <span aria-hidden="true" className="exchange-preview-swap-icon exchange-detail-swap-icon">
-            <SwapIcon />
-          </span>
-        ) : null}
+        <span aria-hidden="true" className="exchange-preview-swap-icon exchange-detail-swap-icon">
+          <SwapIcon />
+        </span>
 
-        <ExchangeBookCard
-          book={otherBook}
-          label={formatTemplate(text.bookOfUser, { name: otherUserName })}
-          ownerName={otherUserName}
-          ownerPhotoUrl={otherUserPhotoUrl}
-        />
+        {currentRole === "RECEIVER" && isGiftExchange ? (
+          <ExchangeGiftNoticeCard
+            eyebrow={giftNotice.eyebrow}
+            ownerName={otherUserName}
+            ownerPhotoUrl={otherUserPhotoUrl}
+            text={giftNotice.text}
+            title={giftNotice.title}
+          />
+        ) : (
+          <ExchangeBookCard
+            book={otherBook}
+            label={formatTemplate(text.bookOfUser, { name: otherUserName })}
+            ownerName={otherUserName}
+            ownerPhotoUrl={otherUserPhotoUrl}
+            showContactDetails={showContactDetails}
+          />
+        )}
       </section>
+
     </section>
   );
 }
 
-function ExchangeListCard({ fallbackStatus = null, item, locale, to }) {
+function ExchangeListCard({ fallbackStatus = null, item, locale, to, type }) {
   const resolvedStatus = item.status || fallbackStatus;
+  const roleBadge = getExchangeHistoryRoleBadge(locale, item, type);
 
   return (
-    <article className="section-card compact-card exchange-list-card">
+    <Link className="section-card compact-card exchange-list-card exchange-list-card-link" to={to}>
+      {roleBadge ? <span className="status-pill status-pill-neutral exchange-list-card-role-badge">{roleBadge}</span> : null}
       <div className="exchange-list-card-layout">
         <div className="exchange-list-card-preview">
           <ExchangePreviewPair
@@ -852,7 +1076,7 @@ function ExchangeListCard({ fallbackStatus = null, item, locale, to }) {
             <div className="exchange-list-card-copy">
               <h2>{formatExchangeWithUser(locale, item.userNickname)}</h2>
               <p className="exchange-list-card-subtitle">
-                {formatExchangeCardHint(locale, item)}
+                {formatExchangeCardHint(locale, item, type)}
               </p>
             </div>
 
@@ -863,23 +1087,32 @@ function ExchangeListCard({ fallbackStatus = null, item, locale, to }) {
             ) : null}
           </div>
 
-          <div className="exchange-list-card-footer">
-            <Link className="button button-secondary button-compact" to={to}>
-              {rt(locale, "Open details")}
-            </Link>
-          </div>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }
 
-function ExchangeGiftNoticeCard({ label, text }) {
+function ExchangeGiftNoticeCard({ eyebrow, ownerName = "", ownerPhotoUrl = "", text, title }) {
   return (
     <article className="section-card exchange-book-card exchange-book-card-note">
-      <span className="eyebrow">{label}</span>
-      <h2>{label}</h2>
-      <p className="muted-line">{text}</p>
+      <span className="eyebrow">{eyebrow}</span>
+      <div className="exchange-gift-note-content">
+        <div>
+          <h2>{title}</h2>
+          <p className="muted-line">{text}</p>
+        </div>
+        <span aria-hidden="true" className="request-gift-illustration request-gift-illustration-lg">
+          <RequestGiftIcon />
+        </span>
+      </div>
+      {ownerName ? (
+        <div className="book-owner exchange-book-owner">
+          <UserIdentityInline className="admin-book-owner-inline" name={ownerName} photoUrl={ownerPhotoUrl} size="sm">
+            <strong>{ownerName}</strong>
+          </UserIdentityInline>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -894,13 +1127,19 @@ function ExchangePreviewPair({
 }) {
   if (isGiftExchange) {
     return (
-      <div className="exchange-preview-pair exchange-preview-pair-single">
-        {showGiftBadge ? (
-          <span className="gift-icon-badge gift-icon-badge-small exchange-preview-frame-badge">
-            <GiftIcon />
-          </span>
-        ) : null}
+      <div className="exchange-preview-pair">
+        <span aria-hidden="true" className="request-gift-illustration request-gift-illustration-sm">
+          <RequestGiftIcon />
+        </span>
+        <span aria-hidden="true" className="exchange-preview-swap-icon">
+          <SwapIcon />
+        </span>
         <div className="book-cover-with-badge">
+          {showGiftBadge ? (
+            <span className="gift-icon-badge gift-icon-badge-small book-cover-corner-badge">
+              <GiftIcon />
+            </span>
+          ) : null}
           <BookCover photoUrl={receiverPhotoUrl} size="sm" title={receiverTitle} />
         </div>
       </div>
@@ -925,7 +1164,7 @@ function ExchangePreviewPair({
   );
 }
 
-function ExchangeBookCard({ book, label, ownerName, ownerPhotoUrl }) {
+function ExchangeBookCard({ book, label, ownerName, ownerPhotoUrl, showContactDetails = false }) {
   const { locale } = useLocale();
 
   if (!book) {
@@ -959,12 +1198,6 @@ function ExchangeBookCard({ book, label, ownerName, ownerPhotoUrl }) {
 
           <h2>{book.name || rt(locale, "Not available")}</h2>
 
-          <div className="book-detail-owner">
-            <UserIdentityInline name={ownerName} photoUrl={ownerPhotoUrl} size="sm">
-              <strong>{ownerName || rt(locale, "Unknown owner")}</strong>
-            </UserIdentityInline>
-          </div>
-
           <p className="book-detail-description">
             <strong>{rt(locale, "Description")}:</strong>{" "}
             {book.description || rt(locale, "No description provided.")}
@@ -974,9 +1207,17 @@ function ExchangeBookCard({ book, label, ownerName, ownerPhotoUrl }) {
             <p>{rt(locale, "Author")}: {book.author || rt(locale, "Not available")}</p>
             <p>{rt(locale, "Publication year")}: {renderValue(locale, book.publicationYear)}</p>
             <p>{rt(locale, "City")}: {book.city ? getCityDisplayName(book.city, locale) : rt(locale, "Not available")}</p>
-            {book.contactDetails ? <p>{rt(locale, "Contact details")}: {book.contactDetails}</p> : null}
+            {showContactDetails && book.contactDetails ? (
+              <p>{rt(locale, "Contact details")}: {book.contactDetails}</p>
+            ) : null}
           </div>
         </div>
+      </div>
+
+      <div className="book-owner exchange-book-owner">
+        <UserIdentityInline className="admin-book-owner-inline" name={ownerName} photoUrl={ownerPhotoUrl} size="sm">
+          <strong>{ownerName || rt(locale, "Unknown owner")}</strong>
+        </UserIdentityInline>
       </div>
     </article>
   );
@@ -1015,6 +1256,33 @@ function getExchangeUiText(locale) {
   return exchangeUiText[locale] ?? exchangeUiText.en;
 }
 
+function getExchangeTabsText(locale) {
+  return exchangeTabsText[locale] ?? exchangeTabsText.en;
+}
+
+function getExchangeActionMessage(locale, kind) {
+  const messages = {
+    de: {
+      offerApproved: "Der Tausch wurde bestätigt. Beide Seiten sehen die Änderung sofort.",
+      offerDeclined: "Die Anfrage wurde abgelehnt. Die andere Seite sieht die Änderung sofort.",
+      requestDeclined: "Die Anfrage wurde storniert. Die andere Seite sieht die Änderung sofort."
+    },
+    en: {
+      offerApproved: "The exchange was approved. Both users can already see the change.",
+      offerDeclined: "The request was declined. The other user can already see the change.",
+      requestDeclined: "The request was cancelled. The other user can already see the change."
+    },
+    ru: {
+      offerApproved: "Обмен подтвержден. Оба пользователя уже видят это изменение.",
+      offerDeclined: "Запрос отклонен. Другой пользователь уже видит это изменение.",
+      requestDeclined: "Запрос отменен. Другой пользователь уже видит это изменение."
+    }
+  };
+  const localeMessages = messages[locale] ?? messages.en;
+
+  return localeMessages[kind] ?? "";
+}
+
 function formatTemplate(template, params) {
   return String(template).replace(/\{(\w+)\}/g, (_, key) => String(params[key] ?? ""));
 }
@@ -1029,7 +1297,7 @@ function formatExchangeWithUser(locale, userNickname) {
 function formatExchangeStatusLabel(locale, status) {
   const labels = {
     de: {
-      APPROVED: "Bestaetigt",
+      APPROVED: "Bestätigt",
       DECLINED: "Abgelehnt",
       PENDING: "Ausstehend"
     },
@@ -1039,9 +1307,9 @@ function formatExchangeStatusLabel(locale, status) {
       PENDING: "Pending"
     },
     ru: {
-      APPROVED: "Подтверждён",
-      DECLINED: "Отклонён",
-      PENDING: "Ожидает"
+      APPROVED: "Подтвержден",
+      DECLINED: "Отклонен",
+      PENDING: "В ожидании"
     }
   };
   const normalizedStatus = String(status || "").toUpperCase();
@@ -1062,53 +1330,119 @@ function resolveReceiverBookLabel(locale, receiverBookName) {
   return receiverBookName || rt(locale, "Unknown receiver book");
 }
 
-function formatExchangeCardHint(locale, item) {
-  const labels = {
+function formatExchangeCardHint(locale, item, type) {
+  const role = resolveExchangeCardRole(item, type);
+  const isGift = isGiftExchangePreview(item);
+  const senderBook = resolveExchangeBookTitle(item.senderBookName, locale);
+  const receiverBook = resolveExchangeBookTitle(item.receiverBookName, locale);
+  const copy = {
     de: {
-      gift: "Geschenkbuch ohne Gegenbuch",
-      regular: "Tausch zwischen zwei Büchern"
+      offerGift: <>Dein Buch <strong>{receiverBook}</strong> wurde als Geschenk angefragt.</>,
+      offerRegular: <>Dir wird angeboten, dein Buch <strong>{receiverBook}</strong> gegen <strong>{senderBook}</strong> zu tauschen.</>,
+      requestGift: <>Du hast das Buch <strong>{receiverBook}</strong> als Geschenk angefragt.</>,
+      requestRegular: <>Du hast vorgeschlagen, dein Buch <strong>{senderBook}</strong> gegen <strong>{receiverBook}</strong> zu tauschen.</>
     },
     en: {
-      gift: "Gift book without a counter-book",
-      regular: "Exchange between two books"
+      offerGift: <>Your book <strong>{receiverBook}</strong> was requested as a gift.</>,
+      offerRegular: <>You are offered to exchange your book <strong>{receiverBook}</strong> for <strong>{senderBook}</strong>.</>,
+      requestGift: <>You requested <strong>{receiverBook}</strong> as a gift.</>,
+      requestRegular: <>You offered to exchange your book <strong>{senderBook}</strong> for <strong>{receiverBook}</strong>.</>
     },
     ru: {
-      gift: "Подарочная книга без встречной книги",
-      regular: "Обмен между двумя книгами"
+      offerGift: <>Вашу книгу <strong>{receiverBook}</strong> запросили в подарок.</>,
+      offerRegular: <>Вам предлагают обменять свою книгу <strong>{receiverBook}</strong> на книгу <strong>{senderBook}</strong>.</>,
+      requestGift: <>Вы запросили книгу <strong>{receiverBook}</strong> в подарок.</>,
+      requestRegular: <>Вы предложили обменять свою книгу <strong>{senderBook}</strong> на книгу <strong>{receiverBook}</strong>.</>
     }
   };
-  const text = labels[locale] ?? labels.en;
+  const text = copy[locale] ?? copy.en;
 
-  return isGiftExchangePreview(item) ? text.gift : text.regular;
+  if (role === "RECEIVER") {
+    return isGift ? text.offerGift : text.offerRegular;
+  }
+
+  return isGift ? text.requestGift : text.requestRegular;
 }
 
 function isGiftExchangePreview(item) {
   return !item?.senderBookName && !item?.senderBookPhotoUrl;
 }
 
-function getGiftNotice(locale, role) {
+function resolveExchangeCardRole(item, type) {
+  if (type === "offer") {
+    return "RECEIVER";
+  }
+
+  if (type === "request") {
+    return "SENDER";
+  }
+
+  return item?.userExchangeRole ?? null;
+}
+
+function getExchangeHistoryRoleBadge(locale, item, type) {
+  if (type !== "history" || !item?.userExchangeRole) {
+    return null;
+  }
+
+  const labels = {
+    de: {
+      RECEIVER: "Angebot",
+      SENDER: "Anfrage"
+    },
+    en: {
+      RECEIVER: "Offer",
+      SENDER: "Request"
+    },
+    ru: {
+      RECEIVER: "Предложение",
+      SENDER: "Запрос"
+    }
+  };
+  const localeLabels = labels[locale] ?? labels.en;
+
+  return localeLabels[item.userExchangeRole] ?? null;
+}
+
+function resolveExchangeBookTitle(title, locale) {
+  return title || rt(locale, "Unknown book");
+}
+
+function getGiftNotice(locale, role, userName = "") {
   const giftNoticeText = {
     de: {
       receiverLabel: "Geschenkanfrage",
+      receiverTitle: "Anfrage ohne Gegenbuch",
       receiverText:
         "Dieses Buch wurde als Geschenk angefragt. Deshalb gibt es in diesem Tausch kein Gegenbuch.",
-      senderLabel: "Anfrage ohne Gegenbuch",
+      receiverTextWithUser:
+        "{name} hat dein Buch als Geschenk angefragt. Deshalb gibt es in diesem Tausch kein Gegenbuch.",
+      senderLabel: "Geschenkanfrage",
+      senderTitle: "Anfrage ohne Gegenbuch",
       senderText:
         "Du hast dieses Buch als Geschenk angefragt. Deshalb ist kein eigenes Gegenbuch erforderlich."
     },
     en: {
       receiverLabel: "Gift request",
+      receiverTitle: "Request without a counter-book",
       receiverText:
         "This book was requested as a gift, so there is no counter-book in this exchange.",
-      senderLabel: "Request without a counter-book",
+      receiverTextWithUser:
+        "{name} requested your book as a gift, so there is no counter-book in this exchange.",
+      senderLabel: "Gift request",
+      senderTitle: "Request without a counter-book",
       senderText:
         "You requested this book as a gift, so a counter-book is not needed for this exchange."
     },
     ru: {
-      receiverLabel: "Подарочный запрос",
+      receiverLabel: "Запрос книги в подарок",
+      receiverTitle: "Запрос без встречной книги",
       receiverText:
         "Эту книгу запросили в дар, поэтому в этом обмене нет встречной книги.",
-      senderLabel: "Запрос без встречной книги",
+      receiverTextWithUser:
+        "Пользователь {name} запросил вашу книгу в дар, поэтому встречная книга для этого запроса не нужна.",
+      senderLabel: "Запрос книги в подарок",
+      senderTitle: "Запрос без встречной книги",
       senderText:
         "Вы запросили эту книгу в дар, поэтому ваша книга для этого запроса не требуется."
     }
@@ -1117,13 +1451,18 @@ function getGiftNotice(locale, role) {
 
   if (role === "RECEIVER") {
     return {
-      label: text.receiverLabel,
-      text: text.receiverText
+      eyebrow: text.receiverLabel,
+      title: text.receiverTitle,
+      text:
+        userName && text.receiverTextWithUser
+          ? formatTemplate(text.receiverTextWithUser, { name: userName })
+          : text.receiverText
     };
   }
 
   return {
-    label: text.senderLabel,
+    eyebrow: text.senderLabel,
+    title: text.senderTitle,
     text: text.senderText
   };
 }
