@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
@@ -30,9 +30,11 @@ import { CityField } from "../../../shared/ui/CityField";
 import { BookCover, UserIdentityInline } from "../../../shared/ui/Media";
 import {
   ArrowLeftIcon,
+  BookIcon,
   ExternalLinkIcon,
   FilterIcon,
   GiftIcon,
+  PencilIcon,
   RestoreIcon,
   SearchIcon,
   SortDirectionIcon,
@@ -40,6 +42,7 @@ import {
   UserIcon,
   XIcon
 } from "../../../shared/ui/Icons";
+import { PageTitle } from "../../../shared/ui/PageTitle";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
 const defaultFilters = {
@@ -118,7 +121,8 @@ const adminCatalogText = {
 
 export function AdminBooksPage() {
   const metadataQuery = useMetadataQuery();
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
+  const navigate = useNavigate();
   const [filters, setFilters] = useState(defaultFilters);
   const [draftFilters, setDraftFilters] = useState(defaultFilters);
   const [searchText, setSearchText] = useState("");
@@ -210,8 +214,9 @@ export function AdminBooksPage() {
       return;
     }
 
-    setDraftFilters(normalizedDraftFilters);
-    setFilters(normalizedDraftFilters);
+    const nextFilters = prepareAdminBookFiltersForState(draftFilters);
+    setDraftFilters(nextFilters);
+    setFilters(nextFilters);
   }
 
   function handleResetFilters() {
@@ -239,6 +244,10 @@ export function AdminBooksPage() {
     }));
   }
 
+  function openBookDetails(bookId) {
+    navigate(`/admin/books/${bookId}`);
+  }
+
   const books = useMemo(
     () => (booksQuery.data?.pages ?? []).flatMap((page) => page.content ?? []),
     [booksQuery.data?.pages]
@@ -249,8 +258,6 @@ export function AdminBooksPage() {
   const hasPendingFilterChanges = !areAdminBookFiltersEqual(normalizedFilters, normalizedDraftFilters);
   const canSearch = normalizedSearchText.length === 0 || normalizedSearchText.length >= 3;
   const hasSearchChanges = normalizedSearchText !== appliedSearchText;
-  const hasAppliedCatalogContext =
-    Boolean(appliedSearchText) || !areAdminBookFiltersEqual(normalizedFilters, normalizedInitialFilters);
   const loadMoreRef = useInfiniteScroll({
     enabled: !booksQuery.isPending && !booksQuery.error,
     hasNextPage: booksQuery.hasNextPage,
@@ -261,7 +268,7 @@ export function AdminBooksPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>{rt(locale, "Book moderation")}</h1>
+        <PageTitle admin icon={BookIcon}>{t("shell.manageBooks")}</PageTitle>
         <p>{text.description}</p>
       </header>
 
@@ -389,11 +396,7 @@ export function AdminBooksPage() {
       </section>
 
       <div className="catalog-results-toolbar">
-        {hasAppliedCatalogContext ? (
-          <span className="muted-line">{rtf(locale, "Found books: {count}", { count: totalElements })}</span>
-        ) : (
-          <span />
-        )}
+        <span className="muted-line">{rtf(locale, "Found books: {count}", { count: totalElements })}</span>
 
         <div className="catalog-sort-controls">
           <select
@@ -463,10 +466,17 @@ export function AdminBooksPage() {
                     deleted ? " admin-book-list-card-deleted" : ""
                   }`}
                   key={book.id}
+                  onClick={() => openBookDetails(book.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openBookDetails(book.id);
+                    }
+                  }}
+                  role="link"
+                  tabIndex={0}
                 >
-                  <Link className="book-card-cover-link" to={`/admin/books/${book.id}`}>
-                    <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
-                  </Link>
+                  <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
 
                   <div className="book-card-head">
                     <div className="book-card-statuses">
@@ -494,7 +504,7 @@ export function AdminBooksPage() {
 
                   <h2>{book.name || rt(locale, "Untitled book")}</h2>
                   <p className="book-meta book-meta-compact">
-                    {book.author || rt(locale, "Unknown author")} / {renderValue(locale, book.publicationYear)}
+                    {formatAuthorYear(locale, book.author, book.publicationYear)}
                   </p>
 
                   <div className="book-owner">
@@ -508,28 +518,6 @@ export function AdminBooksPage() {
                     </UserIdentityInline>
                   </div>
 
-                  <div className="card-actions">
-                    <div className="action-icon-group">
-                      {book.ownerUserId ? (
-                        <Link
-                          aria-label={rt(locale, "Open owner")}
-                          className="icon-button"
-                          title={rt(locale, "Open owner")}
-                          to={`/admin/users/${book.ownerUserId}`}
-                        >
-                          <UserIcon />
-                        </Link>
-                      ) : null}
-                      <Link
-                        aria-label={rt(locale, "Open public page")}
-                        className="icon-button"
-                        title={rt(locale, "Open public page")}
-                        to={`/book/${book.id}`}
-                      >
-                        <ExternalLinkIcon />
-                      </Link>
-                    </div>
-                  </div>
                 </article>
               );
             })}
@@ -553,6 +541,14 @@ function normalizeAdminBookFilters(filters) {
     ...filters,
     author: String(filters.author ?? "").trim(),
     city: normalizeCityQueryValue(filters.city),
+    publicationYear: sanitizePublicationYearInput(filters.publicationYear)
+  };
+}
+
+function prepareAdminBookFiltersForState(filters) {
+  return {
+    ...filters,
+    author: String(filters.author ?? "").trim(),
     publicationYear: sanitizePublicationYearInput(filters.publicationYear)
   };
 }
@@ -615,20 +611,14 @@ function FilterSelectField({ className = "", label, onChange, options, value }) 
 }
 
 export function AdminBookDetailsPage() {
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { bookId } = useParams();
-  const metadataQuery = useMetadataQuery();
   const { locale } = useLocale();
-  const [form, setForm] = useState(emptyBookForm);
-  const [initialForm, setInitialForm] = useState(emptyBookForm);
   const [pendingAction, setPendingAction] = useState(null);
-  const [editError, setEditError] = useState(null);
-  const [editMessage, setEditMessage] = useState("");
   const [moderationError, setModerationError] = useState(null);
   const [moderationMessage, setModerationMessage] = useState("");
-  const [photoPending, setPhotoPending] = useState(false);
-  const [photoError, setPhotoError] = useState("");
-  const [photoMessage, setPhotoMessage] = useState("");
+  const backTo = location.state?.backTo || "/admin/books";
 
   const detailQuery = useQuery({
     queryKey: ["admin-book", String(bookId)],
@@ -636,58 +626,13 @@ export function AdminBookDetailsPage() {
     queryFn: () => fetchAdminBook(bookId)
   });
 
-  useEffect(() => {
-    if (!detailQuery.data) {
-      return;
-    }
-
-    const nextForm = fromBookToForm(detailQuery.data, locale);
-    setForm(nextForm);
-    setInitialForm(nextForm);
-  }, [detailQuery.data, locale]);
-
-  async function handleSave(event) {
-    event.preventDefault();
-    setEditError(null);
-    setEditMessage("");
-    setPhotoError("");
-    setPhotoMessage("");
-
-    const payload = toUpdatePayload(form, initialForm);
-
-      if (Object.keys(payload).length === 0) {
-        return;
-      }
-
-    setPendingAction("save");
-
-    try {
-      await apiRequest(`/admin/books/${bookId}`, {
-        method: "PATCH",
-        auth: true,
-        version: detailQuery.data.__version ?? detailQuery.data.version,
-        body: payload
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ["admin-books"] });
-      const nextBook = await queryClient.fetchQuery({
-        queryKey: ["admin-book", String(bookId)],
-        queryFn: () => fetchAdminBook(bookId)
-      });
-      const nextForm = fromBookToForm(nextBook, locale);
-
-      setForm(nextForm);
-      setInitialForm(nextForm);
-      setEditMessage(rt(locale, "Book updated."));
-    } catch (error) {
-      setEditError(error);
-    } finally {
-      setPendingAction(null);
-    }
-  }
-
   async function handleDelete() {
-    const confirmed = window.confirm(rt(locale, "Soft-delete this book from the moderation console?"));
+    const confirmed = window.confirm(
+      rt(
+        locale,
+        "Soft-delete this book from the moderation console? Any active exchange requests related to this book will be cancelled automatically."
+      )
+    );
 
     if (!confirmed) {
       return;
@@ -705,14 +650,11 @@ export function AdminBookDetailsPage() {
       });
 
       await queryClient.invalidateQueries({ queryKey: ["admin-books"] });
-      const nextBook = await queryClient.fetchQuery({
+      await queryClient.fetchQuery({
         queryKey: ["admin-book", String(bookId)],
         queryFn: () => fetchAdminBook(bookId)
       });
-      const nextForm = fromBookToForm(nextBook, locale);
 
-      setForm(nextForm);
-      setInitialForm(nextForm);
       setModerationMessage(rt(locale, "Book deleted."));
     } catch (error) {
       setModerationError(error);
@@ -740,65 +682,16 @@ export function AdminBookDetailsPage() {
       });
 
       await queryClient.invalidateQueries({ queryKey: ["admin-books"] });
-      const nextBook = await queryClient.fetchQuery({
+      await queryClient.fetchQuery({
         queryKey: ["admin-book", String(bookId)],
         queryFn: () => fetchAdminBook(bookId)
       });
-      const nextForm = fromBookToForm(nextBook, locale);
 
-      setForm(nextForm);
-      setInitialForm(nextForm);
       setModerationMessage(rt(locale, "Book restored."));
     } catch (error) {
       setModerationError(error);
     } finally {
       setPendingAction(null);
-    }
-  }
-
-  async function handleDeletePhoto() {
-    const confirmed = window.confirm(rt(locale, "Delete the saved photo for this book?"));
-
-    if (!confirmed) {
-      return;
-    }
-
-    setPhotoPending(true);
-    setPhotoError("");
-    setPhotoMessage("");
-    setEditError(null);
-    setEditMessage("");
-
-    try {
-      await apiRequest(`/admin/books/${bookId}/photo`, {
-        method: "DELETE",
-        auth: true,
-        version: detailQuery.data.__version ?? detailQuery.data.version
-      });
-
-      const nextBook = await queryClient.fetchQuery({
-        queryKey: ["admin-book", String(bookId)],
-        queryFn: () => fetchAdminBook(bookId)
-      });
-      const nextPhotoUrl = nextBook.photoUrl ?? "";
-
-      setForm((current) => ({
-        ...current,
-        photoBase64: null,
-        photoUrl: nextPhotoUrl
-      }));
-      setInitialForm((current) => ({
-        ...current,
-        photoBase64: null,
-        photoUrl: nextPhotoUrl
-      }));
-
-      await queryClient.invalidateQueries({ queryKey: ["admin-books"] });
-      setPhotoMessage(rt(locale, "Book photo deleted."));
-    } catch (error) {
-      setPhotoError(error.message);
-    } finally {
-      setPhotoPending(false);
     }
   }
 
@@ -812,21 +705,22 @@ export function AdminBookDetailsPage() {
 
   const book = detailQuery.data;
   const deleted = isBookDeleted(book);
-  const categoryOptions = buildBookCategoryOptions(
-    metadataQuery.data?.bookCategories ?? [],
+  const editLocked = Boolean(book.editLocked);
+  const editLockedReason = rt(
     locale,
-    getBookCategoryUiLabel("select", locale),
-    form.category
+    "This book cannot be edited because it already participates in an exchange or is in exchange history."
   );
-  const hasChanges = Object.keys(toUpdatePayload(form, initialForm)).length > 0;
 
   return (
     <section className="content-stack">
       <header className="section-card book-detail-hero">
         <div className="book-detail-header-bar">
-          <Link aria-label={rt(locale, "Back to books")} className="back-link" to="/admin/books">
-            <ArrowLeftIcon />
-          </Link>
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back to books")} className="back-link" to={backTo}>
+              <ArrowLeftIcon />
+            </Link>
+            <PageTitle icon={BookIcon}>{rt(locale, "Book overview")}</PageTitle>
+          </div>
 
           <div className="hero-icon-actions">
             {book.ownerUserId ? (
@@ -839,14 +733,46 @@ export function AdminBookDetailsPage() {
                 <UserIcon />
               </Link>
             ) : null}
-            <Link
-              aria-label={rt(locale, "Open public page")}
-              className="icon-button"
-              title={rt(locale, "Open public page")}
-              to={`/book/${book.id}`}
-            >
-              <ExternalLinkIcon />
-            </Link>
+            {deleted ? (
+              <button
+                aria-label={rt(locale, "Open public page")}
+                className="icon-button"
+                disabled
+                title={rt(locale, "Open public page")}
+                type="button"
+              >
+                <ExternalLinkIcon />
+              </button>
+            ) : (
+              <Link
+                aria-label={rt(locale, "Open public page")}
+                className="icon-button"
+                title={rt(locale, "Open public page")}
+                to={`/book/${book.id}`}
+              >
+                <ExternalLinkIcon />
+              </Link>
+            )}
+            {editLocked ? (
+              <button
+                aria-label={rt(locale, "Edit book")}
+                className="icon-button icon-button-secondary"
+                disabled
+                title={editLockedReason}
+                type="button"
+              >
+                <PencilIcon />
+              </button>
+            ) : (
+              <Link
+                aria-label={rt(locale, "Edit book")}
+                className="icon-button icon-button-secondary"
+                title={rt(locale, "Edit book")}
+                to={`/admin/books/${book.id}/edit`}
+              >
+                <PencilIcon />
+              </Link>
+            )}
             {deleted ? (
               <button
                 aria-label={rt(locale, "Restore book")}
@@ -893,7 +819,7 @@ export function AdminBookDetailsPage() {
               {book.isExchanged ? (
                 <span className="status-pill status-pill-success">{rt(locale, "Exchanged")}</span>
               ) : null}
-              {deleted ? <span className="status-pill status-pill-danger">{rt(locale, "Deleted")}</span> : null}
+              {deleted ? <span className="status-pill status-pill-danger">{rt(locale, "Book deleted status")}</span> : null}
             </div>
 
             <h1>{book.name || rt(locale, "Untitled book")}</h1>
@@ -926,13 +852,13 @@ export function AdminBookDetailsPage() {
 
             <div className="book-hero-timeline">
               {book.meta?.createdAt ? (
-                <p>{rtf(locale, "Created on {value}", { value: formatDateTimeReadable(book.meta?.createdAt) })}</p>
+                <p>{formatAdminBookDateLine(locale, "created", book.meta?.createdAt)}</p>
               ) : null}
               {book.meta?.updatedAt ? (
-                <p>{rtf(locale, "Updated on {value}", { value: formatDateTimeReadable(book.meta?.updatedAt) })}</p>
+                <p>{formatAdminBookDateLine(locale, "updated", book.meta?.updatedAt)}</p>
               ) : null}
               {book.meta?.deletedAt ? (
-                <p>{rtf(locale, "Deleted on {value}", { value: formatDateTimeReadable(book.meta?.deletedAt) })}</p>
+                <p>{formatAdminBookDateLine(locale, "deleted", book.meta?.deletedAt)}</p>
               ) : null}
             </div>
           </div>
@@ -941,16 +867,170 @@ export function AdminBookDetailsPage() {
 
       {moderationMessage ? <p className="inline-message inline-message-success">{moderationMessage}</p> : null}
       {moderationError ? <ErrorBlock error={moderationError} title={rt(locale, "Book action failed")} /> : null}
+    </section>
+  );
+}
+
+export function AdminBookEditPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { bookId } = useParams();
+  const metadataQuery = useMetadataQuery();
+  const { locale } = useLocale();
+  const [form, setForm] = useState(emptyBookForm);
+  const [initialForm, setInitialForm] = useState(emptyBookForm);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [editError, setEditError] = useState(null);
+  const [photoPending, setPhotoPending] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [photoMessage, setPhotoMessage] = useState("");
+
+  const detailQuery = useQuery({
+    queryKey: ["admin-book", String(bookId)],
+    enabled: Boolean(bookId),
+    queryFn: () => fetchAdminBook(bookId)
+  });
+
+  useEffect(() => {
+    if (!detailQuery.data) {
+      return;
+    }
+
+    const nextForm = fromBookToForm(detailQuery.data, locale);
+    setForm(nextForm);
+    setInitialForm(nextForm);
+  }, [detailQuery.data, locale]);
+
+  async function handleSave(event) {
+    event.preventDefault();
+    setEditError(null);
+    setPhotoError("");
+    setPhotoMessage("");
+
+    const payload = toUpdatePayload(form, initialForm);
+
+    if (Object.keys(payload).length === 0) {
+      return;
+    }
+
+    setPendingAction("save");
+
+    try {
+      await apiRequest(`/admin/books/${bookId}`, {
+        method: "PATCH",
+        auth: true,
+        version: detailQuery.data.__version ?? detailQuery.data.version,
+        body: payload
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["admin-books"] });
+      await queryClient.fetchQuery({
+        queryKey: ["admin-book", String(bookId)],
+        queryFn: () => fetchAdminBook(bookId)
+      });
+      navigate(`/admin/books/${bookId}`, { replace: true });
+    } catch (error) {
+      setEditError(error);
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function handleDeletePhoto() {
+    const confirmed = window.confirm(rt(locale, "Delete the saved photo for this book?"));
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPhotoPending(true);
+    setPhotoError("");
+    setPhotoMessage("");
+    setEditError(null);
+
+    try {
+      await apiRequest(`/admin/books/${bookId}/photo`, {
+        method: "DELETE",
+        auth: true,
+        version: detailQuery.data.__version ?? detailQuery.data.version
+      });
+
+      const nextBook = await queryClient.fetchQuery({
+        queryKey: ["admin-book", String(bookId)],
+        queryFn: () => fetchAdminBook(bookId)
+      });
+      const nextPhotoUrl = nextBook.photoUrl ?? "";
+
+      setForm((current) => ({
+        ...current,
+        photoBase64: null,
+        photoUrl: nextPhotoUrl
+      }));
+      setInitialForm((current) => ({
+        ...current,
+        photoBase64: null,
+        photoUrl: nextPhotoUrl
+      }));
+
+      await queryClient.invalidateQueries({ queryKey: ["admin-books"] });
+      setPhotoMessage(rt(locale, "Book photo deleted."));
+    } catch (error) {
+      setPhotoError(error.message);
+    } finally {
+      setPhotoPending(false);
+    }
+  }
+
+  if (detailQuery.isPending) {
+    return <LoadingBlock label={rt(locale, "Loading editable book data")} />;
+  }
+
+  if (detailQuery.error) {
+    return <ErrorBlock error={detailQuery.error} title={rt(locale, "Book could not be loaded for editing")} />;
+  }
+
+  const categoryOptions = buildBookCategoryOptions(
+    metadataQuery.data?.bookCategories ?? [],
+    locale,
+    getBookCategoryUiLabel("select", locale),
+    form.category
+  );
+  const hasChanges = Object.keys(toUpdatePayload(form, initialForm)).length > 0;
+  const editLocked = Boolean(detailQuery.data?.editLocked);
+  const editLockedReason = rt(
+    locale,
+    "This book cannot be edited because it already participates in an exchange or is in exchange history."
+  );
+
+  return (
+    <section className="content-stack">
+      <header className="section-card">
+        <div className="book-detail-header-bar">
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back to book")} className="back-link" to={`/admin/books/${bookId}`}>
+              <ArrowLeftIcon />
+            </Link>
+            <PageTitle admin icon={BookIcon}>
+              {rtf(locale, 'Edit "{name}"', { name: detailQuery.data.name || rt(locale, "Untitled book") })}
+            </PageTitle>
+          </div>
+        </div>
+        <p>{rt(locale, "Update the information your readers should see in the catalog.")}</p>
+      </header>
 
       <section className="section-card">
         <form className="content-stack" onSubmit={handleSave}>
           <div className="section-card-header">
             <div className="section-card-header-copy">
               <h2>{rt(locale, "Edit book")}</h2>
-              <p>{rt(locale, "Update the information your readers should see in the catalog.")}</p>
             </div>
             <div className="section-card-toolbar">
-              <button className="button" disabled={pendingAction !== null || !hasChanges} type="submit">
+              {editLocked ? (
+                <span className="inline-message inline-message-error inline-message-inline">
+                  {editLockedReason}
+                </span>
+              ) : null}
+              <button className="button" disabled={editLocked || pendingAction !== null || !hasChanges} type="submit">
                 {pendingAction === "save" ? rt(locale, "Saving...") : rt(locale, "Save changes")}
               </button>
             </div>
@@ -973,8 +1053,7 @@ export function AdminBookDetailsPage() {
             </div>
 
             <div className="editor-column editor-column-grow">
-              <div className="editor-panel editor-panel-form">
-                <h3>{rt(locale, "Book details")}</h3>
+              <div className="editor-panel editor-panel-plain editor-panel-form">
                 <div className="filters-grid editor-form-grid">
                   <Field
                     label={rt(locale, "Name")}
@@ -1041,7 +1120,6 @@ export function AdminBookDetailsPage() {
             </div>
           </div>
 
-          {editMessage ? <p className="inline-message inline-message-success">{editMessage}</p> : null}
           {editError ? <ErrorBlock error={editError} title={rt(locale, "Book action failed")} /> : null}
         </form>
       </section>
@@ -1091,6 +1169,35 @@ function renderValue(locale, value) {
   return value === null || value === undefined || value === "" ? rt(locale, "Not available") : value;
 }
 
+function formatAuthorYear(locale, author, publicationYear) {
+  const authorLabel = author || rt(locale, "Unknown author");
+
+  return publicationYear ? `${authorLabel}, ${publicationYear}` : authorLabel;
+}
+
+function formatAdminBookDateLine(locale, kind, value) {
+  const labels = {
+    de: {
+      created: "Erstellt",
+      updated: "Letzte Aktualisierung",
+      deleted: "Gelöscht"
+    },
+    en: {
+      created: "Created",
+      updated: "Last updated",
+      deleted: "Deleted"
+    },
+    ru: {
+      created: "Создана",
+      updated: "Последнее обновление",
+      deleted: "Удалена"
+    }
+  };
+  const localeLabels = labels[locale] ?? labels.en;
+
+  return `${localeLabels[kind]}: ${formatDateTimeReadable(value)}`;
+}
+
 function fromBookToForm(book, locale) {
   return {
     name: book.name ?? "",
@@ -1129,6 +1236,11 @@ function toUpdatePayload(form, initialForm) {
 
     if (field === "publicationYear") {
       next.publicationYear = currentValue === "" ? "" : Number(currentValue);
+      return;
+    }
+
+    if (field === "city") {
+      next.city = normalizeCityQueryValue(currentValue);
       return;
     }
 

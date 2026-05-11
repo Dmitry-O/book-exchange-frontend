@@ -34,12 +34,14 @@ export function ImageUploadField({
   const { locale } = useLocale();
   const text = imageUploadText[locale] ?? imageUploadText.en;
   const [cropState, setCropState] = useState(null);
+  const [selectedPreviewSource, setSelectedPreviewSource] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [applyPending, setApplyPending] = useState(false);
   const dragRef = useRef(null);
   const previewPreset = cropPresets[kind];
   const previewSource = resolvePreviewSource(photoBase64, photoUrl);
-  const hasPreview = Boolean(previewSource);
+  const displayPreviewSource = cropState?.source || selectedPreviewSource || previewSource;
+  const hasPreview = Boolean(displayPreviewSource);
   const hasSavedPhoto = Boolean(photoUrl);
   const hasPendingUpload = typeof photoBase64 === "string" && photoBase64.length > 0;
   const canRenderRemoveAction = hasPendingUpload || (hasSavedPhoto && typeof onRemove === "function");
@@ -105,6 +107,7 @@ export function ImageUploadField({
     const source = await readFileAsDataUrl(file);
     const meta = await readImageMeta(source);
 
+    setSelectedPreviewSource(source);
     setCropState({
       source,
       fileName: file.name,
@@ -126,6 +129,7 @@ export function ImageUploadField({
     try {
       const croppedBase64 = await cropImage(cropState, previewPreset);
       await Promise.resolve(onChange(croppedBase64));
+      setSelectedPreviewSource(croppedBase64);
     } catch {
       // Caller-owned error state is rendered outside this modal.
     } finally {
@@ -146,6 +150,8 @@ export function ImageUploadField({
   }
 
   async function handleRemoveClick() {
+    setSelectedPreviewSource("");
+
     if (hasPendingUpload) {
       onChange(null);
       return;
@@ -218,6 +224,11 @@ export function ImageUploadField({
     event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
+  function closeCropModal() {
+    setSelectedPreviewSource("");
+    setCropState(null);
+  }
+
   const helperCopy =
     helperText === undefined
       ? kind === "book"
@@ -242,7 +253,8 @@ export function ImageUploadField({
                 >
                   <BookCover
                     className="image-upload-book-cover"
-                    photoUrl={previewSource}
+                    key={displayPreviewSource || "empty-book-preview"}
+                    photoUrl={displayPreviewSource}
                     size="upload"
                     title={entityName}
                   />
@@ -302,8 +314,9 @@ export function ImageUploadField({
                 <div className="image-upload-user-avatar">
                   <UserAvatar
                     className="image-upload-user-avatar-media"
+                    key={displayPreviewSource || "empty-user-preview"}
                     name={entityName}
-                    photoUrl={previewSource}
+                    photoUrl={displayPreviewSource}
                     size="xl"
                   />
                 </div>
@@ -355,7 +368,7 @@ export function ImageUploadField({
           className="modal-backdrop"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
-              setCropState(null);
+              closeCropModal();
             }
           }}
           role="presentation"
@@ -366,7 +379,7 @@ export function ImageUploadField({
                 <span className="eyebrow">{text.photoCrop}</span>
                 <h2>{cropState.fileName}</h2>
               </div>
-              <button className="modal-close" onClick={() => setCropState(null)} type="button">
+              <button className="modal-close" onClick={closeCropModal} type="button">
                 {text.close}
               </button>
             </div>
@@ -452,7 +465,7 @@ export function ImageUploadField({
                   <button
                     className="button button-secondary"
                     disabled={applyPending}
-                    onClick={() => setCropState(null)}
+                    onClick={closeCropModal}
                     type="button"
                   >
                     {text.cancel}
@@ -571,7 +584,7 @@ const imageUploadText = {
     applyCrop: "Apply crop",
     bookCropHint:
       "Drag the image inside the preview to position the visible area. The same crop is used for the uploaded base64 image.",
-    bookHelper: "A vertical cover image makes the listing look much better in the catalog.",
+    bookHelper: "A book with its own photo looks more noticeable and trustworthy to other readers.",
     cancel: "Cancel",
     close: "Close",
     deleteSavedPhoto: "Delete saved photo",
@@ -596,7 +609,7 @@ const imageUploadText = {
     applyCrop: "Zuschnitt anwenden",
     bookCropHint:
       "Ziehe das Bild im Vorschaufenster, um den sichtbaren Bereich zu positionieren. Derselbe Zuschnitt wird für das hochgeladene Base64-Bild verwendet.",
-    bookHelper: "Ein vertikales Coverbild wirkt im Katalog deutlich besser.",
+    bookHelper: "Ein Buch mit eigenem Foto fällt anderen Leserinnen und Lesern besser auf und wirkt vertrauenswürdiger.",
     cancel: "Abbrechen",
     close: "Schließen",
     deleteSavedPhoto: "Gespeichertes Foto löschen",
@@ -621,7 +634,7 @@ const imageUploadText = {
     applyCrop: "Применить обрезку",
     bookCropHint:
       "Перетащите изображение внутри превью, чтобы выбрать видимую область. Та же обрезка будет использована для загружаемого base64-изображения.",
-    bookHelper: "Вертикальная обложка заметно лучше смотрится в каталоге.",
+    bookHelper: "Книга с фото заметнее для других пользователей и выглядит привлекательнее в каталоге.",
     cancel: "Отмена",
     close: "Закрыть",
     deleteSavedPhoto: "Удалить сохранённое фото",

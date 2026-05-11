@@ -8,7 +8,8 @@ import { formatBookCategoryLabel, getBookCategoryTagStyle } from "../../shared/l
 import { getCityDisplayName } from "../../shared/lib/cities";
 import { formatDateTimeReadable, formatEnumLabel } from "../../shared/lib/format";
 import { BookCover, UserAvatar } from "../../shared/ui/Media";
-import { ArrowLeftIcon, ExternalLinkIcon, GiftIcon } from "../../shared/ui/Icons";
+import { ArrowLeftIcon, BookIcon, ExternalLinkIcon, GiftIcon } from "../../shared/ui/Icons";
+import { PageTitle } from "../../shared/ui/PageTitle";
 import { RequestCreationCard } from "../exchanges/pages";
 import { ReportActionCard } from "../reports/ReportActionCard";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
@@ -61,9 +62,12 @@ export function PublicBookPage() {
     <section className="content-stack">
       <header className="section-card book-detail-hero">
         <div className="book-detail-header-bar">
-          <Link aria-label={rt(locale, "Back to catalog")} className="back-link" to="/catalog">
-            <ArrowLeftIcon />
-          </Link>
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back to catalog")} className="back-link" to="/catalog">
+              <ArrowLeftIcon />
+            </Link>
+            <PageTitle icon={BookIcon}>{rt(locale, "Book overview")}</PageTitle>
+          </div>
 
           <div className="hero-icon-actions">
             {isOwnBook ? (

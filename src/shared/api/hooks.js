@@ -13,13 +13,48 @@ export function useMetadataQuery() {
   });
 }
 
+export function useCityAutocompleteQuery(query, locale, limit = 10, enabled = true) {
+  const normalizedQuery = String(query ?? "").trim();
+
+  return useQuery({
+    queryKey: ["metadata", "cities", locale, normalizedQuery, limit],
+    enabled: enabled && normalizedQuery.length >= 2,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const response = await apiRequest(
+        `/metadata/cities?query=${encodeURIComponent(normalizedQuery)}&limit=${limit}`,
+        { locale }
+      );
+
+      return response.data ?? [];
+    }
+  });
+}
+
 export function useUnreadUpdatesSummaryQuery(enabled) {
   return useQuery({
     queryKey: ["updates", "summary"],
     enabled,
     queryFn: async () => {
       const response = await apiRequest(
-        `/updates/unread?pageIndex=0&pageSize=${DEFAULT_LIST_PAGE_SIZE}`,
+        `/updates?pageIndex=0&pageSize=${DEFAULT_LIST_PAGE_SIZE}&readState=UNREAD`,
+        {
+          auth: true
+        }
+      );
+
+      return response.data;
+    }
+  });
+}
+
+export function useAdminOpenReportsSummaryQuery(enabled) {
+  return useQuery({
+    queryKey: ["admin-reports", "summary", "open"],
+    enabled,
+    queryFn: async () => {
+      const response = await apiRequest(
+        `/admin/reports?pageIndex=0&pageSize=1&reportStatuses=OPEN&sortDirection=DESC`,
         {
           auth: true
         }

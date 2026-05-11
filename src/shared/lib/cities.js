@@ -79,6 +79,38 @@ CITY_ENTRIES.forEach((entry) => {
   });
 });
 
+export function registerCitySuggestions(suggestions = [], locale = "en") {
+  suggestions.forEach((suggestion) => {
+    const value = String(suggestion?.value ?? "").trim();
+    const label = String(suggestion?.label ?? "").trim();
+
+    if (!value || !label) {
+      return;
+    }
+
+    const key = normalizeCityValue(value);
+    const existingEntry = CITY_LOOKUP.get(key);
+    const entry = existingEntry ?? {
+      key,
+      labels: {
+        en: value
+      }
+    };
+
+    entry.labels = {
+      ...entry.labels,
+      en: entry.labels.en ?? value,
+      [locale]: label
+    };
+
+    [entry.key, entry.labels.en, ...Object.values(entry.labels), value, label]
+      .filter(Boolean)
+      .forEach((alias) => {
+        CITY_LOOKUP.set(normalizeCityValue(alias), entry);
+      });
+  });
+}
+
 export function getCityDisplayName(value, locale = "en") {
   if (!value) {
     return "";

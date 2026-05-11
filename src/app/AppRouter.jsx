@@ -21,14 +21,15 @@ import {
 import { CatalogPage } from "../features/catalog/CatalogPage";
 import { PublicBookPage } from "../features/catalog/PublicBookPage";
 import {
+  ExchangesPage,
   HistoryDetailsPage,
-  HistoryPage,
   OfferDetailsPage,
-  OffersPage,
   RequestDetailsPage,
-  RequestsPage
+  RequestsPage,
+  OffersPage,
+  HistoryPage
 } from "../features/exchanges/pages";
-import { AdminBookDetailsPage, AdminBooksPage } from "../features/admin/books/pages";
+import { AdminBookDetailsPage, AdminBookEditPage, AdminBooksPage } from "../features/admin/books/pages";
 import { AdminExchangeDetailsPage, AdminExchangesPage } from "../features/admin/exchanges/pages";
 import { AdminReportDetailsPage, AdminReportsPage } from "../features/admin/reports/pages";
 import { AdminUserDetailsPage, AdminUsersPage } from "../features/admin/users/pages";
@@ -89,6 +90,7 @@ export function AppRouter() {
         <Route path="my-books/exchanged" element={<ExchangedBooksPage />} />
         <Route path="my-books/:bookId" element={<MyBookDetailsPage />} />
         <Route path="my-books/:bookId/edit" element={<EditBookPage />} />
+        <Route path="exchanges" element={<ExchangesPage />} />
         <Route path="exchanges/requests" element={<RequestsPage />} />
         <Route path="exchanges/requests/:exchangeId" element={<RequestDetailsPage />} />
         <Route path="exchanges/offers" element={<OffersPage />} />
@@ -122,6 +124,7 @@ export function AppRouter() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="users/:userId" element={<AdminUserDetailsPage />} />
         <Route path="books" element={<AdminBooksPage />} />
+        <Route path="books/:bookId/edit" element={<AdminBookEditPage />} />
         <Route path="books/:bookId" element={<AdminBookDetailsPage />} />
         <Route path="reports" element={<AdminReportsPage />} />
         <Route path="reports/:reportId" element={<AdminReportDetailsPage />} />

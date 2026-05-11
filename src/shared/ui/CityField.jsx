@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
+import { useCityAutocompleteQuery } from "../api/hooks";
 import { useLocale } from "../i18n/LocaleContext";
-import { findCitySuggestions, getCityApiValue, getCityDisplayName } from "../lib/cities";
+import { getCityApiValue, getCityDisplayName, registerCitySuggestions } from "../lib/cities";
 
 const BEST_MATCH_LABELS = {
   de: "Beste Wahl",
@@ -21,9 +22,15 @@ export function CityField({
   const { locale } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const debouncedValue = useDebouncedValue(value, 250);
+  const autocompleteQuery = useCityAutocompleteQuery(debouncedValue, locale, 10, isOpen);
 
-  const suggestions = useMemo(() => findCitySuggestions(value, locale), [locale, value]);
+  const suggestions = useMemo(() => autocompleteQuery.data ?? [], [autocompleteQuery.data]);
   const inlineSuggestion = useMemo(() => getInlineSuggestion(value, suggestions), [suggestions, value]);
+
+  useEffect(() => {
+    registerCitySuggestions(suggestions, locale);
+  }, [locale, suggestions]);
 
   useEffect(() => {
     setHighlightedIndex(0);
@@ -174,6 +181,21 @@ function getInlineSuggestion(value, suggestions) {
 
   return primarySuggestion;
 }
+
+function useDebouncedValue(value, delayMs) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delayMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [delayMs, value]);
+
+  return debouncedValue;
+}
+
 function normalizeCityValue(value) {
   return String(value ?? "")
     .trim()

@@ -16,6 +16,10 @@ export function resolveMediaUrl(photoUrl, { kind = "generic", uploadedOnly = fal
     return "";
   }
 
+  if (/^data:image\//i.test(normalizedPhotoUrl)) {
+    return normalizedPhotoUrl;
+  }
+
   if (kind === "book" && GENERATED_PLACEHOLDER_PATTERN.test(normalizedPhotoUrl)) {
     return "";
   }
