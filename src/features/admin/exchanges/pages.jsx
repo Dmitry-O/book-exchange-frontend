@@ -1,16 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
 import { useLocale } from "../../../shared/i18n/LocaleContext";
-import { rt, rtf } from "../../../shared/i18n/rawText";
-import { readStoredLocale } from "../../../shared/i18n/locale";
-import { formatBookCategoryLabel } from "../../../shared/lib/bookCategory";
+import { rt } from "../../../shared/i18n/rawText";
+import { formatBookCategoryLabel, getBookCategoryTagStyle } from "../../../shared/lib/bookCategory";
+import { getCityDisplayName } from "../../../shared/lib/cities";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
-import { BookCover, UserAvatar } from "../../../shared/ui/Media";
-import { ArrowLeftIcon, BookIcon, SwapIcon, UserIcon } from "../../../shared/ui/Icons";
+import { BookCover, UserIdentityInline } from "../../../shared/ui/Media";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  EnvelopeClosedIcon,
+  EnvelopeOpenIcon,
+  FilterIcon,
+  GiftIcon,
+  RequestGiftIcon,
+  SwapIcon,
+  XIcon
+} from "../../../shared/ui/Icons";
+import { PageTitle } from "../../../shared/ui/PageTitle";
 import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
@@ -18,14 +29,83 @@ const defaultFilters = {
   exchangeStatuses: []
 };
 
+const USER_MENU_OPEN_EVENT = "book-exchange:user-menu-open";
+
+const adminExchangeText = {
+  de: {
+    accepted: "{name} hat das Angebot angenommen",
+    created: "Erstellt",
+    declinedBy: "Abgelehnt von",
+    detailsTitle: "Tauschdetails",
+    exchangeFound: "Gefundene Tausche",
+    giftRequestDescription:
+      "Dieser Nutzer hat das Buch als Geschenk angefragt, deshalb ist kein eigenes Gegenbuch erforderlich.",
+    lastUpdated: "Letzte Aktualisierung",
+    noMatches: "Wähle einen anderen Tauschstatus.",
+    read: "Gelesen",
+    receiver: "Empfänger",
+    sender: "Absender",
+    statusFilters: "Statusfilter",
+    unread: "Ungelesen",
+    withoutCounterBook: "Ohne Gegenbuch"
+  },
+  en: {
+    accepted: "{name} accepted the offer",
+    created: "Created",
+    declinedBy: "Declined by",
+    detailsTitle: "Exchange details",
+    exchangeFound: "Exchanges found",
+    giftRequestDescription:
+      "This user requested the book as a gift, so their own book is not required for this request.",
+    lastUpdated: "Last updated",
+    noMatches: "Choose another exchange status.",
+    read: "Read",
+    receiver: "Receiver",
+    sender: "Sender",
+    statusFilters: "Status filters",
+    unread: "Unread",
+    withoutCounterBook: "Without counter-book"
+  },
+  ru: {
+    accepted: "Пользователь {name} принял предложение",
+    created: "Создан",
+    declinedBy: "Отклонен пользователем",
+    detailsTitle: "Детали обмена",
+    exchangeFound: "Найдено обменов",
+    giftRequestDescription:
+      "Пользователь запросил эту книгу в дар, поэтому его книга для этого запроса не требуется.",
+    lastUpdated: "Последнее обновление",
+    noMatches: "Выберите другой статус обмена.",
+    read: "Прочитано",
+    receiver: "Получатель",
+    sender: "Отправитель",
+    statusFilters: "Фильтры по статусу",
+    unread: "Не прочитано",
+    withoutCounterBook: "Без встречной книги"
+  }
+};
+
 export function AdminExchangesPage() {
   const metadataQuery = useMetadataQuery();
   const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState(defaultFilters);
-  const [draftFilters, setDraftFilters] = useState(defaultFilters);
-  const { locale } = useLocale();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const { locale, t } = useLocale();
+  const text = getAdminExchangeText(locale);
 
   const exchangeStatuses = metadataQuery.data?.exchangeStatuses ?? ["PENDING", "APPROVED", "DECLINED"];
+
+  useEffect(() => {
+    function closeStatusFilters() {
+      setFiltersOpen(false);
+    }
+
+    window.addEventListener(USER_MENU_OPEN_EVENT, closeStatusFilters);
+
+    return () => {
+      window.removeEventListener(USER_MENU_OPEN_EVENT, closeStatusFilters);
+    };
+  }, []);
 
   const exchangesQuery = useQuery({
     queryKey: ["admin-exchanges", pageIndex, filters],
@@ -41,22 +121,9 @@ export function AdminExchangesPage() {
     }
   });
 
-  function handleApplyFilters(event) {
-    event.preventDefault();
-    setPageIndex(0);
-    setFilters({
-      exchangeStatuses: [...draftFilters.exchangeStatuses]
-    });
-  }
-
-  function handleResetFilters() {
-    setPageIndex(0);
-    setDraftFilters(defaultFilters);
-    setFilters(defaultFilters);
-  }
-
   function toggleStatus(status) {
-    setDraftFilters((current) => ({
+    setPageIndex(0);
+    setFilters((current) => ({
       ...current,
       exchangeStatuses: current.exchangeStatuses.includes(status)
         ? current.exchangeStatuses.filter((item) => item !== status)
@@ -69,44 +136,9 @@ export function AdminExchangesPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>{rt(locale, "Exchange oversight")}</h1>
+        <PageTitle admin icon={SwapIcon}>{t("shell.manageExchanges")}</PageTitle>
         <p>{rt(locale, "Inspect exchanges by status and open full details for books and participants.")}</p>
       </header>
-
-      <section className="section-card">
-        <form className="content-stack" onSubmit={handleApplyFilters}>
-          <div className="field">
-            <span>{rt(locale, "Status filters")}</span>
-            <div className="checkbox-grid">
-              {exchangeStatuses.map((status) => (
-                <label className="field field-checkbox admin-checkbox-card" key={status}>
-                  <span>{formatEnumLabel(status)}</span>
-                  <input
-                    checked={draftFilters.exchangeStatuses.includes(status)}
-                    onChange={() => toggleStatus(status)}
-                    type="checkbox"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="filters-actions">
-            <div className="admin-summary-box">
-              <strong>{exchangesQuery.data?.totalElements ?? 0}</strong>
-              <span>{rt(locale, "matching exchanges")}</span>
-            </div>
-            <div className="pill-row">
-              <button className="button" type="submit">
-                {rt(locale, "Apply filters")}
-              </button>
-              <button className="button button-secondary" onClick={handleResetFilters} type="button">
-                {rt(locale, "Reset")}
-              </button>
-            </div>
-          </div>
-        </form>
-      </section>
 
       {metadataQuery.isPending ? <LoadingBlock label={rt(locale, "Loading exchange metadata")} /> : null}
       {metadataQuery.error ? (
@@ -117,110 +149,54 @@ export function AdminExchangesPage() {
         <ErrorBlock error={exchangesQuery.error} title={rt(locale, "Admin exchanges could not be loaded")} />
       ) : null}
 
+      {!exchangesQuery.isPending && !exchangesQuery.error ? (
+        <div className="catalog-results-toolbar admin-exchange-results-toolbar">
+          <p className="catalog-results-count">{text.exchangeFound}: {exchangesQuery.data?.totalElements ?? 0}</p>
+          <div className="admin-filter-toolbar-actions">
+            <div className="admin-filter-dropdown-wrap">
+              <button
+                aria-expanded={filtersOpen}
+                aria-label={text.statusFilters}
+                className="icon-button catalog-sort-direction-button"
+                onClick={() => setFiltersOpen((current) => !current)}
+                title={text.statusFilters}
+                type="button"
+              >
+                <FilterIcon />
+              </button>
+
+              {filtersOpen ? (
+                <div className="admin-filter-dropdown">
+                  <div className="checkbox-grid admin-status-toggle-grid">
+                    {exchangeStatuses.map((status) => (
+                      <label className="field field-checkbox admin-checkbox-card admin-status-toggle-card" key={status}>
+                        <span>{formatAdminExchangeStatusFilterLabel(status, locale)}</span>
+                        <input
+                          checked={filters.exchangeStatuses.includes(status)}
+                          onChange={() => toggleStatus(status)}
+                          type="checkbox"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {!exchangesQuery.isPending && !exchangesQuery.error && exchanges.length === 0 ? (
         <EmptyBlock
           title={rt(locale, "No exchanges match these filters")}
-          description={rt(locale, "Try resetting the filters or selecting a different set of exchange statuses.")}
+          description={text.noMatches}
         />
       ) : null}
 
       {exchanges.length > 0 ? (
-        <section className="list-stack">
+        <section className="admin-exchange-grid">
           {exchanges.map((exchange) => (
-            <article className="section-card compact-card" key={exchange.id}>
-              <div className="exchange-preview-pair">
-                <BookCover
-                  photoUrl={exchange.senderBook?.photoUrl}
-                  size="sm"
-                  title={resolveAdminSenderBookLabel(locale, exchange.senderBook?.name)}
-                />
-                <span aria-hidden="true" className="exchange-preview-swap-icon">
-                  <SwapIcon />
-                </span>
-                <BookCover
-                  photoUrl={exchange.receiverBook?.photoUrl}
-                  size="sm"
-                  title={resolveAdminReceiverBookLabel(locale, exchange.receiverBook?.name)}
-                />
-              </div>
-
-              <div className="row-between">
-                <div>
-                  <h2>{exchange.senderBook?.name || exchange.receiverBook?.name || rt(locale, "Exchange overview")}</h2>
-                  <p className="muted-line">
-                    {formatAdminExchangeBookSummary(locale, exchange.senderBook?.name, exchange.receiverBook?.name)}
-                  </p>
-                </div>
-
-                <div className="pill-row">
-                  <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
-                    {formatEnumLabel(exchange.status)}
-                  </span>
-                </div>
-              </div>
-
-              <dl className="detail-list detail-list-compact">
-                <div>
-                  <dt>{rt(locale, "Sender")}</dt>
-                  <dd className="detail-inline-media">
-                    <UserAvatar
-                      name={exchange.senderUser?.nickname || exchange.senderUser?.email}
-                      photoUrl={exchange.senderUser?.photoUrl}
-                      size="sm"
-                    />
-                    <span>{renderUserLabel(exchange.senderUser)}</span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>{rt(locale, "Receiver")}</dt>
-                  <dd className="detail-inline-media">
-                    <UserAvatar
-                      name={exchange.receiverUser?.nickname || exchange.receiverUser?.email}
-                      photoUrl={exchange.receiverUser?.photoUrl}
-                      size="sm"
-                    />
-                    <span>{renderUserLabel(exchange.receiverUser)}</span>
-                  </dd>
-                </div>
-                <div>
-                  <dt>{rt(locale, "Sender read")}</dt>
-                  <dd>{exchange.isReadBySender ? rt(locale, "Yes") : rt(locale, "No")}</dd>
-                </div>
-                <div>
-                  <dt>{rt(locale, "Receiver read")}</dt>
-                  <dd>{exchange.isReadByReceiver ? rt(locale, "Yes") : rt(locale, "No")}</dd>
-                </div>
-              </dl>
-
-              <div className="card-actions">
-                <div className="action-icon-group">
-                  {exchange.senderUser?.id ? (
-                    <Link
-                      aria-label={rt(locale, "Open sender")}
-                      className="icon-button"
-                      title={rt(locale, "Open sender")}
-                      to={`/admin/users/${exchange.senderUser.id}`}
-                    >
-                      <UserIcon />
-                    </Link>
-                  ) : null}
-                  {exchange.receiverUser?.id ? (
-                    <Link
-                      aria-label={rt(locale, "Open receiver")}
-                      className="icon-button"
-                      title={rt(locale, "Open receiver")}
-                      to={`/admin/users/${exchange.receiverUser.id}`}
-                    >
-                      <UserIcon />
-                    </Link>
-                  ) : null}
-                </div>
-
-                <Link className="button button-secondary" to={`/admin/exchanges/${exchange.id}`}>
-                  {rt(locale, "Open details")}
-                </Link>
-              </div>
-            </article>
+            <AdminExchangeCard exchange={exchange} key={exchange.id} locale={locale} text={text} />
           ))}
         </section>
       ) : null}
@@ -239,6 +215,7 @@ export function AdminExchangesPage() {
 export function AdminExchangeDetailsPage() {
   const { locale } = useLocale();
   const { exchangeId } = useParams();
+  const text = getAdminExchangeText(locale);
 
   const detailQuery = useQuery({
     queryKey: ["admin-exchange", String(exchangeId)],
@@ -262,199 +239,311 @@ export function AdminExchangeDetailsPage() {
   }
 
   const exchange = detailQuery.data;
+  const acceptedName = renderUserName(exchange.receiverUser, locale);
+  const declinedName = renderUserName(exchange.declinerUser, locale);
 
   return (
     <section className="content-stack">
-      <header className="section-card book-detail-hero">
+      <header className="section-card book-detail-hero admin-exchange-detail-hero">
         <div className="book-detail-header-bar">
-          <Link aria-label={rt(locale, "Back")} className="back-link" to="/admin/exchanges">
-            <ArrowLeftIcon />
-          </Link>
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back")} className="back-link" to="/admin/exchanges">
+              <ArrowLeftIcon />
+            </Link>
+            <PageTitle admin icon={SwapIcon}>{text.detailsTitle}</PageTitle>
+          </div>
           <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
-            {formatEnumLabel(exchange.status)}
+            {formatAdminExchangeStatusLabel(exchange.status, locale)}
           </span>
         </div>
-        <h1>{exchange.senderBook?.name || exchange.receiverBook?.name || rt(locale, "Exchange overview")}</h1>
-        <p>{rt(locale, "See the full exchange details, participants, books, and read states.")}</p>
-        <div className="hero-meta-line">
-          <span>{rt(locale, "Created at")}: {formatDateTime(exchange.meta?.createdAt)}</span>
-          <span>{rt(locale, "Updated at")}: {formatDateTime(exchange.meta?.updatedAt)}</span>
+
+        <div className="admin-user-date-stack admin-exchange-date-stack">
+          <span>{text.created}: {formatDateTime(exchange.meta?.createdAt)}</span>
+          <span>{text.lastUpdated}: {formatDateTime(exchange.meta?.updatedAt)}</span>
         </div>
+
+        {exchange.status === "DECLINED" ? (
+          <p className="admin-exchange-decision-line admin-exchange-decision-danger">
+            <XIcon />
+            <strong>{formatAdminExchangeDeclinedByLabel(locale)}</strong> {declinedName}
+          </p>
+        ) : null}
+
+        {exchange.status === "APPROVED" ? (
+          <p className="admin-exchange-decision-line admin-exchange-decision-success">
+            <CheckIcon />
+            {formatAdminExchangeAcceptedLabel(locale, acceptedName)}
+          </p>
+        ) : null}
       </header>
 
-      <section className="section-card">
-        <h2>{rt(locale, "Exchange overview")}</h2>
-        <dl className="detail-list detail-list-compact">
-          <div>
-            <dt>{rt(locale, "Status")}</dt>
-            <dd>{formatEnumLabel(exchange.status)}</dd>
-          </div>
-          <div>
-            <dt>{rt(locale, "Sender read")}</dt>
-            <dd>{exchange.isReadBySender ? rt(locale, "Yes") : rt(locale, "No")}</dd>
-          </div>
-          <div>
-            <dt>{rt(locale, "Receiver read")}</dt>
-            <dd>{exchange.isReadByReceiver ? rt(locale, "Yes") : rt(locale, "No")}</dd>
-          </div>
-          <div>
-            <dt>{rt(locale, "Decliner")}</dt>
-            <dd>{renderUserLabel(exchange.declinerUser)}</dd>
-          </div>
-        </dl>
-      </section>
+      <section className="admin-exchange-detail-grid">
+        <AdminExchangeParticipantCard
+          book={exchange.senderBook}
+          giftRequest={!exchange.senderBook}
+          label={text.sender}
+          locale={locale}
+          read={exchange.isReadBySender}
+          text={text}
+          user={exchange.senderUser}
+        />
 
-      <section className="detail-grid">
-        <UserCard title={rt(locale, "Sender user")} user={exchange.senderUser} />
-        <UserCard title={rt(locale, "Receiver user")} user={exchange.receiverUser} />
-      </section>
+        <span aria-hidden="true" className="exchange-preview-swap-icon exchange-detail-swap-icon admin-exchange-detail-swap">
+          <SwapIcon />
+        </span>
 
-      <section className="detail-grid">
-        <BookCard title={rt(locale, "Sender book")} book={exchange.senderBook} />
-        <BookCard title={rt(locale, "Receiver book")} book={exchange.receiverBook} />
+        <AdminExchangeParticipantCard
+          book={exchange.receiverBook}
+          label={text.receiver}
+          locale={locale}
+          read={exchange.isReadByReceiver}
+          text={text}
+          user={exchange.receiverUser}
+        />
       </section>
     </section>
   );
 }
 
-function UserCard({ title, user }) {
-  const { locale } = useLocale();
+function AdminExchangeCard({ exchange, locale, text }) {
+  const isGiftRequest = !exchange.senderBook;
+
   return (
-    <article className="section-card">
-      <div className="entity-header">
-        <UserAvatar name={user?.nickname || user?.email} photoUrl={user?.photoUrl} size="lg" />
-        <div>
-          <h2>{title}</h2>
-          <p>{renderUserLabel(user)}</p>
+    <Link className="section-card compact-card admin-exchange-card" to={`/admin/exchanges/${exchange.id}`}>
+      <div className="admin-exchange-card-title-row">
+        <strong>{exchange.senderBook?.name || text.withoutCounterBook}</strong>
+        <strong>{exchange.receiverBook?.name || rt(locale, "Unknown receiver book")}</strong>
+      </div>
+
+      <div className="admin-exchange-card-media-row">
+        <div className="admin-exchange-card-side">
+          {isGiftRequest ? (
+            <span aria-hidden="true" className="request-gift-illustration request-gift-illustration-card">
+              <RequestGiftIcon />
+            </span>
+          ) : (
+            <BookCover photoUrl={exchange.senderBook?.photoUrl} size="sm" title={exchange.senderBook?.name} />
+          )}
+        </div>
+
+        <span aria-hidden="true" className="exchange-preview-swap-icon admin-exchange-card-swap">
+          <SwapIcon />
+        </span>
+
+        <div className="admin-exchange-card-side">
+          <div className="book-cover-with-badge">
+            {exchange.receiverBook?.isGift ? (
+              <span className="gift-icon-badge gift-icon-badge-small book-cover-corner-badge">
+                <GiftIcon />
+              </span>
+            ) : null}
+            <BookCover photoUrl={exchange.receiverBook?.photoUrl} size="sm" title={exchange.receiverBook?.name} />
+          </div>
         </div>
       </div>
 
-      <dl className="detail-list">
-        <div>
-          <dt>{rt(locale, "Email")}</dt>
-          <dd>{user?.email || rt(locale, "Not available")}</dd>
+      <div className="admin-exchange-card-owner-row">
+        <AdminExchangeOwnerInline user={exchange.senderUser} />
+        <AdminExchangeOwnerInline align="end" user={exchange.receiverUser} />
+      </div>
+
+      <div className="pill-row admin-exchange-card-status">
+        <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
+          {formatAdminExchangeStatusLabel(exchange.status, locale)}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function AdminExchangeParticipantCard({ book, giftRequest = false, label, locale, read, text, user }) {
+  return (
+    <article className="section-card exchange-book-card admin-exchange-participant-card">
+      <span className="exchange-section-label">{label}</span>
+
+      {giftRequest ? (
+        <div className="admin-exchange-gift-request">
+          <h2>{text.withoutCounterBook}</h2>
+          <p>{text.giftRequestDescription}</p>
+          <span aria-hidden="true" className="request-gift-illustration request-gift-illustration-lg">
+            <RequestGiftIcon />
+          </span>
         </div>
-        <div>
-          <dt>{rt(locale, "Roles")}</dt>
-          <dd>{(user?.roles ?? []).map((role) => formatEnumLabel(role)).join(", ") || rt(locale, "None")}</dd>
+      ) : (
+        <div className="admin-exchange-book-detail">
+          <Link className="admin-exchange-book-cover-link" to={`/admin/books/${book?.id}`}>
+            <div className="book-cover-with-badge">
+              {book?.isGift ? (
+                <span className="gift-icon-badge gift-icon-badge-small book-cover-corner-badge">
+                  <GiftIcon />
+                </span>
+              ) : null}
+              <BookCover photoUrl={book?.photoUrl} size="md" title={book?.name} />
+            </div>
+          </Link>
+
+          <div className="admin-exchange-book-copy">
+            <Link className="admin-exchange-book-title" to={`/admin/books/${book?.id}`}>
+              {book?.name || rt(locale, "Not available")}
+            </Link>
+            <div className="book-hero-tags">
+              <span className="category-chip" style={getBookCategoryTagStyle(book?.category)}>
+                {formatBookCategoryLabel(book?.category, locale, rt(locale, "Not available"))}
+              </span>
+            </div>
+            <p className="book-detail-description">
+              <strong>{rt(locale, "Description")}:</strong>{" "}
+              {book?.description || rt(locale, "No description provided.")}
+            </p>
+            <div className="book-hero-facts">
+              <p>{rt(locale, "Author")}: {book?.author || rt(locale, "Not available")}</p>
+              <p>{rt(locale, "Publication year")}: {renderValue(locale, book?.publicationYear)}</p>
+              <p>{rt(locale, "City")}: {book?.city ? getCityDisplayName(book.city, locale) : rt(locale, "Not available")}</p>
+              {book?.contactDetails ? <p>{rt(locale, "Contact details")}: {book.contactDetails}</p> : null}
+            </div>
+          </div>
         </div>
-        <div>
-          <dt>{rt(locale, "Ban reason")}</dt>
-          <dd>{user?.banReason || rt(locale, "Not available")}</dd>
-        </div>
-        <div>
-          <dt>{rt(locale, "Open user")}</dt>
-          <dd>
-            {user?.id ? (
-              <Link className="action-link-inline" to={`/admin/users/${user.id}`}>
-                <UserIcon />
-                <div className="action-link-copy">
-                  <strong>{rt(locale, "Open user")}</strong>
-                  <span>{rt(locale, "Admin user details")}</span>
-                </div>
-              </Link>
-            ) : (
-              rt(locale, "Not available")
-            )}
-          </dd>
-        </div>
-      </dl>
+      )}
+
+      <AdminExchangeUserFooter read={read} text={text} user={user} />
     </article>
   );
 }
 
-function BookCard({ title, book }) {
+function AdminExchangeUserFooter({ read, text, user }) {
   const { locale } = useLocale();
+  const content = (
+    <UserIdentityInline className="admin-book-owner-inline" name={renderUserName(user, locale)} photoUrl={user?.photoUrl} size="sm">
+      <strong>{renderUserName(user, locale)}</strong>
+    </UserIdentityInline>
+  );
+  const readIcon = (
+    <span
+      aria-label={read ? text.read : text.unread}
+      className={`read-state-icon ${read ? "read-state-icon-success" : "read-state-icon-muted"}`}
+      title={read ? text.read : text.unread}
+    >
+      {read ? <EnvelopeOpenIcon /> : <EnvelopeClosedIcon />}
+    </span>
+  );
+
+  if (!user?.id) {
+    return (
+      <div className="admin-exchange-user-footer-row">
+        <div className="book-owner admin-exchange-user-footer-card">{content}</div>
+        {readIcon}
+      </div>
+    );
+  }
 
   return (
-    <article className="section-card">
-      <div className="entity-header">
-        <BookCover photoUrl={book?.photoUrl} size="md" title={book?.name} />
-        <div>
-          <h2>{title}</h2>
-          <p>{book?.name || rt(locale, "Not available")}</p>
-        </div>
-      </div>
-
-      <dl className="detail-list">
-        <div>
-          <dt>{rt(locale, "Owner")}</dt>
-          <dd className="detail-inline-media">
-            <UserAvatar name={book?.ownerNickname} photoUrl={book?.ownerPhotoUrl} size="sm" />
-            <span>{book?.ownerNickname || rt(locale, "Unknown owner")}</span>
-          </dd>
-        </div>
-        <div>
-          <dt>{rt(locale, "Author")}</dt>
-          <dd>{book?.author || rt(locale, "Not available")}</dd>
-        </div>
-        <div>
-          <dt>{rt(locale, "Category")}</dt>
-          <dd>{formatBookCategoryLabel(book?.category, locale, rt(locale, "Not available"))}</dd>
-        </div>
-        <div>
-          <dt>{rt(locale, "City")}</dt>
-          <dd>{book?.city || rt(locale, "Not available")}</dd>
-        </div>
-        <div>
-          <dt>{rt(locale, "Publication year")}</dt>
-          <dd>{renderValue(locale, book?.publicationYear)}</dd>
-        </div>
-        <div>
-          <dt>{rt(locale, "Gift mode")}</dt>
-          <dd>{book?.isGift ? rt(locale, "Yes") : rt(locale, "No")}</dd>
-        </div>
-        <div>
-          <dt>{rt(locale, "Exchanged")}</dt>
-          <dd>{book?.isExchanged ? rt(locale, "Yes") : rt(locale, "No")}</dd>
-        </div>
-        <div>
-          <dt>{rt(locale, "Open book")}</dt>
-          <dd>
-            {book?.id ? (
-              <Link className="action-link-inline" to={`/admin/books/${book.id}`}>
-                <BookIcon />
-                <div className="action-link-copy">
-                  <strong>{rt(locale, "Open book")}</strong>
-                  <span>{rt(locale, "Admin book details")}</span>
-                </div>
-              </Link>
-            ) : (
-              rt(locale, "Not available")
-            )}
-          </dd>
-        </div>
-      </dl>
-    </article>
+    <div className="admin-exchange-user-footer-row">
+      <Link className="book-owner admin-exchange-user-footer-card admin-exchange-user-footer-link" to={`/admin/users/${user.id}`}>
+        {content}
+      </Link>
+      {readIcon}
+    </div>
   );
 }
 
-function renderUserLabel(user) {
-  const locale = readLocaleForLabel();
+function AdminExchangeOwnerInline({ align = "start", user }) {
+  const { locale } = useLocale();
+
+  return (
+    <div className={`book-owner admin-exchange-card-owner admin-exchange-card-owner-${align}`}>
+      <UserIdentityInline className="admin-book-owner-inline" name={renderUserName(user, locale)} photoUrl={user?.photoUrl} size="sm">
+        <strong>{renderUserName(user, locale)}</strong>
+      </UserIdentityInline>
+    </div>
+  );
+}
+
+function renderUserName(user, locale) {
   if (!user) {
     return rt(locale, "Not available");
   }
 
-  return `${user.nickname || rt(locale, "Unknown user")} (id ${user.id ?? "n/a"})`;
+  return user.nickname || user.email || rt(locale, "Unknown user");
 }
 
 function renderValue(locale, value) {
   return value === null || value === undefined || value === "" ? rt(locale, "Not available") : value;
 }
 
-function formatAdminExchangeBookSummary(locale, senderBookName, receiverBookName) {
-  const senderLabel = resolveAdminSenderBookLabel(locale, senderBookName);
-  const receiverLabel = resolveAdminReceiverBookLabel(locale, receiverBookName);
-
-  return [senderLabel, receiverLabel].filter(Boolean).join(" / ");
+function formatTemplate(template, params) {
+  return String(template).replace(/\{(\w+)\}/g, (_, key) => String(params[key] ?? ""));
 }
 
-function resolveAdminSenderBookLabel(locale, senderBookName) {
-  return senderBookName || rt(locale, "Without counter book");
+function getAdminExchangeText(locale) {
+  return adminExchangeText[locale] ?? adminExchangeText.en;
 }
 
-function resolveAdminReceiverBookLabel(locale, receiverBookName) {
-  return receiverBookName || rt(locale, "Unknown receiver book");
+function formatAdminExchangeStatusLabel(status, locale) {
+  const labels = {
+    de: {
+      APPROVED: "Bestätigt",
+      DECLINED: "Abgelehnt",
+      PENDING: "Ausstehend"
+    },
+    en: {
+      APPROVED: "Approved",
+      DECLINED: "Declined",
+      PENDING: "Pending"
+    },
+    ru: {
+      APPROVED: "Подтвержден",
+      DECLINED: "Отклонен",
+      PENDING: "В ожидании"
+    }
+  };
+  const normalizedStatus = String(status || "").toUpperCase();
+  const localeLabels = labels[locale] ?? labels.en;
+
+  return localeLabels[normalizedStatus] || formatEnumLabel(status);
+}
+
+function formatAdminExchangeStatusFilterLabel(status, locale) {
+  const labels = {
+    de: {
+      APPROVED: "Bestätigte",
+      DECLINED: "Abgelehnte",
+      PENDING: "Ausstehende"
+    },
+    en: {
+      APPROVED: "Approved",
+      DECLINED: "Declined",
+      PENDING: "Pending"
+    },
+    ru: {
+      APPROVED: "Подтвержденные",
+      DECLINED: "Отклоненные",
+      PENDING: "В ожидании"
+    }
+  };
+  const normalizedStatus = String(status || "").toUpperCase();
+  const localeLabels = labels[locale] ?? labels.en;
+
+  return localeLabels[normalizedStatus] || formatEnumLabel(status);
+}
+
+function formatAdminExchangeAcceptedLabel(locale, userName) {
+  const labels = {
+    de: "{name} hat das Angebot angenommen",
+    en: "{name} accepted the offer",
+    ru: "Пользователь {name} принял предложение"
+  };
+
+  return formatTemplate(labels[locale] ?? labels.en, { name: userName });
+}
+
+function formatAdminExchangeDeclinedByLabel(locale) {
+  const labels = {
+    de: "Abgelehnt von",
+    en: "Declined by",
+    ru: "Отклонен пользователем"
+  };
+
+  return labels[locale] ?? labels.en;
 }
 
 function getExchangeStatusClassName(status) {
@@ -467,8 +556,4 @@ function getExchangeStatusClassName(status) {
   }
 
   return "status-pill-danger";
-}
-
-function readLocaleForLabel() {
-  return readStoredLocale();
 }
