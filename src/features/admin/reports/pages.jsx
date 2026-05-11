@@ -1,20 +1,80 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
 import { useLocale } from "../../../shared/i18n/LocaleContext";
-import { rt, rtf } from "../../../shared/i18n/rawText";
+import { rt } from "../../../shared/i18n/rawText";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
-import { UserAvatar } from "../../../shared/ui/Media";
-import { ArrowLeftIcon, CheckIcon, ExternalLinkIcon, UserIcon, XIcon } from "../../../shared/ui/Icons";
+import { BookCover, UserAvatar } from "../../../shared/ui/Media";
+import { ArrowLeftIcon, CheckIcon, ExternalLinkIcon, FilterIcon, FlagIcon, SortDirectionIcon, UserIcon, XIcon } from "../../../shared/ui/Icons";
+import { PageTitle } from "../../../shared/ui/PageTitle";
 import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
 const defaultFilters = {
   reportStatuses: [],
-  sortDirection: "ASC"
+  sortDirection: "DESC"
+};
+
+const USER_MENU_OPEN_EVENT = "book-exchange:user-menu-open";
+
+const adminReportsText = {
+  de: {
+    comment: "Kommentar",
+    created: "Erstellt",
+    emptyDescription: "Wähle einen anderen Moderationsstatus oder ändere die Sortierung.",
+    found: "Gefundene Meldungen",
+    lastUpdated: "Letzte Aktualisierung",
+    noComment: "Kein Kommentar angegeben.",
+    pageTitle: "Nutzermeldungen",
+    reportOnBook: "Meldung zu einem Buch",
+    reportOnUser: "Meldung zu einem Nutzer",
+    manageTitle: "Beschwerdeverwaltung",
+    sortToggleAscending: "Aufsteigend sortieren",
+    sortToggleDescending: "Absteigend sortieren",
+    statusFilters: "Statusfilter",
+    targetBookFallback: "Buch",
+    targetUserFallback: "Nutzer",
+    unknownTarget: "Ziel nicht verfügbar"
+  },
+  en: {
+    comment: "Comment",
+    created: "Created",
+    emptyDescription: "Choose another moderation status or change the sort order.",
+    found: "Reports found",
+    lastUpdated: "Last updated",
+    noComment: "No comment provided.",
+    pageTitle: "User reports",
+    reportOnBook: "Report about a book",
+    reportOnUser: "Report about a user",
+    manageTitle: "Report management",
+    sortToggleAscending: "Sort ascending",
+    sortToggleDescending: "Sort descending",
+    statusFilters: "Status filters",
+    targetBookFallback: "Book",
+    targetUserFallback: "User",
+    unknownTarget: "Target unavailable"
+  },
+  ru: {
+    comment: "Комментарий",
+    created: "Создана",
+    emptyDescription: "Выберите другой статус модерации или измените направление сортировки.",
+    found: "Найдено жалоб",
+    lastUpdated: "Последнее обновление",
+    noComment: "Комментарий не указан.",
+    pageTitle: "Жалобы пользователей",
+    reportOnBook: "Жалоба на книгу",
+    reportOnUser: "Жалоба на пользователя",
+    manageTitle: "Управление жалобами",
+    sortToggleAscending: "Сортировать по возрастанию",
+    sortToggleDescending: "Сортировать по убыванию",
+    statusFilters: "Фильтры по статусу",
+    targetBookFallback: "Книга",
+    targetUserFallback: "Пользователь",
+    unknownTarget: "Цель недоступна"
+  }
 };
 
 export function AdminReportsPage() {
@@ -22,9 +82,22 @@ export function AdminReportsPage() {
   const metadataQuery = useMetadataQuery();
   const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState(defaultFilters);
-  const [draftFilters, setDraftFilters] = useState(defaultFilters);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const text = getAdminReportsText(locale);
 
   const reportStatuses = metadataQuery.data?.reportStatuses ?? ["OPEN", "RESOLVED", "REJECTED"];
+
+  useEffect(() => {
+    function closeStatusFilters() {
+      setFiltersOpen(false);
+    }
+
+    window.addEventListener(USER_MENU_OPEN_EVENT, closeStatusFilters);
+
+    return () => {
+      window.removeEventListener(USER_MENU_OPEN_EVENT, closeStatusFilters);
+    };
+  }, []);
 
   const reportsQuery = useQuery({
     queryKey: ["admin-reports", pageIndex, filters],
@@ -37,31 +110,28 @@ export function AdminReportsPage() {
       });
       const response = await apiRequest(`/admin/reports?${query}`, { auth: true });
 
-      return response.data;
+      return {
+        ...response.data,
+        content: await enrichReportsWithTargets(response.data?.content ?? [])
+      };
     }
   });
 
-  function handleApplyFilters(event) {
-    event.preventDefault();
-    setPageIndex(0);
-    setFilters({
-      reportStatuses: [...draftFilters.reportStatuses],
-      sortDirection: draftFilters.sortDirection
-    });
-  }
-
-  function handleResetFilters() {
-    setPageIndex(0);
-    setDraftFilters(defaultFilters);
-    setFilters(defaultFilters);
-  }
-
   function toggleStatus(status) {
-    setDraftFilters((current) => ({
+    setPageIndex(0);
+    setFilters((current) => ({
       ...current,
       reportStatuses: current.reportStatuses.includes(status)
         ? current.reportStatuses.filter((item) => item !== status)
         : [...current.reportStatuses, status]
+    }));
+  }
+
+  function toggleSortDirection() {
+    setPageIndex(0);
+    setFilters((current) => ({
+      ...current,
+      sortDirection: current.sortDirection === "ASC" ? "DESC" : "ASC"
     }));
   }
 
@@ -70,65 +140,9 @@ export function AdminReportsPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>{rt(locale, "Moderation queue")}</h1>
+        <PageTitle admin icon={FlagIcon}>{text.manageTitle}</PageTitle>
         <p>{rt(locale, "Review incoming reports, filter them by status, and open each case in detail.")}</p>
       </header>
-
-      <section className="section-card">
-        <form className="content-stack" onSubmit={handleApplyFilters}>
-          <div className="filters-grid">
-            <label className="field">
-              <span>{rt(locale, "Sort direction")}</span>
-              <select
-                className="field-control"
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    sortDirection: event.target.value
-                  }))
-                }
-                value={draftFilters.sortDirection}
-              >
-                <option value="ASC">{rt(locale, "Ascending")}</option>
-                <option value="DESC">{rt(locale, "Descending")}</option>
-              </select>
-            </label>
-
-            <div className="field">
-              <span>{rt(locale, "Result set")}</span>
-              <div className="admin-summary-box">
-                <strong>{reportsQuery.data?.totalElements ?? 0}</strong>
-                <span>{rt(locale, "matching reports")}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="field">
-            <span>{rt(locale, "Status filters")}</span>
-            <div className="checkbox-grid">
-              {reportStatuses.map((status) => (
-                <label className="field field-checkbox admin-checkbox-card" key={status}>
-                  <span>{formatEnumLabel(status)}</span>
-                  <input
-                    checked={draftFilters.reportStatuses.includes(status)}
-                    onChange={() => toggleStatus(status)}
-                    type="checkbox"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="filters-actions">
-            <button className="button" type="submit">
-              {rt(locale, "Apply filters")}
-            </button>
-            <button className="button button-secondary" onClick={handleResetFilters} type="button">
-              {rt(locale, "Reset")}
-            </button>
-          </div>
-        </form>
-      </section>
 
       {metadataQuery.isPending ? <LoadingBlock label={rt(locale, "Loading report metadata")} /> : null}
       {metadataQuery.error ? (
@@ -139,89 +153,72 @@ export function AdminReportsPage() {
         <ErrorBlock error={reportsQuery.error} title={rt(locale, "Admin reports could not be loaded")} />
       ) : null}
 
+      {!reportsQuery.isPending && !reportsQuery.error ? (
+        <div className="catalog-results-toolbar admin-reports-results-toolbar">
+          <p className="catalog-results-count">{text.found}: {reportsQuery.data?.totalElements ?? 0}</p>
+          <div className="admin-filter-toolbar-actions">
+            <div className="admin-filter-dropdown-wrap">
+              <button
+                aria-expanded={filtersOpen}
+                aria-label={text.statusFilters}
+                className="icon-button catalog-sort-direction-button"
+                onClick={() => setFiltersOpen((current) => !current)}
+                title={text.statusFilters}
+                type="button"
+              >
+                <FilterIcon />
+              </button>
+
+              {filtersOpen ? (
+                <div className="admin-filter-dropdown">
+                  <div className="checkbox-grid admin-report-status-grid">
+                    {reportStatuses.map((status) => (
+                      <label className="field field-checkbox admin-checkbox-card admin-report-status-card" key={status}>
+                        <span>{formatAdminReportStatusFilterLabel(status, locale)}</span>
+                        <input
+                          checked={filters.reportStatuses.includes(status)}
+                          onChange={() => toggleStatus(status)}
+                          type="checkbox"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <button
+              aria-label={
+                filters.sortDirection === "ASC"
+                  ? text.sortToggleDescending
+                  : text.sortToggleAscending
+              }
+              className="icon-button catalog-sort-direction-button"
+              onClick={toggleSortDirection}
+              title={
+                filters.sortDirection === "ASC"
+                  ? text.sortToggleDescending
+                  : text.sortToggleAscending
+              }
+              type="button"
+            >
+              <SortDirectionIcon direction={filters.sortDirection} />
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {!reportsQuery.isPending && !reportsQuery.error && reports.length === 0 ? (
         <EmptyBlock
           title={rt(locale, "No reports match these filters")}
-          description={rt(locale, "Try resetting the filters or selecting a different moderation status.")}
+          description={text.emptyDescription}
         />
       ) : null}
 
       {reports.length > 0 ? (
-        <section className="list-stack">
+        <section className="report-card-grid">
           {reports.map((report) => (
-            <article className="section-card compact-card" key={report.id}>
-              <div className="row-between">
-                <div className="entity-inline">
-                  <UserAvatar
-                    name={report.reporter?.nickname || report.reporter?.email}
-                    photoUrl={report.reporter?.photoUrl}
-                    size="md"
-                  />
-                  <div>
-                    <h2>
-                      {formatEnumLabel(report.targetType)} {formatEnumLabel("REPORT")}
-                    </h2>
-                    <p className="muted-line">
-                      {rt(locale, "Reporter")}: {report.reporter?.nickname || rt(locale, "Unknown")} / {formatDateTime(report.meta?.createdAt)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pill-row">
-                  <span className={`status-pill ${getReportStatusClassName(report.status)}`}>
-                    {formatEnumLabel(report.status)}
-                  </span>
-                </div>
-              </div>
-
-              <dl className="detail-list detail-list-compact">
-                <div>
-                  <dt>{rt(locale, "Reason")}</dt>
-                  <dd>{formatEnumLabel(report.reason)}</dd>
-                </div>
-                <div>
-                  <dt>{rt(locale, "Target type")}</dt>
-                  <dd>{formatEnumLabel(report.targetType)}</dd>
-                </div>
-                <div>
-                  <dt>{rt(locale, "Created at")}</dt>
-                  <dd>{formatDateTime(report.meta?.createdAt)}</dd>
-                </div>
-                <div>
-                  <dt>{rt(locale, "Updated at")}</dt>
-                  <dd>{formatDateTime(report.meta?.updatedAt)}</dd>
-                </div>
-              </dl>
-
-              <p className="book-description">{report.comment || rt(locale, "No moderator note provided.")}</p>
-
-              <div className="card-actions">
-                <div className="action-icon-group">
-                  <Link
-                    aria-label={rt(locale, "Open target")}
-                    className="icon-button"
-                    title={rt(locale, "Open target")}
-                    to={resolveReportTargetLink(report)}
-                  >
-                    <ExternalLinkIcon />
-                  </Link>
-                  {report.reporter?.id ? (
-                    <Link
-                      aria-label={rt(locale, "Open reporter")}
-                      className="icon-button"
-                      title={rt(locale, "Open reporter")}
-                      to={`/admin/users/${report.reporter.id}`}
-                    >
-                      <UserIcon />
-                    </Link>
-                  ) : null}
-                </div>
-
-                <Link className="button button-secondary" to={`/admin/reports/${report.id}`}>
-                  {rt(locale, "Open details")}
-                </Link>
-              </div>
-            </article>
+            <AdminReportCard key={report.id} report={report} text={text} />
           ))}
         </section>
       ) : null}
@@ -239,11 +236,14 @@ export function AdminReportsPage() {
 
 export function AdminReportDetailsPage() {
   const { locale } = useLocale();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { reportId } = useParams();
   const [pendingAction, setPendingAction] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [actionMessage, setActionMessage] = useState("");
+  const text = getAdminReportsText(locale);
+  const backTo = location.state?.backTo || "/admin/reports";
 
   const detailQuery = useQuery({
     queryKey: ["admin-report", String(reportId)],
@@ -252,6 +252,20 @@ export function AdminReportDetailsPage() {
       const response = await apiRequest(`/admin/reports/${reportId}`, { auth: true });
 
       return withVersion(response);
+    }
+  });
+
+  const targetQuery = useQuery({
+    queryKey: [
+      "admin-report-target",
+      String(reportId),
+      detailQuery.data?.targetType,
+      detailQuery.data?.targetId
+    ],
+    enabled: Boolean(detailQuery.data?.targetType && detailQuery.data?.targetId),
+    queryFn: async () => {
+      const report = detailQuery.data;
+      return fetchAdminReportTarget(report);
     }
   });
 
@@ -299,40 +313,98 @@ export function AdminReportDetailsPage() {
   }
 
   const report = detailQuery.data;
-  const reporterRoles =
-    (report.reporter?.roles ?? []).map((role) => formatEnumLabel(role)).join(", ") || rt(locale, "None");
+  const isBookTarget = report.targetType === "BOOK";
+  const target = targetQuery.data ?? null;
+  const targetTitle = resolveReportTargetTitle(report, text, target);
+  const title = getReportTitle(report, text);
+  const targetLink = resolveReportTargetLink(report);
 
   return (
     <section className="content-stack">
-      <header className="section-card book-detail-hero">
+      <header className="section-card book-detail-hero admin-report-detail-hero">
         <div className="book-detail-header-bar">
-          <Link aria-label={rt(locale, "Back to reports")} className="back-link" to="/admin/reports">
-            <ArrowLeftIcon />
-          </Link>
-
-          <div className="hero-icon-actions">
-            <Link
-              aria-label={rt(locale, "Open target")}
-              className="icon-button"
-              title={rt(locale, "Open target")}
-              to={resolveReportTargetLink(report)}
-            >
-              <ExternalLinkIcon />
+          <div className="book-detail-header-main">
+            <Link aria-label={rt(locale, "Back to reports")} className="back-link" to={backTo}>
+              <ArrowLeftIcon />
             </Link>
-            {report.reporter?.id ? (
-              <Link
-                aria-label={rt(locale, "Open reporter")}
-                className="icon-button"
-                title={rt(locale, "Open reporter")}
-                to={`/admin/users/${report.reporter.id}`}
-              >
-                <UserIcon />
-              </Link>
+            <PageTitle admin icon={FlagIcon}>{title}</PageTitle>
+          </div>
+
+          <div className="pill-row admin-report-detail-labels">
+            <span className={`status-pill ${getReportStatusClassName(report.status)}`}>
+              {formatEnumLabel(report.status)}
+            </span>
+            <span className="status-pill status-pill-neutral">
+              {formatReportTargetTypeLabel(report.targetType, locale)}
+            </span>
+            <span className={`status-pill ${getReportReasonClassName(report.reason)}`}>
+              {formatEnumLabel(report.reason)}
+            </span>
+          </div>
+        </div>
+
+        <div className="hero-icon-actions admin-report-navigation-actions">
+          <Link
+            aria-label={rt(locale, "Open target")}
+            className="icon-button"
+            title={rt(locale, "Open target")}
+            to={targetLink}
+          >
+            <ExternalLinkIcon />
+          </Link>
+          {report.reporter?.id ? (
+            <Link
+              aria-label={rt(locale, "Open reporter")}
+              className="icon-button"
+              title={rt(locale, "Open reporter")}
+              to={`/admin/users/${report.reporter.id}`}
+            >
+              <UserIcon />
+            </Link>
+          ) : null}
+        </div>
+
+        <div className="admin-report-target-summary">
+          {isBookTarget ? (
+            <BookCover
+              photoUrl={target?.photoUrl ?? report.targetBook?.photoUrl ?? ""}
+              placeholderVariant="fullbleed"
+              size="md"
+              title={targetTitle}
+            />
+          ) : (
+            <UserAvatar
+              name={targetTitle}
+              photoUrl={target?.photoUrl ?? report.targetUser?.photoUrl}
+              size="lg"
+            />
+          )}
+
+          <div className="admin-report-target-copy">
+            <h2>{targetTitle}</h2>
+            {!isBookTarget ? <p>{target?.email || rt(locale, "Not available")}</p> : null}
+
+            <div className="admin-user-date-stack admin-report-date-stack">
+              <span>{text.created}: {formatDateTime(report.meta?.createdAt)}</span>
+              <span>{text.lastUpdated}: {formatDateTime(report.meta?.updatedAt)}</span>
+            </div>
+
+            <p className="admin-report-comment-line">
+              <strong>{text.comment}:</strong> {report.comment || text.noComment}
+            </p>
+
+            {targetQuery.error ? (
+              <p className="inline-message inline-message-error">{text.unknownTarget}</p>
             ) : null}
+          </div>
+        </div>
+
+        {report.status === "OPEN" ? (
+          <div className="card-actions admin-report-detail-actions">
             <button
               aria-label={rt(locale, "Resolve report")}
               className="icon-button icon-button-success"
-              disabled={report.status !== "OPEN" || pendingAction !== null}
+              disabled={pendingAction !== null}
               onClick={() => void handleAction("resolve")}
               title={rt(locale, "Resolve report")}
               type="button"
@@ -342,7 +414,7 @@ export function AdminReportDetailsPage() {
             <button
               aria-label={rt(locale, "Reject report")}
               className="icon-button icon-button-danger"
-              disabled={report.status !== "OPEN" || pendingAction !== null}
+              disabled={pendingAction !== null}
               onClick={() => void handleAction("reject")}
               title={rt(locale, "Reject report")}
               type="button"
@@ -350,101 +422,180 @@ export function AdminReportDetailsPage() {
               <XIcon />
             </button>
           </div>
-        </div>
-
-        <h1>{formatEnumLabel(report.targetType)} {formatEnumLabel("REPORT")}</h1>
-        <p>{rt(locale, "Review this report, inspect the reporter, and decide whether to resolve or reject it.")}</p>
-        <div className="hero-meta-line">
-          <span>{rt(locale, "Created at")}: {formatDateTime(report.meta?.createdAt)}</span>
-          <span>{rt(locale, "Updated at")}: {formatDateTime(report.meta?.updatedAt)}</span>
-        </div>
-        <div className="pill-row">
-          <span className={`status-pill ${getReportStatusClassName(report.status)}`}>
-            {formatEnumLabel(report.status)}
-          </span>
-        </div>
+        ) : null}
       </header>
 
       {actionMessage ? <p className="inline-message inline-message-success">{actionMessage}</p> : null}
-
-      <section className="detail-grid">
-        <article className="section-card">
-          <h2>{rt(locale, "Report overview")}</h2>
-          <dl className="detail-list">
-            <div>
-              <dt>{rt(locale, "Target type")}</dt>
-              <dd>{formatEnumLabel(report.targetType)}</dd>
-            </div>
-            <div>
-              <dt>{rt(locale, "Reason")}</dt>
-              <dd>{formatEnumLabel(report.reason)}</dd>
-            </div>
-            <div>
-              <dt>{rt(locale, "Status")}</dt>
-              <dd>{formatEnumLabel(report.status)}</dd>
-            </div>
-            <div>
-              <dt>{rt(locale, "Comment")}</dt>
-              <dd>{report.comment || rt(locale, "No report comment provided.")}</dd>
-            </div>
-            <div>
-              <dt>{rt(locale, "Created at")}</dt>
-              <dd>{formatDateTime(report.meta?.createdAt)}</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article className="section-card">
-          <div className="entity-header">
-            <UserAvatar
-              name={report.reporter?.nickname || report.reporter?.email}
-              photoUrl={report.reporter?.photoUrl}
-              size="lg"
-            />
-            <div>
-              <h2>{rt(locale, "Reporter overview")}</h2>
-              <p>{rt(locale, "Review the reporter account and open the full admin user page if needed.")}</p>
-            </div>
-          </div>
-
-          <dl className="detail-list">
-            <div>
-              <dt>{rt(locale, "Reporter nickname")}</dt>
-              <dd>{report.reporter?.nickname || rt(locale, "Not available")}</dd>
-            </div>
-            <div>
-              <dt>{rt(locale, "Reporter email")}</dt>
-              <dd>{report.reporter?.email || rt(locale, "Not available")}</dd>
-            </div>
-            <div>
-              <dt>{rt(locale, "Reporter roles")}</dt>
-              <dd>{reporterRoles}</dd>
-            </div>
-            <div>
-              <dt>{rt(locale, "Reporter navigation")}</dt>
-              <dd>
-                {report.reporter?.id ? (
-                  <Link className="link-inline" to={`/admin/users/${report.reporter.id}`}>
-                    {rt(locale, "Open reporter")}
-                  </Link>
-                ) : (
-                  rt(locale, "Not available")
-                )}
-              </dd>
-            </div>
-          </dl>
-        </article>
-      </section>
+      {actionError ? <ErrorBlock error={actionError} title={rt(locale, "Report action failed")} /> : null}
     </section>
   );
 }
 
+function AdminReportCard({ report, text }) {
+  const isBookTarget = report.targetType === "BOOK";
+  const targetTitle = resolveReportTargetTitle(report, text);
+  const cardClasses = [
+    "section-card",
+    "compact-card",
+    "report-card",
+    "report-card-link",
+    report.status !== "OPEN" ? "report-card-muted" : ""
+  ].filter(Boolean).join(" ");
+
+  return (
+    <Link className={cardClasses} to={`/admin/reports/${report.id}`}>
+      <div className="report-card-top">
+        <div className="report-target-row">
+          <div className="report-target-link report-target-link-static">
+            {isBookTarget ? (
+              <BookCover
+                photoUrl={report.targetBook?.photoUrl ?? ""}
+                placeholderVariant="fullbleed"
+                size="sm"
+                title={targetTitle}
+              />
+            ) : (
+              <UserAvatar name={targetTitle} photoUrl={report.targetUser?.photoUrl} size="sm" />
+            )}
+            <div className="report-target-copy">
+              <h2>{getReportTitle(report, text)}</h2>
+              <strong>{targetTitle}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="pill-row report-pill-row">
+          <span className={`status-pill ${getReportStatusClassName(report.status)}`}>
+            {formatEnumLabel(report.status)}
+          </span>
+          <span className={`status-pill ${getReportReasonClassName(report.reason)}`}>
+            {formatEnumLabel(report.reason)}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function resolveReportTargetLink(report) {
-  if (report.targetType === "USER") {
-    return `/admin/users/${report.targetId}`;
+  return report.targetType === "USER"
+    ? `/admin/users/${report.targetId}`
+    : `/admin/books/${report.targetId}`;
+}
+
+async function enrichReportsWithTargets(reports) {
+  const targetRequests = new Map();
+
+  return Promise.all(
+    reports.map(async (report) => {
+      if (report.targetBook || report.targetUser || !report.targetType || !report.targetId) {
+        return report;
+      }
+
+      const targetKey = `${report.targetType}:${report.targetId}`;
+
+      if (!targetRequests.has(targetKey)) {
+        targetRequests.set(targetKey, fetchAdminReportTarget(report).catch(() => null));
+      }
+
+      const target = await targetRequests.get(targetKey);
+
+      if (!target) {
+        return report;
+      }
+
+      return report.targetType === "BOOK"
+        ? { ...report, targetBook: normalizeReportBookTarget(target) }
+        : { ...report, targetUser: normalizeReportUserTarget(target) };
+    })
+  );
+}
+
+async function fetchAdminReportTarget(report) {
+  const targetPath =
+    report.targetType === "USER"
+      ? `/admin/users/${report.targetId}`
+      : `/admin/books/${report.targetId}`;
+  const response = await apiRequest(targetPath, { auth: true });
+
+  return response.data;
+}
+
+function normalizeReportBookTarget(book) {
+  return {
+    id: book.id,
+    name: book.name,
+    photoUrl: book.photoUrl,
+    ownerUserId: book.ownerUserId,
+    ownerNickname: book.ownerNickname,
+    ownerPhotoUrl: book.ownerPhotoUrl
+  };
+}
+
+function normalizeReportUserTarget(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    nickname: user.nickname,
+    photoUrl: user.photoUrl
+  };
+}
+
+function resolveReportTargetTitle(report, text, target = null) {
+  if (report.targetType === "BOOK") {
+    return (
+      target?.name ||
+      report.targetBook?.name ||
+      `${text.targetBookFallback} #${report.targetId}`
+    );
   }
 
-  return `/admin/books/${report.targetId}`;
+  return (
+    target?.nickname ||
+    target?.email ||
+    report.targetUser?.nickname ||
+    `${text.targetUserFallback} #${report.targetId}`
+  );
+}
+
+function getReportTitle(report, text) {
+  return report.targetType === "BOOK" ? text.reportOnBook : text.reportOnUser;
+}
+
+function formatReportTargetTypeLabel(targetType, locale) {
+  if (targetType === "BOOK") {
+    return locale === "ru" ? "Книга" : formatEnumLabel("BOOK");
+  }
+
+  return locale === "ru" ? "Пользователь" : formatEnumLabel("USER");
+}
+
+function formatAdminReportStatusFilterLabel(status, locale) {
+  const labels = {
+    de: {
+      OPEN: "In Prüfung",
+      REJECTED: "Abgelehnte",
+      RESOLVED: "Bearbeitete"
+    },
+    en: {
+      OPEN: "Under review",
+      REJECTED: "Rejected",
+      RESOLVED: "Processed"
+    },
+    ru: {
+      OPEN: "На рассмотрении",
+      REJECTED: "Отклоненные",
+      RESOLVED: "Обработанные"
+    }
+  };
+  const normalizedStatus = String(status || "").toUpperCase();
+  const localeLabels = labels[locale] ?? labels.en;
+
+  return localeLabels[normalizedStatus] || formatEnumLabel(status);
+}
+
+function getAdminReportsText(locale) {
+  return adminReportsText[locale] ?? adminReportsText.en;
 }
 
 function getReportStatusClassName(status) {
@@ -457,6 +608,18 @@ function getReportStatusClassName(status) {
   }
 
   return "status-pill-neutral";
+}
+
+function getReportReasonClassName(reason) {
+  if (reason === "FRAUD" || reason === "INAPPROPRIATE") {
+    return "status-pill-reason-danger";
+  }
+
+  if (reason === "SPAM") {
+    return "status-pill-reason-warning";
+  }
+
+  return "status-pill-reason-neutral";
 }
 
 function withVersion(response) {

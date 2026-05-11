@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { apiRequest } from "../../shared/api/http";
 import { useAuth } from "../../shared/auth/AuthContext";
 import { useLocale } from "../../shared/i18n/LocaleContext";
-import { formatEnumLabel } from "../../shared/lib/format";
-import { trimFormPayload } from "../../shared/lib/format";
+import { formatEnumLabel, trimFormPayload } from "../../shared/lib/format";
 import { BookCover, UserAvatar } from "../../shared/ui/Media";
 import { FlagIcon, XIcon } from "../../shared/ui/Icons";
+
+const REPORT_CLOSE_TIMEOUT_MS = 5000;
 
 const initialForm = {
   reason: "",
@@ -21,6 +22,7 @@ const reportText = {
     aboutUser: "Diesen Nutzer melden",
     alreadyBook: "Du hast für dieses Buch bereits eine Meldung gesendet.",
     alreadyUser: "Du hast für diesen Nutzer bereits eine Meldung gesendet.",
+    autoClose: "Dieses Fenster schließt sich automatisch in:",
     chooseTarget: "Wähle oben zuerst aus, worauf sich die Meldung beziehen soll.",
     close: "Fenster schließen",
     comment: "Kommentar",
@@ -32,6 +34,7 @@ const reportText = {
     reason: "Grund",
     send: "Meldung senden",
     sending: "Meldung wird gesendet...",
+    sent: "Meldung gesendet",
     title: "Meldung"
   },
   en: {
@@ -39,6 +42,7 @@ const reportText = {
     aboutUser: "Report this user",
     alreadyBook: "You have already sent a report about this book.",
     alreadyUser: "You have already sent a report about this user.",
+    autoClose: "This window will close automatically in:",
     chooseTarget: "Choose what you want to report above to continue.",
     close: "Close window",
     comment: "Comment",
@@ -50,6 +54,7 @@ const reportText = {
     reason: "Reason",
     send: "Send report",
     sending: "Sending report...",
+    sent: "Report sent",
     title: "Report"
   },
   ru: {
@@ -57,6 +62,7 @@ const reportText = {
     aboutUser: "Пожаловаться на пользователя",
     alreadyBook: "Вы уже отправляли жалобу на эту книгу.",
     alreadyUser: "Вы уже отправляли жалобу на этого пользователя.",
+    autoClose: "Это окно будет автоматически закрыто через:",
     chooseTarget: "Сначала выберите, на что именно вы хотите пожаловаться.",
     close: "Закрыть окно",
     comment: "Комментарий",
@@ -68,6 +74,7 @@ const reportText = {
     reason: "Причина",
     send: "Отправить жалобу",
     sending: "Отправляем жалобу...",
+    sent: "Жалоба отправлена",
     title: "Жалоба"
   }
 };
@@ -104,12 +111,57 @@ function ReportModal({ book, onClose }) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const metadataQuery = useMetadataQuery();
-  const [targetType, setTargetType] = useState(null);
+  const [targetType, setTargetType] = useState("BOOK");
   const [form, setForm] = useState(initialForm);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [closeDeadline, setCloseDeadline] = useState(null);
+  const [remainingMs, setRemainingMs] = useState(0);
   const text = reportText[locale] ?? reportText.en;
+
+  const targetLocksQuery = useQuery({
+    queryKey: ["report-target-locks", book.id, book.ownerUserId],
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const content = [];
+      let pageIndex = 0;
+      let totalPages = 1;
+
+      while (pageIndex < totalPages) {
+        const response = await apiRequest(`/report/user?pageIndex=${pageIndex}&pageSize=100`, {
+          auth: true
+        });
+        const page = response.data ?? {};
+
+        content.push(...(page.content ?? []));
+        totalPages = page.totalPages ?? 0;
+        pageIndex += 1;
+      }
+
+      return content;
+    }
+  });
+
+  const existingTargetKeys = useMemo(
+    () =>
+      new Set(
+        (targetLocksQuery.data ?? [])
+          .filter((report) => report?.targetType && report?.targetId && report?.status === "OPEN")
+          .map((report) => `${report.targetType}:${report.targetId}`)
+      ),
+    [targetLocksQuery.data]
+  );
+
+  const bookTargetKey = `BOOK:${book.id}`;
+  const userTargetKey = `USER:${book.ownerUserId}`;
+  const isBookAlreadyReported = existingTargetKeys.has(bookTargetKey);
+  const isUserAlreadyReported = existingTargetKeys.has(userTargetKey);
+  const selectedTargetKey = targetType ? `${targetType}:${resolveTargetId(book, targetType)}` : "";
+  const alreadyReported = Boolean(selectedTargetKey) && existingTargetKeys.has(selectedTargetKey);
+  const countdownActive = closeDeadline !== null;
+  const closeSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+  const progressDegrees = Math.max(0, Math.min(360, (remainingMs / REPORT_CLOSE_TIMEOUT_MS) * 360));
 
   useEffect(() => {
     if (!metadataQuery.data?.reportReasons?.length) {
@@ -122,10 +174,37 @@ function ReportModal({ book, onClose }) {
     }));
   }, [metadataQuery.data]);
 
+  useEffect(() => {
+    if (!closeDeadline || typeof window === "undefined") {
+      return undefined;
+    }
+
+    const updateCountdown = () => {
+      const nextRemainingMs = Math.max(0, closeDeadline - Date.now());
+      setRemainingMs(nextRemainingMs);
+
+      if (nextRemainingMs <= 0) {
+        onClose();
+        return false;
+      }
+
+      return true;
+    };
+
+    updateCountdown();
+    const timerId = window.setInterval(() => {
+      if (!updateCountdown()) {
+        window.clearInterval(timerId);
+      }
+    }, 100);
+
+    return () => window.clearInterval(timerId);
+  }, [closeDeadline, onClose]);
+
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!targetType) {
+    if (!targetType || alreadyReported || countdownActive || !form.comment.trim()) {
       return;
     }
 
@@ -144,7 +223,10 @@ function ReportModal({ book, onClose }) {
       });
 
       await queryClient.invalidateQueries({ queryKey: ["my-reports"] });
-      setSuccessMessage(response.message || text.send);
+      await queryClient.invalidateQueries({ queryKey: ["report-target-locks", book.id, book.ownerUserId] });
+      setSuccessMessage(response.message || text.sent);
+      setCloseDeadline(Date.now() + REPORT_CLOSE_TIMEOUT_MS);
+      setRemainingMs(REPORT_CLOSE_TIMEOUT_MS);
       setForm((current) => ({
         ...current,
         comment: ""
@@ -193,6 +275,7 @@ function ReportModal({ book, onClose }) {
         <div className="choice-grid">
           <button
             className={targetType === "BOOK" ? "choice-card choice-card-active" : "choice-card"}
+            disabled={pending || countdownActive}
             onClick={() => {
               setTargetType("BOOK");
               setError(null);
@@ -203,9 +286,13 @@ function ReportModal({ book, onClose }) {
             <BookCover photoUrl={book.photoUrl} size="sm" title={book.name} />
             <strong>{text.aboutBook}</strong>
             <span>{book.name}</span>
+            {isBookAlreadyReported ? (
+              <span className="inline-message inline-message-error">{text.alreadyBook}</span>
+            ) : null}
           </button>
           <button
             className={targetType === "USER" ? "choice-card choice-card-active" : "choice-card"}
+            disabled={pending || countdownActive}
             onClick={() => {
               setTargetType("USER");
               setError(null);
@@ -216,6 +303,9 @@ function ReportModal({ book, onClose }) {
             <UserAvatar name={book.ownerNickname} photoUrl={book.ownerPhotoUrl} size="sm" />
             <strong>{text.aboutUser}</strong>
             <span>{book.ownerNickname}</span>
+            {isUserAlreadyReported ? (
+              <span className="inline-message inline-message-error">{text.alreadyUser}</span>
+            ) : null}
           </button>
         </div>
 
@@ -232,6 +322,7 @@ function ReportModal({ book, onClose }) {
               <span>{text.reason}</span>
               <select
                 className="field-control"
+                disabled={alreadyReported || pending || countdownActive}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, reason: event.target.value }))
                 }
@@ -246,9 +337,13 @@ function ReportModal({ book, onClose }) {
             </label>
 
             <label className="field">
-              <span>{text.comment}</span>
+              <span>
+                {text.comment}
+                <span className="field-required-mark">*</span>
+              </span>
               <textarea
                 className="field-control"
+                disabled={alreadyReported || pending || countdownActive}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, comment: event.target.value }))
                 }
@@ -268,14 +363,37 @@ function ReportModal({ book, onClose }) {
               </p>
             ) : null}
 
-            <div className="card-actions">
+            <div className="card-actions report-modal-actions">
               <button
                 className="button"
-                disabled={pending || !form.reason || metadataQuery.isPending}
+                disabled={
+                  pending ||
+                  !form.reason ||
+                  !form.comment.trim() ||
+                  metadataQuery.isPending ||
+                  targetLocksQuery.isPending ||
+                  alreadyReported ||
+                  countdownActive
+                }
                 type="submit"
               >
                 {pending ? text.sending : text.send}
               </button>
+
+              {countdownActive ? (
+                <div className="report-modal-auto-close">
+                  <span>{text.autoClose}</span>
+                  <span
+                    aria-hidden="true"
+                    className="report-modal-countdown-ring"
+                    style={{
+                      background: `conic-gradient(from -90deg, rgba(31, 107, 88, 0.22) 0deg ${progressDegrees}deg, rgba(18, 32, 43, 0.08) ${progressDegrees}deg 360deg)`
+                    }}
+                  >
+                    <span className="report-modal-countdown-core">{closeSeconds}</span>
+                  </span>
+                </div>
+              ) : null}
             </div>
           </form>
         ) : (
