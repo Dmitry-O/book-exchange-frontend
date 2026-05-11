@@ -7,6 +7,8 @@ import { useLocale } from "../../shared/i18n/LocaleContext";
 import { rt } from "../../shared/i18n/rawText";
 import { formatEnumLabel } from "../../shared/lib/format";
 import { BookCover, UserAvatar } from "../../shared/ui/Media";
+import { FlagIcon } from "../../shared/ui/Icons";
+import { PageTitle } from "../../shared/ui/PageTitle";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
@@ -65,7 +67,7 @@ export function MyReportsPage() {
   return (
     <section className="content-stack">
       <header className="section-card">
-        <h1>{rt(locale, "My reports")}</h1>
+        <PageTitle icon={FlagIcon}>{rt(locale, "My reports")}</PageTitle>
         <p>{rt(locale, "When you send moderation reports from public book pages, they will appear here.")}</p>
       </header>
 
@@ -82,7 +84,7 @@ export function MyReportsPage() {
       ) : null}
 
       {reports.length > 0 ? (
-        <section className="list-stack">
+        <section className="report-card-grid">
           {reports.map((report) => {
             const isBookTarget = report.targetType === "BOOK";
             const targetBook = report.targetBook ?? null;
@@ -90,31 +92,65 @@ export function MyReportsPage() {
             const targetTitle = isBookTarget
               ? targetBook?.name || `${text.bookFallback} #${report.targetId}`
               : targetUser?.nickname || `${text.unknownUser} #${report.targetId}`;
+            const isMuted = report.status !== "OPEN";
+            const cardClassName = [
+              "section-card",
+              "compact-card",
+              "report-card",
+              isMuted ? "report-card-muted" : ""
+            ]
+              .filter(Boolean)
+              .join(" ");
 
             return (
-              <article className="section-card compact-card report-card" key={report.id}>
+              <article className={cardClassName} key={report.id}>
                 <div className="row-between report-card-top">
                   <div className="report-target-row">
                     {isBookTarget ? (
-                      <Link className="report-target-link" to={`/book/${targetBook?.id ?? report.targetId}`}>
-                        <BookCover
-                          photoUrl={targetBook?.photoUrl ?? ""}
-                          placeholderVariant="fullbleed"
-                          size="sm"
-                          title={targetTitle}
-                        />
-                        <div className="report-target-copy">
-                          <h2>{text.reportOnBook}</h2>
-                          <strong>{targetTitle}</strong>
-                          <div className="report-meta-lines">
-                            <span>{formatReportDateLine(report.createdAt, locale, text.createdLabel)}</span>
-                            <span>{formatReportDateLine(report.updatedAt, locale, text.updatedLabel)}</span>
+                      report.targetDeleted ? (
+                        <div className="report-target-link report-target-link-static">
+                          <div className="report-target-media">
+                            <BookCover
+                              photoUrl={targetBook?.photoUrl ?? ""}
+                              placeholderVariant="fullbleed"
+                              size="sm"
+                              title={targetTitle}
+                            />
+                          </div>
+                          <div className="report-target-copy">
+                            <h2>{text.reportOnBook}</h2>
+                            <strong>{targetTitle}</strong>
+                            <div className="report-meta-lines">
+                              <span>{formatReportDateLine(report.createdAt, locale, text.createdLabel)}</span>
+                              <span>{formatReportDateLine(report.updatedAt, locale, text.updatedLabel)}</span>
+                            </div>
                           </div>
                         </div>
-                      </Link>
+                      ) : (
+                        <Link className="report-target-link" to={`/book/${targetBook?.id ?? report.targetId}`}>
+                          <div className="report-target-media">
+                            <BookCover
+                              photoUrl={targetBook?.photoUrl ?? ""}
+                              placeholderVariant="fullbleed"
+                              size="sm"
+                              title={targetTitle}
+                            />
+                          </div>
+                          <div className="report-target-copy">
+                            <h2>{text.reportOnBook}</h2>
+                            <strong>{targetTitle}</strong>
+                            <div className="report-meta-lines">
+                              <span>{formatReportDateLine(report.createdAt, locale, text.createdLabel)}</span>
+                              <span>{formatReportDateLine(report.updatedAt, locale, text.updatedLabel)}</span>
+                            </div>
+                          </div>
+                        </Link>
+                      )
                     ) : (
                       <div className="report-target-link report-target-link-static">
-                        <UserAvatar name={targetTitle} photoUrl={targetUser?.photoUrl} size="sm" />
+                        <div className="report-target-media report-target-media-avatar">
+                          <UserAvatar name={targetTitle} photoUrl={targetUser?.photoUrl} size="sm" />
+                        </div>
                         <div className="report-target-copy">
                           <h2>{text.reportOnUser}</h2>
                           <strong>{targetTitle}</strong>
