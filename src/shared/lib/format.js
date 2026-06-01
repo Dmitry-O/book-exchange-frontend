@@ -127,7 +127,7 @@ const ENUM_LABELS = {
   DEFAULT: { de: "Standard", en: "Default", ru: "По умолчанию" },
   DELETED: { de: "Gelöscht", en: "Deleted", ru: "Удалено" },
   DESCRIPTION: { de: "Beschreibung", en: "Description", ru: "Описание" },
-  EMAIL: { de: "E-Mail", en: "Email", ru: "Почта" },
+  EMAIL: { de: "E-Mail", en: "Email", ru: "Эл. почта" },
   EXCHANGE: { de: "Tausch", en: "Exchange", ru: "Обмен" },
   EXCHANGED: { de: "Getauscht", en: "Exchanged", ru: "Обменено" },
   FRAUD: { de: "Betrug", en: "Fraud", ru: "Мошенничество" },

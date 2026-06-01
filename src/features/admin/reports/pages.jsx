@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
@@ -83,6 +83,7 @@ export function AdminReportsPage() {
   const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState(defaultFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersRef = useRef(null);
   const text = getAdminReportsText(locale);
 
   const reportStatuses = metadataQuery.data?.reportStatuses ?? ["OPEN", "RESOLVED", "REJECTED"];
@@ -92,9 +93,17 @@ export function AdminReportsPage() {
       setFiltersOpen(false);
     }
 
+    function handleDocumentClick(event) {
+      if (!filtersRef.current?.contains(event.target)) {
+        setFiltersOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleDocumentClick);
     window.addEventListener(USER_MENU_OPEN_EVENT, closeStatusFilters);
 
     return () => {
+      document.removeEventListener("mousedown", handleDocumentClick);
       window.removeEventListener(USER_MENU_OPEN_EVENT, closeStatusFilters);
     };
   }, []);
@@ -157,7 +166,7 @@ export function AdminReportsPage() {
         <div className="catalog-results-toolbar admin-reports-results-toolbar">
           <p className="catalog-results-count">{text.found}: {reportsQuery.data?.totalElements ?? 0}</p>
           <div className="admin-filter-toolbar-actions">
-            <div className="admin-filter-dropdown-wrap">
+            <div className="admin-filter-dropdown-wrap" ref={filtersRef}>
               <button
                 aria-expanded={filtersOpen}
                 aria-label={text.statusFilters}

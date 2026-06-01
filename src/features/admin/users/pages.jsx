@@ -12,6 +12,7 @@ import { useInfiniteScroll } from "../../../shared/lib/useInfiniteScroll";
 import { UserAvatar } from "../../../shared/ui/Media";
 import { ArrowLeftIcon, FilterIcon, SearchIcon, TrashIcon, UserIcon, XIcon } from "../../../shared/ui/Icons";
 import { PageTitle } from "../../../shared/ui/PageTitle";
+import { PrettySelect } from "../../../shared/ui/PrettySelect";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
 const defaultFilters = {
@@ -20,6 +21,10 @@ const defaultFilters = {
   onlyBannedUsers: false,
   userType: "ALL"
 };
+
+const ROLE_FILTER_ALL = "ALL";
+const ROLE_FILTER_USERS = "USERS";
+const ROLE_FILTER_ADMINS = "ADMINS";
 
 const emptyBanForm = {
   bannedUntil: "",
@@ -111,7 +116,7 @@ const adminUsersText = {
     lastUpdated: "Последнее обновление",
     loadingMore: "Подгружаем ещё пользователей...",
     ownProfile: "Ваш профиль",
-    searchPlaceholder: "Введите email или никнейм...",
+    searchPlaceholder: "Введите эл. почту или никнейм...",
     submitBan: "Внести изменения",
     userDeletedAt: "Уч. запись удалена",
     usersFound: "Найдено пользователей",
@@ -130,8 +135,9 @@ export function AdminUsersPage() {
   const [draftFilters, setDraftFilters] = useState(defaultFilters);
   const text = adminUsersText[locale] ?? adminUsersText.en;
 
-  const roles = (metadataQuery.data?.roles ?? []).filter((role) => role !== "SUPER_ADMIN");
   const userTypes = getOrderedUserTypes(metadataQuery.data?.userTypes ?? ["ACTIVE", "DELETED", "ALL"]);
+  const roleFilterOptions = getRoleFilterOptions(locale);
+  const roleFilterValue = getRoleFilterValue(draftFilters.roles);
 
   const usersQuery = useInfiniteQuery({
     queryKey: ["admin-users", filters],
@@ -198,15 +204,6 @@ export function AdminUsersPage() {
     }));
   }
 
-  function toggleRole(role) {
-    setDraftFilters((current) => ({
-      ...current,
-      roles: current.roles.includes(role)
-        ? current.roles.filter((item) => item !== role)
-        : [...current.roles, role]
-    }));
-  }
-
   return (
     <section className="content-stack">
       <header className="section-card">
@@ -265,31 +262,45 @@ export function AdminUsersPage() {
 
           {filtersOpen ? (
             <form className="catalog-filters-panel" onSubmit={handleApplyFilters}>
-              <div className="filters-grid">
-                <label className="field filter-field-span-2">
+              <div className="filters-grid admin-users-filters-grid">
+                <label className="field admin-user-type-filter">
                   <span>{rt(locale, "User type")}</span>
-                  <select
-                    className="field-control"
-                    onChange={(event) =>
+                  <PrettySelect
+                    ariaLabel={rt(locale, "User type")}
+                    onChange={(nextValue) =>
                       setDraftFilters((current) => ({
                         ...current,
-                        userType: event.target.value
+                        userType: nextValue
                       }))
                     }
+                    options={userTypes.map((userType) => ({
+                      label: formatUserTypeFilterLabel(text, userType),
+                      value: userType
+                    }))}
                     value={draftFilters.userType}
-                  >
-                    {userTypes.map((userType) => (
-                      <option key={userType} value={userType}>
-                        {formatUserTypeFilterLabel(text, userType)}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </label>
 
-                <label className="field field-checkbox admin-toggle-field filter-field-span-2">
-                  <span>{rt(locale, "Only banned users")}</span>
+                <label className="field admin-user-role-filter-field">
+                  <span>{rt(locale, "Roles")}</span>
+                  <PrettySelect
+                    ariaLabel={rt(locale, "Roles")}
+                    onChange={(nextValue) =>
+                      setDraftFilters((current) => ({
+                        ...current,
+                        roles: getRolesFromRoleFilterValue(nextValue)
+                      }))
+                    }
+                    options={roleFilterOptions}
+                    value={roleFilterValue}
+                  />
+                </label>
+
+                <label className="admin-switch-field admin-user-banned-filter">
+                  <span>{rt(locale, "Only banned")}</span>
                   <input
                     checked={draftFilters.onlyBannedUsers}
+                    className="admin-switch-input"
                     onChange={(event) =>
                       setDraftFilters((current) => ({
                         ...current,
@@ -298,23 +309,8 @@ export function AdminUsersPage() {
                     }
                     type="checkbox"
                   />
+                  <span className="admin-switch-track" aria-hidden="true" />
                 </label>
-              </div>
-
-              <div className="field">
-                <span>{rt(locale, "Role filters")}</span>
-                <div className="checkbox-grid">
-                  {roles.map((role) => (
-                    <label className="field field-checkbox admin-checkbox-card" key={role}>
-                      <span>{formatDisplayRole(locale, role)}</span>
-                      <input
-                        checked={draftFilters.roles.includes(role)}
-                        onChange={() => toggleRole(role)}
-                        type="checkbox"
-                      />
-                    </label>
-                  ))}
-                </div>
               </div>
 
               <div className="filters-actions">
@@ -854,6 +850,38 @@ function formatDisplayRole(locale, role) {
   }
 
   return formatEnumLabel(role);
+}
+
+function getRoleFilterOptions(locale) {
+  return [
+    { label: rt(locale, "All"), value: ROLE_FILTER_ALL },
+    { label: rt(locale, "Only users"), value: ROLE_FILTER_USERS },
+    { label: rt(locale, "Only admins"), value: ROLE_FILTER_ADMINS }
+  ];
+}
+
+function getRoleFilterValue(roles) {
+  if (roles?.includes("ADMIN")) {
+    return ROLE_FILTER_ADMINS;
+  }
+
+  if (roles?.includes("USER")) {
+    return ROLE_FILTER_USERS;
+  }
+
+  return ROLE_FILTER_ALL;
+}
+
+function getRolesFromRoleFilterValue(value) {
+  if (value === ROLE_FILTER_USERS) {
+    return ["USER"];
+  }
+
+  if (value === ROLE_FILTER_ADMINS) {
+    return ["ADMIN"];
+  }
+
+  return [];
 }
 
 function renderBanStatusPill(locale, text, user) {
