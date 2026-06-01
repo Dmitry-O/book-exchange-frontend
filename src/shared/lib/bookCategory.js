@@ -84,11 +84,6 @@ const BOOK_CATEGORY_LABELS = {
     de: "Geschichte",
     ru: "История"
   },
-  HORROR: {
-    en: "Horror",
-    de: "Horror",
-    ru: "Ужасы"
-  },
   MANGA: {
     en: "Manga",
     de: "Manga",
@@ -215,9 +210,9 @@ export function formatBookCategoryLabel(value, locale = "en", fallback = "") {
 }
 
 export function buildBookCategoryOptions(categories, locale = "en", emptyLabel = "", currentValue = "") {
-  const nextCategories = [...categories];
+  const nextCategories = categories.filter(isVisibleBookCategory);
 
-  if (currentValue && !nextCategories.includes(currentValue)) {
+  if (isVisibleBookCategory(currentValue) && !nextCategories.includes(currentValue)) {
     nextCategories.push(currentValue);
   }
 
@@ -256,7 +251,17 @@ export function getBookCategoryTagStyle(value) {
   };
 }
 
-function normalizeBookCategoryKey(value) {
+export function isVisibleBookCategory(value) {
+  const key = normalizeBookCategoryKey(value);
+
+  return Boolean(key) && Boolean(BOOK_CATEGORY_LABELS[key]);
+}
+
+export function getBookCategoryImageSlug(value) {
+  return normalizeBookCategoryKey(value).toLowerCase().replace(/_/g, "-");
+}
+
+export function normalizeBookCategoryKey(value) {
   return String(value)
     .trim()
     .normalize("NFKD")
