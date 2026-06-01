@@ -34,6 +34,7 @@ import { AdminExchangeDetailsPage, AdminExchangesPage } from "../features/admin/
 import { AdminReportDetailsPage, AdminReportsPage } from "../features/admin/reports/pages";
 import { AdminUserDetailsPage, AdminUsersPage } from "../features/admin/users/pages";
 import { AppLayout, PublicLayout } from "../features/shell/layouts";
+import { AboutPage } from "../features/shell/AboutPage";
 import { HomePage } from "../features/shell/HomePage";
 import { MyReportsPage } from "../features/profile/MyReportsPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
@@ -60,6 +61,7 @@ export function AppRouter() {
     <Routes>
       <Route element={<PublicLayout />}>
         <Route index element={<HomePage />} />
+        <Route path="about" element={<AboutPage />} />
         <Route path="catalog" element={<CatalogPage />} />
         <Route path="book/:bookId" element={<PublicBookPage />} />
         <Route path="login" element={<LoginPage />} />

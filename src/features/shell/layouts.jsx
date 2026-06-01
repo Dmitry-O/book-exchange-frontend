@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   useAdminOpenReportsSummaryQuery,
   useMetadataQuery,
@@ -10,20 +10,54 @@ import { useLocale } from "../../shared/i18n/LocaleContext";
 import { getLocaleLabel } from "../../shared/i18n/locale";
 import { UserAvatar } from "../../shared/ui/Media";
 import {
+  ArrowUpIcon,
   BellIcon,
   BookIcon,
   AdminBadgeIcon,
   FlagIcon,
+  HomeIcon,
+  InfoIcon,
   MenuIcon,
+  SignInIcon,
   SignOutIcon,
   SwapIcon,
-  UserIcon
+  UserIcon,
+  UserPlusIcon
 } from "../../shared/ui/Icons";
+import { ProjectResourceLinks } from "./ProjectResourceLinks";
 
 const BASE_NAV_LINKS = [
-  { to: "/", labelKey: "common.home", end: true },
-  { to: "/catalog", labelKey: "common.catalog" }
+  { to: "/", labelKey: "common.home", icon: HomeIcon, end: true },
+  { to: "/catalog", labelKey: "common.catalog", icon: BookIcon },
+  { to: "/about", labelKey: "common.about", icon: InfoIcon }
 ];
+
+const FOOTER_COPY = {
+  en: {
+    title: "Book Exchange demo project",
+    description:
+      "A demonstration platform for book sharing: public catalog, accounts, book listings, exchange requests, reports, moderation, admin tools, email flows, and a React interface connected to the API.",
+    stack: "Spring Boot API + React client"
+  },
+  de: {
+    title: "Book Exchange Demo-Projekt",
+    description:
+      "Eine Demo-Plattform zum Teilen von Büchern: öffentlicher Katalog, Konten, Buchanzeigen, Tauschanfragen, Meldungen, Moderation, Admin-Tools, E-Mail-Flows und ein React-Interface mit API-Anbindung.",
+    stack: "Spring Boot API + React Client"
+  },
+  ru: {
+    title: "Book Exchange как демонстрационный проект",
+    description:
+      "Платформа для демонстрации обмена книгами: публичный каталог, аккаунты, объявления, запросы на обмен, жалобы, модерация, админка, email-сценарии и React-интерфейс, подключенный к API.",
+    stack: "Spring Boot API + React client"
+  }
+};
+
+const SCROLL_TOP_LABELS = {
+  en: "Back to top",
+  de: "Nach oben",
+  ru: "Наверх"
+};
 
 const USER_MENU_OPEN_EVENT = "book-exchange:user-menu-open";
 
@@ -52,10 +86,13 @@ export function PublicLayout() {
 
   return (
     <div className="app-frame">
+      <ScrollBehavior />
       <AppHeader availableLocales={metadataQuery.data?.locales} />
       <main className="page-container">
         <Outlet />
       </main>
+      <SiteFooter />
+      <ScrollToTopButton />
     </div>
   );
 }
@@ -65,11 +102,59 @@ export function AppLayout() {
 
   return (
     <div className="app-frame">
+      <ScrollBehavior />
       <AppHeader availableLocales={metadataQuery.data?.locales} />
       <main className="page-container page-container-app">
         <Outlet />
       </main>
+      <SiteFooter />
+      <ScrollToTopButton />
     </div>
+  );
+}
+
+function SiteFooter() {
+  const { isAuthenticated } = useAuth();
+  const { locale, t } = useLocale();
+  const text = FOOTER_COPY[locale] ?? FOOTER_COPY.en;
+
+  return (
+    <footer className="site-footer">
+      <div className="site-footer-copy">
+        <strong>{text.title}</strong>
+        <p>{text.description}</p>
+        <span>{text.stack}</span>
+      </div>
+
+      <div className="site-footer-actions">
+        <nav className="site-footer-nav">
+          {BASE_NAV_LINKS.map((link) => {
+            const Icon = link.icon;
+
+            return (
+              <Link key={link.to} to={link.to}>
+                <Icon />
+                <span>{t(link.labelKey)}</span>
+              </Link>
+            );
+          })}
+          {!isAuthenticated ? (
+            <>
+              <Link className="site-footer-auth-link" to="/login">
+                <SignInIcon />
+                <span>{t("common.signIn")}</span>
+              </Link>
+              <Link className="site-footer-auth-link" to="/register">
+                <UserPlusIcon />
+                <span>{t("common.register")}</span>
+              </Link>
+            </>
+          ) : null}
+        </nav>
+
+        <ProjectResourceLinks compact />
+      </div>
+    </footer>
   );
 }
 
@@ -175,19 +260,19 @@ function AppHeader({ availableLocales }) {
 
   return (
     <header className="topbar topbar-unified">
-      <div className="topbar-start">
-        <NavLink className="brand" to="/">
-          {t("common.appName")}
+      <div className="topbar-brand-slot">
+        <NavLink aria-label={t("common.appName")} className="brand" to="/">
+          <img alt={t("common.appName")} src="/logo_with_title_transparent.png" />
         </NavLink>
-
-        <nav className="topbar-nav">
-          {BASE_NAV_LINKS.map((link) => (
-            <TopNavLink key={link.to} end={link.end} to={link.to}>
-              {t(link.labelKey)}
-            </TopNavLink>
-          ))}
-        </nav>
       </div>
+
+      <nav className="topbar-nav">
+        {BASE_NAV_LINKS.map((link) => (
+          <TopNavLink icon={link.icon} key={link.to} end={link.end} to={link.to}>
+            {t(link.labelKey)}
+          </TopNavLink>
+        ))}
+      </nav>
 
       <div className="topbar-end">
         <LocalePicker
@@ -299,11 +384,13 @@ function AppHeader({ availableLocales }) {
           </div>
         ) : (
           <div className="topbar-auth-actions">
-            <NavLink className="button" to="/login">
-              {t("common.signIn")}
+            <NavLink className="button button-secondary topbar-auth-link" to="/login">
+              <SignInIcon />
+              <span>{t("common.signIn")}</span>
             </NavLink>
-            <NavLink className="button button-secondary" to="/register">
-              {t("common.register")}
+            <NavLink className="button topbar-auth-link" to="/register">
+              <UserPlusIcon />
+              <span>{t("common.register")}</span>
             </NavLink>
           </div>
         )}
@@ -312,15 +399,58 @@ function AppHeader({ availableLocales }) {
   );
 }
 
-function TopNavLink({ children, end = false, to }) {
+function TopNavLink({ children, end = false, icon: Icon, to }) {
   return (
     <NavLink
       end={end}
       to={to}
       className={({ isActive }) => (isActive ? "topbar-link topbar-link-active" : "topbar-link")}
     >
-      {children}
+      {Icon ? <Icon /> : null}
+      <span>{children}</span>
     </NavLink>
+  );
+}
+
+function ScrollBehavior() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ left: 0, top: 0, behavior: "auto" });
+    }
+  }, [location.pathname]);
+
+  return null;
+}
+
+function ScrollToTopButton() {
+  const { locale } = useLocale();
+  const [visible, setVisible] = useState(false);
+  const label = SCROLL_TOP_LABELS[locale] ?? SCROLL_TOP_LABELS.en;
+
+  useEffect(() => {
+    function handleScroll() {
+      setVisible(window.scrollY > 420);
+    }
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  return (
+    <button
+      aria-label={label}
+      className={visible ? "scroll-top-button scroll-top-button-visible" : "scroll-top-button"}
+      onClick={() => window.scrollTo({ left: 0, top: 0, behavior: "smooth" })}
+      type="button"
+    >
+      <ArrowUpIcon />
+    </button>
   );
 }
 
@@ -344,7 +474,7 @@ function LocalePicker({
       >
         <LocaleFlagIcon locale={locale} />
         <span className="locale-picker-button-label">{getLocaleLabel(locale)}</span>
-        <span className="locale-picker-button-caret">▾</span>
+        <span className="locale-picker-button-caret" aria-hidden="true" />
       </button>
 
       {menuOpen ? (

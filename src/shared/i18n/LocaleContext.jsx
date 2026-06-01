@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
+  detectLocaleFromIp,
   getLocaleLabel,
+  hasStoredLocalePreference,
   normalizeLocale,
   readStoredLocale,
   SUPPORTED_LOCALES,
@@ -15,6 +17,7 @@ const messages = {
       appName: "Book Exchange",
       home: "Home",
       catalog: "Catalog",
+      about: "About",
       login: "Login",
       register: "Register",
       language: "Language",
@@ -43,8 +46,8 @@ const messages = {
       workspaceTitle: "User workspace",
       workspaceDescription:
         "Profile, security settings, books, exchanges, notifications, and reports are available after sign-in.",
-      metadataTitle: "Metadata snapshot",
-      metadataLoading: "Metadata is loading.",
+      metadataTitle: "App data",
+      metadataLoading: "App data is loading.",
       locales: "Locales",
       reportReasons: "Report reasons",
       exchangeStatuses: "Exchange statuses",
@@ -87,7 +90,7 @@ const messages = {
       description: "The page you requested does not exist in this frontend."
     },
     shell: {
-      loadingMetadata: "Loading app metadata",
+      loadingMetadata: "Loading app data",
       workspace: "Workspace",
       profile: "Profile",
       security: "Security",
@@ -127,7 +130,7 @@ const messages = {
     },
     auth: {
       signInEyebrow: "Sign in",
-      signInTitle: "Sign in to your account",
+      signInTitle: "Sign in",
       signInDescription: "Use your email address and password to continue.",
       noAccount: "No account yet?",
       createOne: "Create one",
@@ -137,29 +140,30 @@ const messages = {
       forgotPasswordTitle: "Request a password reset email",
       forgotPasswordDescription:
         "Enter your email address and we will send you a link to set a new password.",
-      sendResetLink: "Send reset link",
+      sendResetLink: "Send password reset link",
       resendTitle: "Send a new confirmation email",
       resendDescription: "Enter your email address and we will send you a new confirmation link.",
-      resendConfirmation: "Resend confirmation email",
+      resendConfirmation: "Resend email",
       alreadyConfirmed: "Already confirmed?",
       backToLogin: "Back to login",
       registerEyebrow: "Register",
-      registerTitle: "Create your account",
+      registerTitle: "Create account",
       registerDescription:
         "Create your Book Exchange account and choose the language for your interface and emails.",
+      registrationDataError: "Registration data could not be loaded",
       nickname: "Nickname",
       locale: "Language",
       creatingAccount: "Creating account...",
       createAccount: "Create account",
       alreadyRegistered: "Already registered?",
       goToLogin: "Go to login",
-      nextStepsTitle: "What to do next",
+      nextStepsTitle: "What next?",
       nextStepsDescription:
-        "Open your inbox, confirm your email address, and then sign in to the app.",
-      requestDeleteTitle: "Request an account deletion email",
+        "Open your inbox, confirm your email address, and then sign in to the app. Did not receive the email? Check spam or send it again.",
+      requestDeleteTitle: "Request an account deletion link",
       requestDeleteDescription:
         "Enter your email address and we will send you a link to confirm account deletion.",
-      sendDeletionEmail: "Send deletion email",
+      sendDeletionEmail: "Send account deletion link",
       verifyEyebrow: "Verify",
       verifyTitle: "Confirm your email address",
       verifyDescription: "Please wait while we confirm your email address.",
@@ -194,12 +198,12 @@ const messages = {
       accountNeedsConfirmationTitle: "Your account still needs email confirmation",
       accountNeedsConfirmationDescription:
         "Request a new confirmation email and finish activating your account.",
-      bannedTitle: "Need to delete a permanently banned account?",
-      bannedDescription: "You can request an account deletion email without signing in.",
-      wrongPasswordTitle: "Need a password reset instead?",
+      bannedTitle: "Need to delete a blocked account?",
+      bannedDescription: "You can request an account deletion link without signing in.",
+      wrongPasswordTitle: "Forgot your password?",
       wrongPasswordDescription:
         "Send yourself a password reset email and choose a new password.",
-      requestDeletionEmail: "Request deletion email"
+      requestDeletionEmail: "Request account deletion link"
     },
     profile: {
       eyebrow: "Profile",
@@ -248,6 +252,7 @@ const messages = {
       appName: "Book Exchange",
       home: "Startseite",
       catalog: "Katalog",
+      about: "Über das Projekt",
       login: "Anmelden",
       register: "Registrieren",
       language: "Sprache",
@@ -276,8 +281,8 @@ const messages = {
       workspaceTitle: "Benutzerbereich",
       workspaceDescription:
         "Profil, Sicherheit, Bücher, Tausche, Benachrichtigungen und Meldungen stehen nach der Anmeldung bereit.",
-      metadataTitle: "Metadaten-Übersicht",
-      metadataLoading: "Metadaten werden geladen.",
+      metadataTitle: "App-Daten",
+      metadataLoading: "App-Daten werden geladen.",
       locales: "Sprachen",
       reportReasons: "Meldegründe",
       exchangeStatuses: "Tauschstatus",
@@ -320,7 +325,7 @@ const messages = {
       description: "Die angeforderte Seite existiert in diesem Frontend nicht."
     },
     shell: {
-      loadingMetadata: "App-Metadaten werden geladen",
+      loadingMetadata: "App-Daten werden geladen",
       workspace: "Arbeitsbereich",
       profile: "Profil",
       security: "Sicherheit",
@@ -370,17 +375,18 @@ const messages = {
       forgotPasswordTitle: "E-Mail zum Zurücksetzen des Passworts anfordern",
       forgotPasswordDescription:
         "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Festlegen eines neuen Passworts.",
-      sendResetLink: "Reset-Link senden",
+      sendResetLink: "Link zum Zurücksetzen des Passworts senden",
       resendTitle: "Neue Bestätigungs-E-Mail senden",
       resendDescription:
         "Gib deine E-Mail-Adresse ein und wir senden dir einen neuen Bestätigungslink.",
-      resendConfirmation: "Bestätigungs-E-Mail erneut senden",
+      resendConfirmation: "E-Mail erneut senden",
       alreadyConfirmed: "Bereits bestätigt?",
       backToLogin: "Zur Anmeldung",
       registerEyebrow: "Registrieren",
       registerTitle: "Erstelle dein Konto",
       registerDescription:
         "Erstelle dein Book-Exchange-Konto und wähle die Sprache für Oberfläche und E-Mails.",
+      registrationDataError: "Registrierungsdaten konnten nicht geladen werden",
       nickname: "Nickname",
       locale: "Sprache",
       creatingAccount: "Konto wird erstellt...",
@@ -389,11 +395,11 @@ const messages = {
       goToLogin: "Zur Anmeldung",
       nextStepsTitle: "Wie geht es weiter?",
       nextStepsDescription:
-        "Öffne dein Postfach, bestätige deine E-Mail-Adresse und melde dich dann in der App an.",
-      requestDeleteTitle: "E-Mail zur Kontolöschung anfordern",
+        "Öffne dein Postfach, bestätige deine E-Mail-Adresse und melde dich dann in der App an. Keine E-Mail erhalten? Prüfe den Spam-Ordner oder sende sie erneut.",
+      requestDeleteTitle: "Link zur Kontolöschung anfordern",
       requestDeleteDescription:
         "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zur Bestätigung der Kontolöschung.",
-      sendDeletionEmail: "Löschungs-E-Mail senden",
+      sendDeletionEmail: "Link zur Kontolöschung senden",
       verifyEyebrow: "Bestätigen",
       verifyTitle: "E-Mail-Adresse bestätigen",
       verifyDescription: "Bitte warte, während wir deine E-Mail-Adresse bestätigen.",
@@ -428,12 +434,12 @@ const messages = {
       accountNeedsConfirmationTitle: "Dein Konto muss noch bestätigt werden",
       accountNeedsConfirmationDescription:
         "Fordere eine neue Bestätigungs-E-Mail an und aktiviere dein Konto.",
-      bannedTitle: "Möchtest du ein dauerhaft gesperrtes Konto löschen?",
-      bannedDescription: "Du kannst eine E-Mail zur Kontolöschung ohne Anmeldung anfordern.",
+      bannedTitle: "Möchtest du ein gesperrtes Konto löschen?",
+      bannedDescription: "Du kannst ohne Anmeldung einen Link zur Kontolöschung anfordern.",
       wrongPasswordTitle: "Passwort vergessen?",
       wrongPasswordDescription:
         "Sende dir eine E-Mail zum Zurücksetzen des Passworts und vergib ein neues Passwort.",
-      requestDeletionEmail: "Löschungs-E-Mail anfordern"
+      requestDeletionEmail: "Link zur Kontolöschung anfordern"
     },
     profile: {
       eyebrow: "Profil",
@@ -482,6 +488,7 @@ const messages = {
       appName: "Book Exchange",
       home: "Главная",
       catalog: "Каталог",
+      about: "О проекте",
       login: "Войти",
       register: "Регистрация",
       language: "Язык",
@@ -506,12 +513,12 @@ const messages = {
         "Ищи книги, открывай публичные страницы книг и проверяй реальные catalog endpoint'ы.",
       authTitle: "Работа с аккаунтом",
       authDescription:
-        "Регистрация, подтверждение email, сброс пароля и удаление аккаунта уже подключены.",
+        "Регистрация, подтверждение эл. почты, сброс пароля и удаление аккаунта уже подключены.",
       workspaceTitle: "Личный кабинет",
       workspaceDescription:
         "Профиль, безопасность, книги, обмены, уведомления и жалобы доступны после входа.",
-      metadataTitle: "Снимок метаданных",
-      metadataLoading: "Метаданные загружаются.",
+      metadataTitle: "Данные приложения",
+      metadataLoading: "Данные приложения загружаются.",
       locales: "Языки",
       reportReasons: "Причины жалоб",
       exchangeStatuses: "Статусы обменов",
@@ -554,7 +561,7 @@ const messages = {
       description: "Запрошенная страница отсутствует в этом фронтенде."
     },
     shell: {
-      loadingMetadata: "Загрузка метаданных приложения",
+      loadingMetadata: "Загрузка данных приложения",
       workspace: "Кабинет",
       profile: "Профиль",
       security: "Безопасность",
@@ -582,7 +589,7 @@ const messages = {
       moderationConsole: "Панель модерации",
       frontendWorkspace: "Рабочее пространство фронтенда",
       unknownUser: "Неизвестный пользователь",
-      noEmail: "Нет email"
+      noEmail: "Нет эл. почты"
     },
     routeGuards: {
       loadingWorkspace: "Загрузка рабочего пространства",
@@ -594,49 +601,50 @@ const messages = {
     },
     auth: {
       signInEyebrow: "Вход",
-      signInTitle: "Войдите в аккаунт",
-      signInDescription: "Используйте email и пароль, чтобы продолжить.",
+      signInTitle: "Вход в систему",
+      signInDescription: "Используйте эл. почту и пароль, чтобы продолжить.",
       noAccount: "Ещё нет аккаунта?",
       createOne: "Создать аккаунт",
-      email: "Email",
+      email: "Эл. почта",
       password: "Пароль",
       signingIn: "Вход...",
       forgotPasswordTitle: "Запросить письмо для сброса пароля",
       forgotPasswordDescription:
-        "Введите email, и мы отправим вам ссылку для установки нового пароля.",
-      sendResetLink: "Отправить ссылку для сброса",
+        "Введите эл. почту, и мы отправим вам ссылку для установки нового пароля.",
+      sendResetLink: "Отправить ссылку для сброса пароля",
       resendTitle: "Отправить новое письмо подтверждения",
       resendDescription:
-        "Введите email, и мы отправим вам новую ссылку для подтверждения.",
-      resendConfirmation: "Отправить письмо подтверждения",
+        "Введите эл. почту, и мы отправим вам новую ссылку для подтверждения.",
+      resendConfirmation: "Отправить письмо повторно",
       alreadyConfirmed: "Уже подтвердили аккаунт?",
       backToLogin: "Назад ко входу",
       registerEyebrow: "Регистрация",
-      registerTitle: "Создайте аккаунт",
+      registerTitle: "Создание уч. записи",
       registerDescription:
         "Создайте аккаунт Book Exchange и выберите язык интерфейса и писем.",
+      registrationDataError: "Не удалось загрузить данные для регистрации",
       nickname: "Никнейм",
       locale: "Язык",
       creatingAccount: "Создание аккаунта...",
       createAccount: "Создать аккаунт",
       alreadyRegistered: "Уже зарегистрированы?",
       goToLogin: "Перейти ко входу",
-      nextStepsTitle: "Что дальше",
+      nextStepsTitle: "Что дальше?",
       nextStepsDescription:
-        "Откройте письмо, подтвердите email и после этого войдите в приложение.",
-      requestDeleteTitle: "Запросить письмо на удаление аккаунта",
+        "Откройте письмо, подтвердите эл. почту и после этого войдите в приложение. Не получили письмо? Проверьте спам или отправьте письмо повторно.",
+      requestDeleteTitle: "Запросить ссылку на удаление аккаунта",
       requestDeleteDescription:
-        "Введите email, и мы отправим вам ссылку для подтверждения удаления аккаунта.",
-      sendDeletionEmail: "Отправить письмо на удаление",
+        "Введите эл. почту, и мы отправим вам ссылку для подтверждения удаления аккаунта.",
+      sendDeletionEmail: "Отправить ссылку на удаление аккаунта",
       verifyEyebrow: "Подтверждение",
-      verifyTitle: "Подтвердите email",
-      verifyDescription: "Пожалуйста, подождите, пока мы подтверждаем ваш email.",
-      verifyAction: "Подтвердить email",
+      verifyTitle: "Подтвердите эл. почту",
+      verifyDescription: "Пожалуйста, подождите, пока мы подтверждаем вашу эл. почту.",
+      verifyAction: "Подтвердить эл. почту",
       freshConfirmationTitle: "Нужна новая ссылка подтверждения?",
       freshConfirmationDescription:
-        "Введите email, и мы отправим вам новое письмо для подтверждения.",
+        "Введите эл. почту, и мы отправим вам новое письмо для подтверждения.",
       sendNewConfirmation: "Отправить новое письмо подтверждения",
-      emailConfirmed: "Ваш email успешно подтверждён.",
+      emailConfirmed: "Ваша эл. почта успешно подтверждена.",
       resetEyebrow: "Сброс",
       resetTitle: "Выберите новый пароль",
       resetDescription: "Введите новый пароль для вашего аккаунта.",
@@ -646,7 +654,7 @@ const messages = {
       passwordChanged: "Ваш пароль был изменён.",
       requestFreshResetTitle: "Запросить новую ссылку",
       requestFreshResetDescription:
-        "Если старая ссылка истекла или не работает, введите email, и мы отправим новую.",
+        "Если старая ссылка истекла или не работает, введите эл. почту, и мы отправим новую.",
       sendNewReset: "Отправить новое письмо",
       deleteEyebrow: "Удаление",
       deleteTitle: "Подтверждение удаления аккаунта",
@@ -655,19 +663,19 @@ const messages = {
       deletedSuccess: "Ваш аккаунт был удалён.",
       newDeletionTitle: "Нужна новая ссылка на удаление?",
       newDeletionDescription:
-        "Введите email, и мы отправим вам новую ссылку для подтверждения удаления аккаунта.",
+        "Введите эл. почту, и мы отправим вам новую ссылку для подтверждения удаления аккаунта.",
       sendNewDeletion: "Отправить новое письмо на удаление",
       processing: "Обработка...",
       sending: "Отправка...",
       accountNeedsConfirmationTitle: "Аккаунт ещё не подтверждён",
       accountNeedsConfirmationDescription:
         "Запросите новое письмо подтверждения и завершите активацию аккаунта.",
-      bannedTitle: "Нужно удалить навсегда забаненный аккаунт?",
-      bannedDescription: "Вы можете запросить письмо на удаление аккаунта без входа.",
-      wrongPasswordTitle: "Нужен сброс пароля?",
+      bannedTitle: "Нужно удалить заблокированный аккаунт?",
+      bannedDescription: "Вы можете запросить ссылку на удаление аккаунта без входа.",
+      wrongPasswordTitle: "Забыли пароль?",
       wrongPasswordDescription:
         "Отправьте себе письмо для сброса пароля и выберите новый пароль.",
-      requestDeletionEmail: "Запросить письмо на удаление"
+      requestDeletionEmail: "Запросить ссылку на удаление аккаунта"
     },
     profile: {
       eyebrow: "Профиль",
@@ -708,7 +716,7 @@ const messages = {
       deleteConfirm:
         "Удалить текущий аккаунт? Это действие безвозвратно удалит ваш аккаунт.",
       publicDeleteFlowPrefix: "Если потом не будет доступа, вы также можете использовать публичный",
-      publicDeleteFlowLink: "email-flow для удаления аккаунта"
+      publicDeleteFlowLink: "письмо для удаления аккаунта"
     }
   }
 };
@@ -717,9 +725,28 @@ export function LocaleProvider({ children }) {
   const [locale, setLocaleState] = useState(() => readStoredLocale());
 
   useEffect(() => {
-    writeStoredLocale(locale);
     document.documentElement.lang = locale;
   }, [locale]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (hasStoredLocalePreference()) {
+      return undefined;
+    }
+
+    void detectLocaleFromIp().then((detectedLocale) => {
+      if (cancelled || hasStoredLocalePreference()) {
+        return;
+      }
+
+      setLocaleState(normalizeLocale(detectedLocale));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const setLocale = (nextLocale) => {
     const normalizedLocale = normalizeLocale(nextLocale);
