@@ -40,9 +40,9 @@ export const EXTRA_RAW_TEXT = {
     ru: "Не удалось загрузить обмены для администратора"
   },
   "Admin metadata could not be loaded": {
-    en: "Admin metadata could not be loaded",
-    de: "Admin-Metadaten konnten nicht geladen werden",
-    ru: "Не удалось загрузить данные для администратора"
+    en: "Admin page data could not be loaded",
+    de: "Admin-Seitendaten konnten nicht geladen werden",
+    ru: "Не удалось загрузить данные страницы администратора"
   },
   "Admin report details could not be loaded": {
     en: "Admin report details could not be loaded",
@@ -200,9 +200,9 @@ export const EXTRA_RAW_TEXT = {
     ru: "Удалена"
   },
   "Book metadata could not be loaded": {
-    en: "Book metadata could not be loaded",
-    de: "Buch-Metadaten konnten nicht geladen werden",
-    ru: "Не удалось загрузить метаданные книг"
+    en: "Book page data could not be loaded",
+    de: "Buchseitendaten konnten nicht geladen werden",
+    ru: "Не удалось загрузить данные страницы книг"
   },
   "Book moderation": {
     en: "Book moderation",
@@ -342,7 +342,7 @@ export const EXTRA_RAW_TEXT = {
   "Email": {
     en: "Email",
     de: "E-Mail",
-    ru: "Почта"
+    ru: "Эл. почта"
   },
   "Exchange only": {
     en: "Exchange only",
@@ -362,12 +362,12 @@ export const EXTRA_RAW_TEXT = {
   "Email or nickname": {
     en: "Email or nickname",
     de: "E-Mail oder Spitzname",
-    ru: "Почта или никнейм"
+    ru: "Эл. почта или никнейм"
   },
   "Exchange metadata could not be loaded": {
-    en: "Exchange metadata could not be loaded",
-    de: "Tausch-Metadaten konnten nicht geladen werden",
-    ru: "Не удалось загрузить метаданные обменов"
+    en: "Exchange page data could not be loaded",
+    de: "Tauschseitendaten konnten nicht geladen werden",
+    ru: "Не удалось загрузить данные страницы обменов"
   },
   "Exchange overview": {
     en: "Exchange overview",
@@ -430,8 +430,8 @@ export const EXTRA_RAW_TEXT = {
     ru: "Загрузка деталей книги для администратора"
   },
   "Loading admin metadata": {
-    en: "Loading admin metadata",
-    de: "Admin-Metadaten werden geladen",
+    en: "Loading admin page data",
+    de: "Admin-Seitendaten werden geladen",
     ru: "Загрузка данных для администратора"
   },
   "Loading admin user details": {
@@ -440,9 +440,9 @@ export const EXTRA_RAW_TEXT = {
     ru: "Загрузка деталей пользователя для администратора"
   },
   "Loading book metadata": {
-    en: "Loading book metadata",
-    de: "Buch-Metadaten werden geladen",
-    ru: "Загрузка метаданных книг"
+    en: "Loading book page data",
+    de: "Buchseitendaten werden geladen",
+    ru: "Загрузка данных страницы книг"
   },
   "Loading exchange details": {
     en: "Loading exchange details",
@@ -450,9 +450,9 @@ export const EXTRA_RAW_TEXT = {
     ru: "Загрузка деталей обмена"
   },
   "Loading exchange metadata": {
-    en: "Loading exchange metadata",
-    de: "Tausch-Metadaten werden geladen",
-    ru: "Загрузка метаданных обменов"
+    en: "Loading exchange page data",
+    de: "Tauschseitendaten werden geladen",
+    ru: "Загрузка данных страницы обменов"
   },
   "Loading exchange oversight": {
     en: "Loading exchange oversight",
@@ -475,9 +475,9 @@ export const EXTRA_RAW_TEXT = {
     ru: "Загрузка деталей жалобы"
   },
   "Loading report metadata": {
-    en: "Loading report metadata",
-    de: "Metadaten zu Meldungen werden geladen",
-    ru: "Загрузка метаданных жалоб"
+    en: "Loading report page data",
+    de: "Meldungsseitendaten werden geladen",
+    ru: "Загрузка данных страницы жалоб"
   },
   "Loading moderation reports": {
     en: "Loading moderation reports",
@@ -557,7 +557,7 @@ export const EXTRA_RAW_TEXT = {
   "No email available": {
     en: "No email available",
     de: "Keine E-Mail verfügbar",
-    ru: "Почта недоступна"
+    ru: "Эл. почта недоступна"
   },
   "No exchanges match these filters": {
     en: "No exchanges match these filters",
@@ -603,6 +603,21 @@ export const EXTRA_RAW_TEXT = {
     en: "Only banned users",
     de: "Nur gesperrte Benutzer",
     ru: "Только заблокированные пользователи"
+  },
+  "Only banned": {
+    en: "Only banned",
+    de: "Nur gesperrte",
+    ru: "Только заблокированные"
+  },
+  "Only users": {
+    en: "Only users",
+    de: "Nur Nutzer",
+    ru: "Только пользователи"
+  },
+  "Only admins": {
+    en: "Only admins",
+    de: "Nur Admins",
+    ru: "Только админы"
   },
   "Only super admins can grant or revoke admin rights from this view.": {
     en: "Only super admins can grant or revoke admin rights from this view.",
@@ -705,9 +720,9 @@ export const EXTRA_RAW_TEXT = {
     ru: "Не удалось выполнить действие с жалобой"
   },
   "Report metadata could not be loaded": {
-    en: "Report metadata could not be loaded",
-    de: "Metadaten zu Meldungen konnten nicht geladen werden",
-    ru: "Не удалось загрузить метаданные жалоб"
+    en: "Report page data could not be loaded",
+    de: "Meldungsseitendaten konnten nicht geladen werden",
+    ru: "Не удалось загрузить данные страницы жалоб"
   },
   "Saving...": {
     en: "Saving...",
@@ -737,7 +752,7 @@ export const EXTRA_RAW_TEXT = {
   "Reporter email": {
     en: "Reporter email",
     de: "E-Mail des Meldenden",
-    ru: "Почта отправителя жалобы"
+    ru: "Эл. почта отправителя жалобы"
   },
   "Reporter id": {
     en: "Reporter id",
@@ -1007,7 +1022,7 @@ export const EXTRA_RAW_TEXT = {
   "Try resetting the filters or searching with a different email, nickname, or role.": {
     en: "Try resetting the filters or searching with a different email, nickname, or role.",
     de: "Versuche, die Filter zurückzusetzen oder mit einer anderen E-Mail, einem anderen Spitznamen oder einer anderen Rolle zu suchen.",
-    ru: "Попробуйте сбросить фильтры или искать по другой почте, никнейму или роли."
+    ru: "Попробуйте сбросить фильтры или искать по другой эл. почте, никнейму или роли."
   },
   "Unknown": {
     en: "Unknown",

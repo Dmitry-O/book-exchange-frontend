@@ -43,7 +43,9 @@ import {
   XIcon
 } from "../../../shared/ui/Icons";
 import { PageTitle } from "../../../shared/ui/PageTitle";
+import { PrettySelect } from "../../../shared/ui/PrettySelect";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
+import { YearSuggestionField } from "../../../shared/ui/YearSuggestionField";
 
 const defaultFilters = {
   bookType: "ALL",
@@ -82,7 +84,7 @@ const adminCatalogText = {
     filtersHide: "Filter ausblenden",
     filtersShow: "Filter anzeigen",
     loadingMore: "Weitere Bücher werden geladen...",
-    searchPlaceholder: "Buchtitel eingeben...",
+    searchPlaceholder: "Nach Titel oder Beschreibung suchen...",
     sortFieldAria: "Sortierfeld",
     sortPlaceholder: "Sortierfeld auswählen",
     sortToggleDescending: "Absteigend sortieren",
@@ -96,7 +98,7 @@ const adminCatalogText = {
     filtersHide: "Hide filters",
     filtersShow: "Show filters",
     loadingMore: "Loading more books...",
-    searchPlaceholder: "Enter book title...",
+    searchPlaceholder: "Search by title or description...",
     sortFieldAria: "Sort field",
     sortPlaceholder: "Choose a sort field",
     sortToggleDescending: "Sort descending",
@@ -110,7 +112,7 @@ const adminCatalogText = {
     filtersHide: "Скрыть фильтры",
     filtersShow: "Показать фильтры",
     loadingMore: "Подгружаем ещё книги...",
-    searchPlaceholder: "Введите название книги...",
+    searchPlaceholder: "Искать по названию или описанию...",
     sortFieldAria: "Поле сортировки",
     sortPlaceholder: "Выберите поле сортировки",
     sortToggleDescending: "Сортировать по убыванию",
@@ -399,20 +401,15 @@ export function AdminBooksPage() {
         <span className="muted-line">{rtf(locale, "Found books: {count}", { count: totalElements })}</span>
 
         <div className="catalog-sort-controls">
-          <select
-            aria-label={text.sortFieldAria}
-            className="field-control catalog-sort-select"
-            onChange={(event) =>
-              setSortState((current) => ({ ...current, sortBy: event.target.value }))
+          <PrettySelect
+            ariaLabel={text.sortFieldAria}
+            className="catalog-sort-select"
+            onChange={(nextValue) =>
+              setSortState((current) => ({ ...current, sortBy: nextValue }))
             }
+            options={sortOptions}
             value={sortState.sortBy}
-          >
-            {sortOptions.map((option) => (
-              <option key={`admin-sort-${option.value || "empty"}`} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          />
 
           <button
             aria-label={
@@ -571,27 +568,19 @@ function FilterField({ className = "", label, onChange, value }) {
 }
 
 function FilterPublicationYearField({ className = "", hint, label, onChange, value }) {
-  const listId = "admin-book-publication-year-options";
   const hasError = Boolean(value) && parsePublicationYearInput(value) === undefined;
 
   return (
-    <label className={`field ${className}`.trim()}>
-      <span>{label}</span>
-      <input
-        aria-invalid={hasError}
-        className="field-control"
-        inputMode="numeric"
-        list={listId}
-        onChange={(event) => onChange(sanitizePublicationYearInput(event.target.value))}
-        value={value}
-      />
-      <datalist id={listId}>
-        {YEAR_SUGGESTIONS.map((year) => (
-          <option key={year} value={year} />
-        ))}
-      </datalist>
-      {hasError ? <span className="field-hint">{hint}</span> : null}
-    </label>
+    <YearSuggestionField
+      className={className}
+      hint={hint}
+      isInvalid={hasError}
+      label={label}
+      onChange={onChange}
+      sanitizeValue={sanitizePublicationYearInput}
+      suggestions={YEAR_SUGGESTIONS}
+      value={value}
+    />
   );
 }
 
@@ -599,13 +588,7 @@ function FilterSelectField({ className = "", label, onChange, options, value }) 
   return (
     <label className={`field ${className}`.trim()}>
       <span>{label}</span>
-      <select className="field-control" onChange={(event) => onChange(event.target.value)} value={value}>
-        {options.map((option) => (
-          <option key={`${label}-${option.value || "empty"}`} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <PrettySelect ariaLabel={label} onChange={onChange} options={options} value={value} />
     </label>
   );
 }
@@ -1145,18 +1128,13 @@ function SelectField({ label, onChange, options, required = false, value }) {
   return (
     <label className="field">
       <span>{label}</span>
-      <select
-        className="field-control"
-        onChange={(event) => onChange(event.target.value)}
+      <PrettySelect
+        ariaLabel={label}
+        onChange={onChange}
+        options={options}
         required={required}
         value={value}
-      >
-        {options.map((option) => (
-          <option key={`${label}-${option.value || "empty"}`} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      />
     </label>
   );
 }
