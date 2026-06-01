@@ -17,6 +17,7 @@ import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
 import { ArrowLeftIcon, BookIcon, GiftIcon, PencilIcon, TrashIcon } from "../../shared/ui/Icons";
 import { PageTitle } from "../../shared/ui/PageTitle";
 import { Pagination } from "../../shared/ui/Pagination";
+import { PrettySelect } from "../../shared/ui/PrettySelect";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
 const emptyBookForm = {
@@ -825,18 +826,13 @@ function SelectField({ label, onChange, options, required = false, value }) {
   return (
     <label className="field">
       <span>{label}</span>
-      <select
-        className="field-control"
-        onChange={(event) => onChange(event.target.value)}
+      <PrettySelect
+        ariaLabel={label}
+        onChange={onChange}
+        options={options}
         required={required}
         value={value}
-      >
-        {options.map((option) => (
-          <option key={`${label}-${option.value || "empty"}`} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      />
     </label>
   );
 }

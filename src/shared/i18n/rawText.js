@@ -556,9 +556,9 @@ const RAW_TEXT = {
     ru: "Версия"
   },
   "View exchanged books": {
-    de: "Getauschte Bücher öffnen",
-    en: "Open exchanged books",
-    ru: "Открыть обменянные книги"
+    de: "Getauschte Bücher ansehen",
+    en: "View exchanged books",
+    ru: "Просмотреть обменянные книги"
   },
   "When request, offer, or history events appear, they will show up here.": {
     de: "Wenn Ereignisse zu Anfragen, Angeboten oder dem Verlauf erscheinen, werden sie hier angezeigt.",
