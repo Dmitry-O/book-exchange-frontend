@@ -147,7 +147,7 @@ async function performRequest(endpoint, options, canRefresh) {
     throw new ApiClientError({
       status: response.status,
       message:
-        apiError.message ?? payload?.message ?? response.statusText ?? "Request failed",
+        apiError.message ?? payload?.message ?? getLocalizedText(TRANSPORT_ERROR_TEXT, getPreferredLocale()),
       requestId: apiError.requestId ?? requestId,
       errorCode: apiError.error ?? null,
       path: apiError.path ?? null,
@@ -191,8 +191,7 @@ async function refreshAccessToken(refreshToken) {
           message:
             payload?.error?.message ??
             payload?.message ??
-            response.statusText ??
-            "Could not refresh access token",
+            getLocalizedText(TRANSPORT_ERROR_TEXT, getPreferredLocale()),
           requestId: payload?.error?.requestId ?? response.headers.get("X-Request-Id")
         });
       }
