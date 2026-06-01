@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { DEFAULT_PAGE_SIZE } from "../../shared/api/config";
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { apiRequest } from "../../shared/api/http";
@@ -26,7 +26,9 @@ import { useInfiniteScroll } from "../../shared/lib/useInfiniteScroll";
 import { CityField } from "../../shared/ui/CityField";
 import { FilterIcon, GiftIcon, SearchIcon, SortDirectionIcon, XIcon } from "../../shared/ui/Icons";
 import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
+import { PrettySelect } from "../../shared/ui/PrettySelect";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
+import { YearSuggestionField } from "../../shared/ui/YearSuggestionField";
 
 const initialFilters = {
   author: "",
@@ -50,8 +52,15 @@ const catalogPageText = {
       "Durchsuche Angebote, vergleiche Bücher und öffne direkt die Detailseiten für Tausch oder Geschenk.",
     filtersHide: "Filter ausblenden",
     filtersShow: "Filter anzeigen",
+    heroEyebrow: "Katalog",
+    heroTitle: "Finde ein Buch, das schon auf neue Leser wartet.",
+    heroFacts: [
+      "Nach Titel und Beschreibung suchen",
+      "Nach Genre, Stadt, Jahr, Geschenkangeboten und mehr filtern",
+      "Bücher tauschen oder Geschenkangebote finden"
+    ],
     loadingMore: "Weitere Bücher werden geladen...",
-    searchPlaceholder: "Buchtitel eingeben...",
+    searchPlaceholder: "Nach Titel oder Beschreibung suchen...",
     sortFieldAria: "Sortierfeld",
     sortPlaceholder: "Sortierfeld auswählen",
     sortToggleDescending: "Absteigend sortieren",
@@ -64,8 +73,15 @@ const catalogPageText = {
       "Browse listings, compare books, and open detail pages when you want to exchange or request a gift.",
     filtersHide: "Hide filters",
     filtersShow: "Show filters",
+    heroEyebrow: "Catalog",
+    heroTitle: "Find a book that is already waiting for a new reader.",
+    heroFacts: [
+      "Search titles and descriptions",
+      "Filter by genre, city, year, gifts, and more",
+      "Exchange books or find gift offers"
+    ],
     loadingMore: "Loading more books...",
-    searchPlaceholder: "Enter book title...",
+    searchPlaceholder: "Search by title or description...",
     sortFieldAria: "Sort field",
     sortPlaceholder: "Choose a sort field",
     sortToggleDescending: "Sort descending",
@@ -78,8 +94,15 @@ const catalogPageText = {
       "Ищите интересные книги, настраивайте каталог под себя и открывайте объявления для обмена или запроса подарка.",
     filtersHide: "Скрыть фильтры",
     filtersShow: "Показать фильтры",
+    heroEyebrow: "Каталог",
+    heroTitle: "Найдите книгу, которая уже ждет нового читателя.",
+    heroFacts: [
+      "Ищите по названию и описанию",
+      "Фильтруйте по жанру, городу, году, подаркам и не только",
+      "Меняйтесь книгами или находите подарочные предложения"
+    ],
     loadingMore: "Подгружаем ещё книги...",
-    searchPlaceholder: "Введите название книги...",
+    searchPlaceholder: "Искать по названию или описанию...",
     sortFieldAria: "Поле сортировки",
     sortPlaceholder: "Выберите поле сортировки",
     sortToggleDescending: "Сортировать по убыванию",
@@ -91,12 +114,15 @@ const catalogPageText = {
 export function CatalogPage() {
   const metadataQuery = useMetadataQuery();
   const { locale, t } = useLocale();
-  const [filters, setFilters] = useState(initialFilters);
-  const [draftFilters, setDraftFilters] = useState(initialFilters);
-  const [searchText, setSearchText] = useState("");
-  const [appliedSearchText, setAppliedSearchText] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filters, setFilters] = useState(() => getCatalogFiltersFromSearchParams(searchParams));
+  const [draftFilters, setDraftFilters] = useState(() => getCatalogFiltersFromSearchParams(searchParams));
+  const [searchText, setSearchText] = useState(() => getCatalogSearchTextFromSearchParams(searchParams));
+  const [appliedSearchText, setAppliedSearchText] = useState(() =>
+    getCatalogSearchTextFromSearchParams(searchParams).trim()
+  );
   const [sortState, setSortState] = useState(initialSort);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(() => hasCatalogFiltersInSearchParams(searchParams));
   const text = catalogPageText[locale] ?? catalogPageText.en;
 
   const normalizedFilters = useMemo(() => normalizeCatalogFilters(filters), [filters]);
@@ -188,6 +214,20 @@ export function CatalogPage() {
     onLoadMore: () => void booksQuery.fetchNextPage()
   });
 
+  useEffect(() => {
+    const nextFilters = getCatalogFiltersFromSearchParams(searchParams);
+    const nextSearchText = getCatalogSearchTextFromSearchParams(searchParams);
+
+    setFilters(nextFilters);
+    setDraftFilters(nextFilters);
+    setSearchText(nextSearchText);
+    setAppliedSearchText(nextSearchText.trim());
+
+    if (hasCatalogFiltersInSearchParams(searchParams)) {
+      setFiltersOpen(true);
+    }
+  }, [searchParams]);
+
   function updateDraftFilter(name, value) {
     setDraftFilters((current) => ({
       ...current,
@@ -203,11 +243,13 @@ export function CatalogPage() {
     const nextFilters = prepareCatalogFiltersForState(draftFilters);
     setDraftFilters(nextFilters);
     setFilters(nextFilters);
+    syncCatalogSearchParams(appliedSearchText, nextFilters);
   }
 
   function handleResetFilters() {
     setDraftFilters(initialFilters);
     setFilters(initialFilters);
+    syncCatalogSearchParams(appliedSearchText, initialFilters);
   }
 
   function handleSearch() {
@@ -216,18 +258,39 @@ export function CatalogPage() {
     }
 
     setAppliedSearchText(normalizedSearchText);
+    syncCatalogSearchParams(normalizedSearchText, filters);
   }
 
   function handleClearSearch() {
     setSearchText("");
     setAppliedSearchText("");
+    syncCatalogSearchParams("", filters);
+  }
+
+  function syncCatalogSearchParams(nextSearchText, nextFilters) {
+    setSearchParams(buildCatalogSearchParams(nextSearchText, nextFilters), { replace: true });
   }
 
   return (
     <section className="content-stack catalog-page">
-      <header className="section-card">
-        <h1>{t("catalog.title")}</h1>
-        <p>{text.description}</p>
+      <header className="catalog-hero">
+        <div className="catalog-hero-copy">
+          <span className="home-eyebrow">{text.heroEyebrow}</span>
+          <h1>{text.heroTitle}</h1>
+          <p>{text.description}</p>
+        </div>
+        <div className="catalog-hero-facts">
+          {text.heroFacts.map((fact, index) => {
+            const Icon = [SearchIcon, FilterIcon, GiftIcon][index] ?? SearchIcon;
+
+            return (
+              <span key={fact}>
+                <Icon />
+                {fact}
+              </span>
+            );
+          })}
+        </div>
       </header>
 
       <section className="section-card catalog-controls-card">
@@ -346,20 +409,15 @@ export function CatalogPage() {
         <span className="muted-line">{t("catalog.booksMatched", { count: totalElements })}</span>
 
         <div className="catalog-sort-controls">
-          <select
-            aria-label={text.sortFieldAria}
-            className="field-control catalog-sort-select"
-            onChange={(event) =>
-              setSortState((current) => ({ ...current, sortBy: event.target.value }))
+          <PrettySelect
+            ariaLabel={text.sortFieldAria}
+            className="catalog-sort-select"
+            onChange={(nextValue) =>
+              setSortState((current) => ({ ...current, sortBy: nextValue }))
             }
+            options={sortOptions}
             value={sortState.sortBy}
-          >
-            {sortOptions.map((option) => (
-              <option key={`catalog-sort-${option.value || "empty"}`} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          />
 
           <button
             aria-label={
@@ -472,6 +530,48 @@ function areCatalogFiltersEqual(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function getCatalogSearchTextFromSearchParams(searchParams) {
+  return searchParams.get("searchText") ?? searchParams.get("q") ?? "";
+}
+
+function getCatalogFiltersFromSearchParams(searchParams) {
+  return {
+    author: searchParams.get("author") ?? "",
+    category: searchParams.get("category") ?? "",
+    city: searchParams.get("city") ?? "",
+    publicationYear: sanitizePublicationYearInput(searchParams.get("publicationYear") ?? ""),
+    isGift: normalizeBooleanSearchParam(searchParams.get("isGift"))
+  };
+}
+
+function normalizeBooleanSearchParam(value) {
+  return value === "true" || value === "false" ? value : "";
+}
+
+function buildCatalogSearchParams(searchText, filters) {
+  const params = new URLSearchParams();
+  const normalizedSearchText = String(searchText ?? "").trim();
+  const normalizedFilters = normalizeCatalogFilters(filters);
+
+  if (normalizedSearchText) {
+    params.set("searchText", normalizedSearchText);
+  }
+
+  Object.entries(normalizedFilters).forEach(([key, value]) => {
+    if (value !== "" && value !== undefined && value !== null) {
+      params.set(key, String(value));
+    }
+  });
+
+  return params;
+}
+
+function hasCatalogFiltersInSearchParams(searchParams) {
+  return ["author", "category", "city", "publicationYear", "isGift"].some((key) =>
+    Boolean(searchParams.get(key))
+  );
+}
+
 function formatAuthorYear(locale, author, publicationYear, fallbackYear) {
   const authorLabel = author || rt(locale, "Unknown author");
 
@@ -492,27 +592,19 @@ function Field({ className = "", label, onChange, value }) {
 }
 
 function PublicationYearField({ className = "", hint, label, onChange, value }) {
-  const listId = "catalog-publication-year-options";
   const hasError = Boolean(value) && parsePublicationYearInput(value) === undefined;
 
   return (
-    <label className={`field ${className}`.trim()}>
-      <span>{label}</span>
-      <input
-        aria-invalid={hasError}
-        className="field-control"
-        inputMode="numeric"
-        list={listId}
-        onChange={(event) => onChange(sanitizePublicationYearInput(event.target.value))}
-        value={value}
-      />
-      <datalist id={listId}>
-        {YEAR_SUGGESTIONS.map((year) => (
-          <option key={year} value={year} />
-        ))}
-      </datalist>
-      {hasError ? <span className="field-hint">{hint}</span> : null}
-    </label>
+    <YearSuggestionField
+      className={className}
+      hint={hint}
+      isInvalid={hasError}
+      label={label}
+      onChange={onChange}
+      sanitizeValue={sanitizePublicationYearInput}
+      suggestions={YEAR_SUGGESTIONS}
+      value={value}
+    />
   );
 }
 
@@ -520,13 +612,7 @@ function SelectField({ className = "", label, onChange, options, value }) {
   return (
     <label className={`field ${className}`.trim()}>
       <span>{label}</span>
-      <select className="field-control" onChange={(event) => onChange(event.target.value)} value={value}>
-        {options.map((option) => (
-          <option key={`${label}-${option.value || "empty"}`} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <PrettySelect ariaLabel={label} onChange={onChange} options={options} value={value} />
     </label>
   );
 }
