@@ -8,6 +8,7 @@ import { useLocale } from "../../shared/i18n/LocaleContext";
 import { formatEnumLabel, trimFormPayload } from "../../shared/lib/format";
 import { BookCover, UserAvatar } from "../../shared/ui/Media";
 import { FlagIcon, XIcon } from "../../shared/ui/Icons";
+import { PrettySelect } from "../../shared/ui/PrettySelect";
 
 const REPORT_CLOSE_TIMEOUT_MS = 5000;
 
@@ -29,6 +30,7 @@ const reportText = {
     commentPlaceholder: "Beschreibe kurz, was geprüft werden soll",
     helper:
       "Wähle zuerst, ob sich die Meldung auf das Buch oder auf den Besitzer des Inserats bezieht, und sende dann deinen Kommentar.",
+    loadReasonsError: "Die Gründe konnten nicht geladen werden. Bitte versuche es später noch einmal.",
     loadingReasons: "Meldegründe werden geladen...",
     openDialog: "Meldeformular öffnen",
     reason: "Grund",
@@ -49,6 +51,7 @@ const reportText = {
     commentPlaceholder: "Briefly describe what should be reviewed",
     helper:
       "First choose whether the report is about the book or about the owner of this listing, then send your moderation comment.",
+    loadReasonsError: "Report reasons could not be loaded. Please try again later.",
     loadingReasons: "Loading report reasons...",
     openDialog: "Open report dialog",
     reason: "Reason",
@@ -69,6 +72,7 @@ const reportText = {
     commentPlaceholder: "Коротко опишите, что именно нужно проверить",
     helper:
       "Сначала выберите, относится ли жалоба к книге или к владельцу объявления, а затем отправьте комментарий для модерации.",
+    loadReasonsError: "Не удалось загрузить причины жалобы. Попробуйте позже.",
     loadingReasons: "Загружаем причины жалобы...",
     openDialog: "Открыть окно жалобы",
     reason: "Причина",
@@ -312,7 +316,7 @@ function ReportModal({ book, onClose }) {
         {metadataQuery.isPending ? <p className="muted-line">{text.loadingReasons}</p> : null}
         {metadataQuery.error ? (
           <p className="inline-message inline-message-error">
-            {metadataQuery.error.message}
+            {text.loadReasonsError}
           </p>
         ) : null}
 
@@ -320,20 +324,18 @@ function ReportModal({ book, onClose }) {
           <form className="content-stack" onSubmit={handleSubmit}>
             <label className="field">
               <span>{text.reason}</span>
-              <select
-                className="field-control"
+              <PrettySelect
+                ariaLabel={text.reason}
                 disabled={alreadyReported || pending || countdownActive}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, reason: event.target.value }))
+                onChange={(nextValue) =>
+                  setForm((current) => ({ ...current, reason: nextValue }))
                 }
+                options={(metadataQuery.data?.reportReasons ?? []).map((reason) => ({
+                  label: formatEnumLabel(reason),
+                  value: reason
+                }))}
                 value={form.reason}
-              >
-                {(metadataQuery.data?.reportReasons ?? []).map((reason) => (
-                  <option key={reason} value={reason}>
-                    {formatEnumLabel(reason)}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
 
             <label className="field">
