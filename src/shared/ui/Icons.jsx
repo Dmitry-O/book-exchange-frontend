@@ -230,6 +230,183 @@ export function SignOutIcon() {
   );
 }
 
+export function SignInIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M14 5h4a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M10 8l4 4-4 4M14 12H4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function UserPlusIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M3.5 20a6.5 6.5 0 0 1 11.3-4.4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M18 14v6M15 17h6"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function HomeIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-8.5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function InfoIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <circle
+        cx="12"
+        cy="12"
+        fill="none"
+        r="8"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M12 11v5M12 8h.01"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.4"
+      />
+    </svg>
+  );
+}
+
+export function ArrowUpIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M12 19V5M6 11l6-6 6 6"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function GithubIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M12 2.8a9.2 9.2 0 0 0-2.9 17.9c.46.08.63-.2.63-.44v-1.56c-2.55.56-3.08-1.08-3.08-1.08-.42-1.08-1.03-1.37-1.03-1.37-.84-.58.06-.57.06-.57.93.07 1.42.96 1.42.96.83 1.42 2.17 1.01 2.7.77.08-.6.32-1.01.58-1.24-2.03-.23-4.17-1.02-4.17-4.53 0-1 .36-1.82.95-2.46-.1-.23-.42-1.17.09-2.43 0 0 .78-.25 2.54.94a8.8 8.8 0 0 1 4.62 0c1.76-1.19 2.54-.94 2.54-.94.51 1.26.19 2.2.09 2.43.59.64.95 1.46.95 2.46 0 3.52-2.14 4.3-4.18 4.53.33.29.62.85.62 1.72v2.56c0 .24.17.53.64.44A9.2 9.2 0 0 0 12 2.8Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function LinkedinIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M5.2 9.2h3.2V20H5.2V9.2Zm1.6-5.1a1.85 1.85 0 1 1 0 3.7 1.85 1.85 0 0 1 0-3.7ZM10.7 9.2h3.1v1.48h.04c.43-.82 1.48-1.7 3.05-1.7 3.26 0 3.86 2.15 3.86 4.94V20h-3.22v-5.4c0-1.29-.02-2.95-1.8-2.95-1.8 0-2.08 1.41-2.08 2.86V20h-3.22V9.2Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function FileTextIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M14 3v5h5M8 12h8M8 16h8"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function ShieldIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <path
+        d="M12 3 19 6v5.3c0 4.2-2.7 7.9-7 9.7-4.3-1.8-7-5.5-7-9.7V6l7-3Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="m9 12 2 2 4-4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
 export function AdminBadgeIcon() {
   return (
     <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
