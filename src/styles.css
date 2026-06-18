@@ -2676,6 +2676,7 @@ select.field-control,
 }
 
 .book-card-link {
+  position: relative;
   color: inherit;
   text-decoration: none;
   transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
@@ -4000,6 +4001,27 @@ select.field-control,
   align-items: stretch;
 }
 
+.book-exchange-active-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 2px solid rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  background: #d8832f;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(157, 83, 20, 0.28);
+}
+
+.book-exchange-active-badge .icon-svg {
+  width: 19px;
+  height: 19px;
+}
 .profile-data-card,
 .profile-security-card {
   height: 100%;

@@ -530,6 +530,11 @@ const RAW_TEXT = {
     en: "This book cannot be edited because it already participates in an exchange or is in exchange history.",
     ru: "Эту книгу нельзя редактировать, потому что она уже участвует в обмене или находится в истории обменов."
   },
+  "This book is currently participating in an exchange": {
+    de: "Dieses Buch nimmt gerade an einem Tausch teil",
+    en: "This book is currently participating in an exchange",
+    ru: "Эта книга сейчас участвует в обмене"
+  },
   "Try broader filters or remove some filters.": {
     de: "Versuche breitere Filter oder entferne einige Filter.",
     en: "Try broader filters or remove some filters.",

@@ -14,7 +14,7 @@ import { useInfiniteScroll } from "../../shared/lib/useInfiniteScroll";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
 import { CityField } from "../../shared/ui/CityField";
 import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
-import { ArrowLeftIcon, BookIcon, GiftIcon, PencilIcon, TrashIcon } from "../../shared/ui/Icons";
+import { ArrowLeftIcon, BookIcon, GiftIcon, PencilIcon, SwapIcon, TrashIcon } from "../../shared/ui/Icons";
 import { PageTitle } from "../../shared/ui/PageTitle";
 import { Pagination } from "../../shared/ui/Pagination";
 import { PrettySelect } from "../../shared/ui/PrettySelect";
@@ -125,6 +125,15 @@ export function MyBooksPage() {
         <section className="book-grid">
           {books.map((book) => (
             <Link className="book-card book-card-link" key={book.id} to={`/app/my-books/${book.id}`}>
+              {book.editLocked && !book.isExchanged ? (
+                <span
+                  aria-label={rt(locale, "This book is currently participating in an exchange")}
+                  className="book-exchange-active-badge"
+                  title={rt(locale, "This book is currently participating in an exchange")}
+                >
+                  <SwapIcon />
+                </span>
+              ) : null}
               <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
 
               <div className="book-card-head">
