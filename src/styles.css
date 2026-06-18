@@ -1536,6 +1536,13 @@ dl {
   padding: 24px;
 }
 
+.auth-panel .auth-panel-title {
+  font-size: clamp(1.55rem, 2.4vw, 1.9rem);
+  line-height: 1.08;
+  letter-spacing: 0;
+  text-align: center;
+}
+
 .auth-panel-compact {
   justify-items: center;
   text-align: center;
@@ -1586,6 +1593,36 @@ dl {
 
 .auth-helper-card p {
   margin-top: 0;
+}
+
+.not-found-panel {
+  gap: 18px;
+  text-align: center;
+}
+
+.not-found-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);
+  align-items: center;
+  gap: 18px;
+}
+
+.not-found-copy {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+}
+
+.not-found-home-button {
+  width: fit-content;
+  min-width: 0;
+}
+
+.not-found-image {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
 }
 
 .auth-helper-card-soft {
@@ -6320,6 +6357,15 @@ select.field-control,
 
   .profile-session-actions {
     flex-wrap: wrap;
+  }
+
+  .not-found-content {
+    grid-template-columns: 1fr;
+  }
+
+  .not-found-image {
+    order: -1;
+    max-height: 180px;
   }
 
   .my-books-header-actions .button {

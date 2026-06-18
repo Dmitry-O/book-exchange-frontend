@@ -87,7 +87,7 @@ const messages = {
     },
     notFound: {
       title: "Page not found",
-      description: "The page you requested does not exist in this frontend."
+      description: "This page may have moved or never existed. Let’s get you back to the books."
     },
     shell: {
       loadingMetadata: "Loading app data",
@@ -322,7 +322,7 @@ const messages = {
     },
     notFound: {
       title: "Seite nicht gefunden",
-      description: "Die angeforderte Seite existiert in diesem Frontend nicht."
+      description: "Diese Seite wurde vielleicht verschoben oder hat nie existiert. Zurück zu den Büchern."
     },
     shell: {
       loadingMetadata: "App-Daten werden geladen",
@@ -558,7 +558,7 @@ const messages = {
     },
     notFound: {
       title: "Страница не найдена",
-      description: "Запрошенная страница отсутствует в этом фронтенде."
+      description: "Возможно, страница переехала или такой ссылки никогда не было. Вернёмся к книгам."
     },
     shell: {
       loadingMetadata: "Загрузка данных приложения",
