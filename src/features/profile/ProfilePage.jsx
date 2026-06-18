@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../shared/auth/AuthContext";
 import { useLocale } from "../../shared/i18n/LocaleContext";
 import { trimFormPayload } from "../../shared/lib/format";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
-import { UserIcon } from "../../shared/ui/Icons";
+import { ArrowLeftIcon, ShieldIcon, UserIcon } from "../../shared/ui/Icons";
 import { PageTitle } from "../../shared/ui/PageTitle";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 import { SecuritySettingsPanel } from "./SecurityPage";
 
 export function ProfilePage() {
+  const navigate = useNavigate();
   const { locale, t } = useLocale();
   const { deleteProfilePhoto, isLoadingUser, refetchUser, updateProfile, user, userError } = useAuth();
   const [form, setForm] = useState({
@@ -20,6 +22,12 @@ export function ProfilePage() {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [photoPending, setPhotoPending] = useState(false);
+  const privacyText =
+    locale === "ru"
+      ? "Мы никогда не передаём ваши данные третьим лицам."
+      : locale === "de"
+        ? "Wir geben deine Daten niemals an Dritte weiter."
+        : "We never share your data with third parties.";
   const [photoError, setPhotoError] = useState("");
   const [photoMessage, setPhotoMessage] = useState("");
 
@@ -144,14 +152,29 @@ export function ProfilePage() {
 
   return (
     <section className="content-stack">
-      <header className="section-card">
-        <PageTitle icon={UserIcon}>{t("profile.title")}</PageTitle>
-        <p>{t("profile.description")}</p>
+      <header className="profile-settings-header">
+        <button
+          aria-label={locale === "ru" ? "Назад" : locale === "de" ? "Zurück" : "Back"}
+          className="icon-button profile-back-button"
+          onClick={() => navigate(-1)}
+          type="button"
+        >
+          <ArrowLeftIcon />
+        </button>
+        <div>
+          <PageTitle>{t("profile.title")}</PageTitle>
+          <p>{t("profile.description")}</p>
+        </div>
       </header>
 
       <section className="detail-grid profile-settings-grid">
         <article className="section-card profile-data-card">
-          <h2>{t("profile.currentData")}</h2>
+          <div className="profile-card-heading">
+            <span className="profile-card-heading-icon">
+              <UserIcon />
+            </span>
+            <h2>{t("profile.currentData")}</h2>
+          </div>
           <form className="content-stack profile-data-form" onSubmit={handleSubmit}>
             <ImageUploadField
               entityName={form.nickname || user.email}
@@ -182,6 +205,11 @@ export function ProfilePage() {
 
             {successMessage ? <p className="inline-message inline-message-success">{successMessage}</p> : null}
             {error ? <p className="inline-message inline-message-error">{error.message}</p> : null}
+
+            <p className="profile-privacy-note">
+              <ShieldIcon />
+              <span>{privacyText}</span>
+            </p>
           </form>
         </article>
         <SecuritySettingsPanel />
