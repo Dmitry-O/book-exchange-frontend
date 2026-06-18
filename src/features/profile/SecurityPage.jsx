@@ -1,72 +1,52 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../../shared/auth/AuthContext";
+import {
+  getPasswordFeedback,
+  getPasswordRequirements
+} from "../../shared/auth/passwordFeedback";
 import { useLocale } from "../../shared/i18n/LocaleContext";
-import { SignOutIcon, TrashIcon } from "../../shared/ui/Icons";
-
-const passwordHintText = {
-  de:
-    "8 bis 64 Zeichen, mindestens ein Kleinbuchstabe, ein Grossbuchstabe, eine Zahl, ein Sonderzeichen und keine Leerzeichen.",
-  en:
-    "Use 8 to 64 characters with at least one lowercase letter, one uppercase letter, one number, one symbol, and no spaces.",
-  ru:
-    "От 8 до 64 символов, минимум одна строчная буква, одна заглавная, одна цифра, один спецсимвол и без пробелов."
-};
-
-const passwordFeedbackCopy = {
-  de: {
-    invalidPrefix: "Das Passwort braucht noch",
-    medium:
-      "Das Passwort erfüllt die Anforderungen. Für mehr Sicherheit empfehlen wir mindestens 12 Zeichen.",
-    same: "Das neue Passwort muss sich vom aktuellen Passwort unterscheiden.",
-    strong: "Gutes Passwort. Du kannst es jetzt speichern.",
-    requirements: {
-      digit: "eine Zahl",
-      length: "8-64 Zeichen",
-      lower: "einen Kleinbuchstaben",
-      noSpace: "keine Leerzeichen",
-      symbol: "ein Sonderzeichen",
-      upper: "einen Grossbuchstaben"
-    }
-  },
-  en: {
-    invalidPrefix: "Password still needs",
-    medium:
-      "The password meets the requirements. For better security, use at least 12 characters.",
-    same: "The new password must be different from the current password.",
-    strong: "Strong password. You can save it now.",
-    requirements: {
-      digit: "a number",
-      length: "8-64 characters",
-      lower: "a lowercase letter",
-      noSpace: "no spaces",
-      symbol: "a special character",
-      upper: "an uppercase letter"
-    }
-  },
-  ru: {
-    invalidPrefix: "Пароль должен содержать",
-    medium:
-      "Пароль подходит по требованиям. Для надёжности лучше сделать его длиннее: от 12 символов.",
-    same: "Новый пароль должен отличаться от текущего.",
-    strong: "Хороший пароль. Его уже можно сохранить.",
-    summary:
-      "Пароль должен содержать: от 8 до 64 символов, цифру, строчную и заглавную буквы.",
-    requirements: {
-      digit: "цифру",
-      length: "от 8 до 64 символов",
-      lower: "строчную букву",
-      noSpace: "без пробелов",
-      symbol: "спецсимвол",
-      upper: "заглавную букву"
-    }
-  }
-};
+import {
+  AlertTriangleIcon,
+  LockIcon,
+  ShieldIcon,
+  SignOutIcon,
+  TrashIcon
+} from "../../shared/ui/Icons";
+import { PasswordField } from "../../shared/ui/PasswordField";
+import { PasswordStrengthFeedback } from "../../shared/ui/PasswordStrengthFeedback";
 
 const accountManagementHeading = {
   de: "Kontoverwaltung",
   en: "Account management",
   ru: "Управление аккаунтом"
+};
+
+const securityCopy = {
+  de: {
+    deleteNote:
+      "Dein Profil wird anonymisiert, deine Bücher verschwinden aus dem Katalog und offene Tauschanfragen werden automatisch abgelehnt. Abgeschlossene und abgelehnte Tausche bleiben anonymisiert im Verlauf. Eine Anmeldung und Wiederherstellung deiner Daten sind danach nicht mehr möglich.",
+    deleteTitle: "Achtung!",
+    requirementsTitle: "Passwortanforderungen",
+    passwordsMatch: "Die Passwörter stimmen überein",
+    samePassword: "Das neue Passwort muss sich vom aktuellen Passwort unterscheiden."
+  },
+  en: {
+    deleteNote:
+      "Your profile will be anonymized, your books will disappear from the catalog, and pending exchanges will be declined automatically. Completed and declined exchanges remain in history anonymously. You will no longer be able to sign in or restore your data.",
+    deleteTitle: "Attention!",
+    requirementsTitle: "Password requirements",
+    passwordsMatch: "The passwords match",
+    samePassword: "The new password must be different from the current password."
+  },
+  ru: {
+    deleteNote:
+      "Профиль будет обезличен, ваши книги исчезнут из каталога, а ожидающие обмены будут автоматически отменены. Завершённые и отклонённые обмены останутся в истории в обезличенном виде. Войти в аккаунт или восстановить данные после удаления будет невозможно.",
+    deleteTitle: "Внимание!",
+    requirementsTitle: "Требования к паролю",
+    passwordsMatch: "Пароли совпадают",
+    samePassword: "Новый пароль должен отличаться от текущего."
+  }
 };
 
 export function SecuritySettingsPanel() {
@@ -75,7 +55,8 @@ export function SecuritySettingsPanel() {
   const { deleteOwnAccount, changePassword, logout, user } = useAuth();
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
-    newPassword: ""
+    newPassword: "",
+    confirmPassword: ""
   });
   const [passwordPending, setPasswordPending] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState("");
@@ -83,15 +64,27 @@ export function SecuritySettingsPanel() {
   const [deletePending, setDeletePending] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const accountManagementTitle = accountManagementHeading[locale] ?? accountManagementHeading.en;
-  const hint = passwordHintText[locale] ?? passwordHintText.en;
-  const passwordFeedback = getPasswordFeedback(
-    locale,
-    passwordForm.currentPassword,
-    passwordForm.newPassword
+  const copy = securityCopy[locale] ?? securityCopy.en;
+  const passwordFeedback = getPasswordFeedback(locale, "", passwordForm.newPassword);
+  const samePasswordAsCurrent = Boolean(
+    passwordForm.currentPassword &&
+      passwordForm.newPassword &&
+      passwordForm.currentPassword === passwordForm.newPassword
+  );
+  const confirmPasswordError =
+    passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword
+      ? t("auth.passwordMismatch")
+      : "";
+  const passwordRequirements = getPasswordRequirements(locale, passwordForm.newPassword);
+  const passwordsMatch = Boolean(
+    passwordForm.confirmPassword && passwordForm.newPassword === passwordForm.confirmPassword
   );
   const canSubmitPassword = Boolean(
     passwordForm.currentPassword &&
       passwordForm.newPassword &&
+      passwordForm.confirmPassword &&
+      !confirmPasswordError &&
+      !samePasswordAsCurrent &&
       passwordFeedback?.canSubmit &&
       !passwordPending
   );
@@ -114,11 +107,18 @@ export function SecuritySettingsPanel() {
     setPasswordMessage("");
 
     try {
-      const response = await changePassword(passwordForm, user.__version ?? user.version);
+      const response = await changePassword(
+        {
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        },
+        user.__version ?? user.version
+      );
       setPasswordMessage(response.message || t("security.changed"));
       setPasswordForm({
         currentPassword: "",
-        newPassword: ""
+        newPassword: "",
+        confirmPassword: ""
       });
     } catch (nextError) {
       setPasswordError(nextError);
@@ -150,85 +150,141 @@ export function SecuritySettingsPanel() {
   return (
     <article className="section-card profile-security-card">
       <div className="profile-security-stack">
-        <section className="content-stack profile-security-primary">
-          <div className="profile-security-section-head">
+        <div className="profile-security-section-head">
+          <span className="profile-card-heading-icon">
+            <ShieldIcon />
+          </span>
+          <div>
             <h2>{accountManagementTitle}</h2>
-            <p className="muted-line">{hint}</p>
           </div>
+        </div>
 
-          <form className="content-stack" onSubmit={handlePasswordSubmit}>
-            <div className="security-password-grid">
-              <Field
-                label={t("security.currentPassword")}
-                onChange={(value) => handlePasswordFieldChange("currentPassword", value)}
-                type="password"
-                value={passwordForm.currentPassword}
-              />
-
-              <div className="security-password-field-stack">
-                <Field
-                  label={t("auth.newPassword")}
-                  onChange={(value) => handlePasswordFieldChange("newPassword", value)}
-                  type="password"
-                  value={passwordForm.newPassword}
+        <div className="profile-security-workspace">
+          <section className="content-stack profile-security-primary">
+            <form autoComplete="off" className="content-stack" onSubmit={handlePasswordSubmit}>
+              <div className="security-password-grid">
+                <PasswordField
+                  autoComplete="off"
+                  label={t("security.currentPassword")}
+                  name="currentPassword"
+                  onChange={(value) => handlePasswordFieldChange("currentPassword", value)}
+                  revealLabel={t("auth.holdToShowPassword")}
+                  value={passwordForm.currentPassword}
                 />
-                {passwordFeedback ? (
-                  <p
-                    className={`security-password-feedback security-password-feedback-${passwordFeedback.tone}`}
-                  >
-                    {passwordFeedback.text}
-                  </p>
-                ) : (
-                  <span aria-hidden="true" className="security-password-feedback-spacer" />
-                )}
+
+                <div className="security-password-field-stack">
+                  <PasswordField
+                    autoComplete="new-password"
+                    label={t("auth.newPassword")}
+                    name="newPassword"
+                    onChange={(value) => handlePasswordFieldChange("newPassword", value)}
+                    revealLabel={t("auth.holdToShowPassword")}
+                    value={passwordForm.newPassword}
+                  />
+                  <div className="password-strength-slot">
+                    <PasswordStrengthFeedback feedback={passwordFeedback} />
+                  </div>
+                </div>
+
+                <PasswordField
+                  autoComplete="new-password"
+                  label={t("auth.confirmPassword")}
+                  name="confirmPassword"
+                  onChange={(value) => handlePasswordFieldChange("confirmPassword", value)}
+                  revealLabel={t("auth.holdToShowPassword")}
+                  value={passwordForm.confirmPassword}
+                />
+
+                <div className="password-match-slot">
+                  {confirmPasswordError ? (
+                    <p className="password-match-message password-match-message-error">
+                      {confirmPasswordError}
+                    </p>
+                  ) : samePasswordAsCurrent ? (
+                    <p className="password-match-message password-match-message-error">
+                      {copy.samePassword}
+                    </p>
+                  ) : passwordsMatch ? (
+                    <p className="password-match-message">
+                      <span aria-hidden="true">✓</span>
+                      {copy.passwordsMatch}
+                    </p>
+                  ) : null}
+                </div>
               </div>
 
               <div className="security-password-action">
-                <span aria-hidden="true" className="security-password-action-label-spacer" />
                 <button
                   className="button button-compact security-action-button security-password-button"
                   disabled={!canSubmitPassword}
                   type="submit"
                 >
+                  <LockIcon />
                   {passwordPending ? t("security.updating") : t("security.changePassword")}
                 </button>
               </div>
+
+              {passwordMessage ? (
+                <p className="inline-message inline-message-success">{passwordMessage}</p>
+              ) : null}
+              {passwordError ? (
+                <p className="inline-message inline-message-error">{passwordError.message}</p>
+              ) : null}
+            </form>
+          </section>
+
+          <aside className="content-stack profile-security-session">
+            <section className="profile-password-requirements">
+              <h3>
+                <ShieldIcon />
+                {copy.requirementsTitle}
+              </h3>
+              <ul>
+                {passwordRequirements.map((requirement) => (
+                  <li
+                    className={requirement.met ? "password-requirement-met" : ""}
+                    key={requirement.key}
+                  >
+                    <span aria-hidden="true">{requirement.met ? "✓" : "○"}</span>
+                    {requirement.label}
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <div className="profile-session-actions">
+              <button
+                className="button button-secondary button-compact security-action-button profile-session-action-logout"
+                onClick={() => void logout()}
+                type="button"
+              >
+                <SignOutIcon />
+                {t("security.logoutCurrentSession")}
+              </button>
+              <button
+                className="button button-danger button-compact security-action-button profile-session-action-delete"
+                disabled={deletePending}
+                onClick={() => void handleDeleteAccount()}
+                type="button"
+              >
+                <TrashIcon />
+                {deletePending ? t("security.deletingAccount") : t("security.deleteAccount")}
+              </button>
             </div>
 
-            {passwordMessage ? (
-              <p className="inline-message inline-message-success">{passwordMessage}</p>
+            {deleteError ? (
+              <p className="inline-message inline-message-error">{deleteError.message}</p>
             ) : null}
-            {passwordError ? (
-              <p className="inline-message inline-message-error">{passwordError.message}</p>
-            ) : null}
-          </form>
-        </section>
 
-        <section className="content-stack profile-security-session">
-          <div className="profile-session-actions">
-            <button
-              className="button button-secondary button-compact security-action-button"
-              onClick={() => void logout()}
-              type="button"
-            >
-              <SignOutIcon />
-              {t("security.logoutCurrentSession")}
-            </button>
-            <button
-              className="button button-danger button-compact security-action-button"
-              disabled={deletePending}
-              onClick={() => void handleDeleteAccount()}
-              type="button"
-            >
-              <TrashIcon />
-              {deletePending ? t("security.deletingAccount") : t("security.deleteAccount")}
-            </button>
-          </div>
-
-          {deleteError ? (
-            <p className="inline-message inline-message-error">{deleteError.message}</p>
-          ) : null}
-        </section>
+            <section className="profile-delete-warning">
+              <AlertTriangleIcon />
+              <div>
+                <strong>{copy.deleteTitle}</strong>
+                <p>{copy.deleteNote}</p>
+              </div>
+            </section>
+          </aside>
+        </div>
       </div>
     </article>
   );
@@ -236,88 +292,4 @@ export function SecuritySettingsPanel() {
 
 export function SecurityPage() {
   return <Navigate replace to="/app/profile" />;
-}
-
-function Field({ label, onChange, type, value }) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <input
-        className="field-control"
-        onChange={(event) => onChange(event.target.value)}
-        type={type}
-        value={value}
-      />
-    </label>
-  );
-}
-
-function getPasswordFeedback(locale, currentPassword, newPassword) {
-  if (!newPassword) {
-    return null;
-  }
-
-  const text = passwordFeedbackCopy[locale] ?? passwordFeedbackCopy.en;
-  const hasWhitespace = /\s/.test(newPassword);
-  const hasLower = /[a-z]/.test(newPassword);
-  const hasUpper = /[A-Z]/.test(newPassword);
-  const hasDigit = /\d/.test(newPassword);
-  const hasSymbol = /[^A-Za-z0-9\s]/.test(newPassword);
-  const missingRequirements = [];
-
-  if (newPassword.length < 8 || newPassword.length > 64) {
-    missingRequirements.push(text.requirements.length);
-  }
-
-  if (!hasLower) {
-    missingRequirements.push(text.requirements.lower);
-  }
-
-  if (!hasUpper) {
-    missingRequirements.push(text.requirements.upper);
-  }
-
-  if (!hasDigit) {
-    missingRequirements.push(text.requirements.digit);
-  }
-
-  if (!hasSymbol) {
-    missingRequirements.push(text.requirements.symbol);
-  }
-
-  if (hasWhitespace) {
-    missingRequirements.push(text.requirements.noSpace);
-  }
-
-  const meetsRequirements = missingRequirements.length === 0;
-
-  if (currentPassword && currentPassword === newPassword) {
-    return {
-      canSubmit: false,
-      text: text.same,
-      tone: "danger"
-    };
-  }
-
-  if (!meetsRequirements) {
-    return {
-      canSubmit: false,
-      text: text.summary ?? `${text.invalidPrefix}: ${missingRequirements.join(", ")}.`,
-      tone: "danger"
-    };
-  }
-
-  if (newPassword.length >= 12) {
-    return {
-      canSubmit: true,
-      text: text.strong,
-      tone: "success"
-    };
-  }
-
-  return {
-    canSubmit: true,
-    text: text.medium,
-    tone: "warning"
-  };
 }
