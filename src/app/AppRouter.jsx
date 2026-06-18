@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { RequireAdmin, RequireAuth } from "../shared/auth/RouteGuards";
+import { useMetadataQuery } from "../shared/api/hooks";
 import { FeaturePlaceholderPage } from "../shared/ui/FeaturePlaceholderPage";
+import { LoadingBlock } from "../shared/ui/StateBlocks";
 import {
   DeleteAccountRequestPage,
   DeleteAccountTokenPage,
@@ -20,6 +22,7 @@ import {
 } from "../features/books/pages";
 import { CatalogPage } from "../features/catalog/CatalogPage";
 import { PublicBookPage } from "../features/catalog/PublicBookPage";
+import { DemoEmailInboxPage } from "../features/demo-email-sandbox/DemoEmailInboxPage";
 import {
   ExchangesPage,
   HistoryDetailsPage,
@@ -62,6 +65,7 @@ export function AppRouter() {
       <Route element={<PublicLayout />}>
         <Route index element={<HomePage />} />
         <Route path="about" element={<AboutPage />} />
+        <Route path="demo-inbox" element={<DemoEmailInboxRoute />} />
         <Route path="catalog" element={<CatalogPage />} />
         <Route path="book/:bookId" element={<PublicBookPage />} />
         <Route path="login" element={<LoginPage />} />
@@ -150,4 +154,18 @@ export function AppRouter() {
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
+}
+
+function DemoEmailInboxRoute() {
+  const metadataQuery = useMetadataQuery();
+
+  if (metadataQuery.isPending) {
+    return <LoadingBlock />;
+  }
+
+  if (metadataQuery.data?.features?.demoEmailSandboxEnabled !== true) {
+    return <Navigate replace to="/" />;
+  }
+
+  return <DemoEmailInboxPage />;
 }
