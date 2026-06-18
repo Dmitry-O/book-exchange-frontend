@@ -1732,6 +1732,45 @@ dl {
   width: 100%;
 }
 
+.password-reveal-control {
+  position: relative;
+  display: block;
+}
+
+.password-reveal-control .field-control {
+  width: 100%;
+  padding-right: 48px;
+}
+
+.password-reveal-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-soft);
+  transform: translateY(-50%);
+}
+
+.password-reveal-button:hover {
+  background: rgba(31, 107, 88, 0.1);
+  color: var(--accent-strong);
+}
+
+.password-reveal-button .icon-svg {
+  width: 19px;
+  height: 19px;
+}
+
+.password-reveal-field:has(input[name="confirmPassword"]) .field-feedback-slot {
+  min-height: 0;
+}
 .field {
   display: grid;
   gap: 6px;
@@ -4127,6 +4166,86 @@ select.field-control,
   min-width: 0;
 }
 
+.password-strength {
+  display: grid;
+  gap: 8px;
+  padding: 8px 2px 0;
+}
+
+.password-strength-slot {
+  display: block;
+  min-height: 104px;
+}
+
+.password-strength-meter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.password-strength-meter strong {
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+}
+
+.password-strength-segments {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.password-strength-segments > span {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(101, 116, 128, 0.16);
+}
+
+.password-strength-danger .password-strength-segment-active {
+  background: var(--danger-strong);
+}
+
+.password-strength-warning .password-strength-segment-active {
+  background: #bd7a2a;
+}
+
+.password-strength-success .password-strength-segment-active {
+  background: var(--accent-strong);
+}
+
+.password-strength p {
+  color: var(--text-soft);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.password-match-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.password-match-slot {
+  display: flex;
+  align-items: flex-start;
+  min-height: 24px;
+  margin-top: -6px;
+  margin-bottom: 8px;
+}
+
+.password-match-slot .password-match-message {
+  margin: 0;
+}
+
+.password-match-message-error {
+  color: var(--danger-strong);
+  font-weight: 600;
+}
 .security-password-feedback {
   margin: -1px 0 0;
   padding: 8px 12px;
