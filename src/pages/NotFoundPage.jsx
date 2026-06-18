@@ -6,12 +6,17 @@ export function NotFoundPage() {
 
   return (
     <section className="auth-shell">
-      <div className="auth-panel">
-        <h1>{t("notFound.title")}</h1>
-        <p>{t("notFound.description")}</p>
-        <Link className="button" to="/">
-          {t("common.backHome")}
-        </Link>
+      <div className="auth-panel not-found-panel">
+        <h1 className="auth-panel-title">{t("notFound.title")}</h1>
+        <div className="not-found-content">
+          <div className="not-found-copy">
+            <p>{t("notFound.description")}</p>
+            <Link className="button not-found-home-button" to="/">
+              {t("common.backHome")}
+            </Link>
+          </div>
+          <img alt="" className="not-found-image" src="/not_found.png" />
+        </div>
       </div>
     </section>
   );
