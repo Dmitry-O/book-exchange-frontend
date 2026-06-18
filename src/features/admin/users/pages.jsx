@@ -413,6 +413,8 @@ export function AdminUserDetailsPage() {
   const banned = isUserBanned(targetUser);
   const userActionDisabled = !currentUser || deleted || isOwnAccount || pendingAction !== null;
   const banControlsDisabled = !currentUser || deleted || isOwnAccount || pendingAction !== null;
+  const hasBanChanges =
+    JSON.stringify(banForm) !== JSON.stringify(toBanForm(targetUser));
   const canShowRoleAction =
     isSuperAdmin && !isOwnAccount && !deleted && !hasRole(targetUser, "SUPER_ADMIN");
   const roleAction = hasRole(targetUser, "ADMIN") ? "remove-admin" : "make-admin";
@@ -731,7 +733,7 @@ export function AdminUserDetailsPage() {
           <div className="card-actions">
             <button
               className="button"
-              disabled={banControlsDisabled}
+              disabled={banControlsDisabled || !hasBanChanges}
               type="submit"
             >
               {pendingAction === "ban" ? rt(locale, "Saving ban...") : banned ? text.submitBan : text.banUser}
