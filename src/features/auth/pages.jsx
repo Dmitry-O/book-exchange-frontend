@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useMetadataQuery } from "../../shared/api/hooks";
-import { apiRequest } from "../../shared/api/http";
+import { activateDemoEmailSandboxForEmail, apiRequest } from "../../shared/api/http";
 import { useAuth } from "../../shared/auth/AuthContext";
+import {
+  getPasswordFeedback,
+  getPasswordRequirements
+} from "../../shared/auth/passwordFeedback";
 import { useLocale } from "../../shared/i18n/LocaleContext";
 import { getLocaleLabel } from "../../shared/i18n/locale";
 import {
@@ -10,6 +14,9 @@ import {
   hasPostLogoutRedirect
 } from "../../shared/auth/session";
 import { trimFormPayload } from "../../shared/lib/format";
+import { EnvelopeClosedIcon, ShieldIcon } from "../../shared/ui/Icons";
+import { PasswordField } from "../../shared/ui/PasswordField";
+import { PasswordStrengthFeedback } from "../../shared/ui/PasswordStrengthFeedback";
 import { PrettySelect } from "../../shared/ui/PrettySelect";
 import { ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
 
@@ -127,6 +134,20 @@ function getDeleteCooldownText(locale, seconds) {
 
 const EMAIL_ACTION_COOLDOWNS_STORAGE_KEY = "book-exchange/email-action-cooldowns";
 const EMAIL_ACTION_LAST_EMAIL_STORAGE_KEY = "book-exchange/email-action-last-email";
+const PASSWORD_REQUIREMENTS_COPY = {
+  de: {
+    description: "Für mehr Sicherheit empfehlen wir mindestens 12 Zeichen.",
+    title: "Passwortanforderungen"
+  },
+  en: {
+    description: "For better security, we recommend at least 12 characters.",
+    title: "Password requirements"
+  },
+  ru: {
+    description: "Для надёжности лучше сделать пароль длиннее: от 12 символов.",
+    title: "Требования к паролю"
+  }
+};
 
 function getRequiredFieldMessage(locale) {
   if (locale === "ru") {
@@ -140,6 +161,63 @@ function getRequiredFieldMessage(locale) {
   return "Please fill in this field.";
 }
 
+function getInvalidEmailMessage(locale) {
+  if (locale === "ru") {
+    return "Введите корректный адрес электронной почты.";
+  }
+
+  if (locale === "de") {
+    return "Gib eine gültige E-Mail-Adresse ein.";
+  }
+
+  return "Enter a valid email address.";
+}
+
+function isValidEmailAddress(value) {
+  const email = value?.trim() ?? "";
+
+  if (!email || email.length > 254 || /\s/.test(email)) {
+    return false;
+  }
+
+  const separatorIndex = email.lastIndexOf("@");
+
+  if (separatorIndex <= 0 || separatorIndex === email.length - 1) {
+    return false;
+  }
+
+  const localPart = email.slice(0, separatorIndex);
+  const domain = email.slice(separatorIndex + 1);
+
+  if (
+    localPart.length > 64 ||
+    localPart.startsWith(".") ||
+    localPart.endsWith(".") ||
+    localPart.includes("..")
+  ) {
+    return false;
+  }
+
+  return (
+    /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(localPart) &&
+    /^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/.test(
+      domain
+    )
+  );
+}
+
+function getPasswordsMatchMessage(locale) {
+  if (locale === "ru") {
+    return "Пароли совпадают";
+  }
+
+  if (locale === "de") {
+    return "Die Passwörter stimmen überein";
+  }
+
+  return "The passwords match";
+}
+
 function buildMissingFieldErrors(locale, fields) {
   const message = getRequiredFieldMessage(locale);
 
@@ -149,60 +227,60 @@ function buildMissingFieldErrors(locale, fields) {
   }, {});
 }
 
-function readEmailActionCooldown(endpoint, email) {
+function readEmailActionCooldown(actionKey) {
   if (typeof window === "undefined") {
     return 0;
   }
 
-  const normalizedEmail = email?.trim().toLowerCase();
-
-  if (!endpoint || !normalizedEmail) {
+  if (!actionKey) {
     return 0;
   }
 
   try {
     const raw = window.localStorage.getItem(EMAIL_ACTION_COOLDOWNS_STORAGE_KEY);
     const stored = raw ? JSON.parse(raw) : {};
-    const cooldownKey = `${endpoint}::${normalizedEmail}`;
-    const expiresAt = Number(stored[cooldownKey]);
-
-    if (!expiresAt) {
-      return 0;
-    }
-
+    const expiresAt = Number(stored[actionKey]);
     const remaining = Math.ceil((expiresAt - Date.now()) / 1000);
 
-    if (remaining <= 0) {
-      delete stored[cooldownKey];
-      window.localStorage.setItem(EMAIL_ACTION_COOLDOWNS_STORAGE_KEY, JSON.stringify(stored));
-      return 0;
+    if (remaining > 0) {
+      return remaining;
     }
 
-    return remaining;
+    delete stored[actionKey];
+    window.localStorage.setItem(EMAIL_ACTION_COOLDOWNS_STORAGE_KEY, JSON.stringify(stored));
+    return 0;
   } catch {
     return 0;
   }
 }
 
-function writeEmailActionCooldown(endpoint, email, cooldownSeconds) {
+function writeEmailActionCooldown(actionKey, cooldownSeconds) {
   if (typeof window === "undefined") {
     return;
   }
 
-  const normalizedEmail = email?.trim().toLowerCase();
-
-  if (!endpoint || !normalizedEmail || cooldownSeconds <= 0) {
+  if (!actionKey) {
     return;
   }
 
   try {
     const raw = window.localStorage.getItem(EMAIL_ACTION_COOLDOWNS_STORAGE_KEY);
     const stored = raw ? JSON.parse(raw) : {};
-    stored[`${endpoint}::${normalizedEmail}`] = Date.now() + cooldownSeconds * 1000;
+
+    if (cooldownSeconds > 0) {
+      stored[actionKey] = Date.now() + Math.ceil(cooldownSeconds) * 1000;
+    } else {
+      delete stored[actionKey];
+    }
+
     window.localStorage.setItem(EMAIL_ACTION_COOLDOWNS_STORAGE_KEY, JSON.stringify(stored));
   } catch {
     // Ignore localStorage issues and keep the in-memory cooldown.
   }
+}
+
+function clearEmailActionCooldown(actionKey) {
+  writeEmailActionCooldown(actionKey, 0);
 }
 
 function readRememberedEmail(endpoint) {
@@ -336,6 +414,14 @@ export function LoginPage() {
           name="email"
           type="email"
           value={form.email}
+          onBlur={() => {
+            if (form.email.trim() && !isValidEmailAddress(form.email)) {
+              setFieldErrors((current) => ({
+                ...current,
+                email: getInvalidEmailMessage(locale)
+              }));
+            }
+          }}
           onChange={(value) => {
             setForm((current) => ({ ...current, email: value }));
             setFieldErrors((current) => ({ ...current, email: "" }));
@@ -343,35 +429,43 @@ export function LoginPage() {
           }}
           required
         />
-        <Field
+        <PasswordField
           error={fieldErrors.password}
           label={t("auth.password")}
           name="password"
-          type="password"
           value={form.password}
           onChange={(value) => {
             setForm((current) => ({ ...current, password: value }));
             setFieldErrors((current) => ({ ...current, password: "" }));
             setError(null);
           }}
+          revealLabel={t("auth.holdToShowPassword")}
           required
         />
-        <div className="auth-form-message-slot">{error ? <InlineError error={error} /> : null}</div>
-
         <button className="button auth-submit-button" disabled={pending} type="submit">
           {pending ? t("auth.signingIn") : t("common.signIn")}
         </button>
+        <div className="auth-form-message-slot">{error ? <InlineError error={error} /> : null}</div>
       </form>
     </AuthPanel>
   );
 }
 
-function RegisterSuccessHelper({ email, locale, title, description, buttonLabel, successFallback }) {
+function RegisterSuccessHelper({
+  email,
+  locale,
+  title,
+  description,
+  buttonLabel,
+  successFallback
+}) {
   return (
     <AuthHelperCard description={description} title={title}>
       <EmailActionForm
+        alwaysShowInboxLink
         buttonLabel={buttonLabel}
         compact
+        cooldownKey="register-success-resend-confirmation"
         cooldownHintBuilder={(seconds) => getRegisterCooldownText(locale, seconds)}
         cooldownSeconds={60}
         disableAfterSuccess={false}
@@ -380,6 +474,7 @@ function RegisterSuccessHelper({ email, locale, title, description, buttonLabel,
         initialCooldownActive
         initialEmail={email}
         locale={locale}
+        showSuccessMessage={false}
         successFallback={successFallback}
       />
     </AuthHelperCard>
@@ -404,6 +499,8 @@ export function RegisterPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const passwordFeedback = getPasswordFeedback(form.locale || locale, "", form.password);
+  const passwordRequirements = getPasswordRequirements(form.locale || locale, form.password);
 
   useEffect(() => {
     const locale = metadataQuery.data?.locales?.[0];
@@ -419,6 +516,14 @@ export function RegisterPage() {
 
     if (!form.email.trim()) {
       missingFields.push("email");
+    } else if (!isValidEmailAddress(form.email)) {
+      setFieldErrors((current) => ({
+        ...current,
+        email: getInvalidEmailMessage(locale)
+      }));
+      setError(null);
+      setSuccessMessage("");
+      return;
     }
 
     if (!form.nickname.trim()) {
@@ -451,6 +556,7 @@ export function RegisterPage() {
     });
 
     try {
+      await activateDemoEmailSandboxForEmail(form.email, form.locale);
       const response = await apiRequest("/auth/register", {
         method: "POST",
         body: trimFormPayload(form),
@@ -471,6 +577,7 @@ export function RegisterPage() {
   return (
     <AuthPanel
       compact
+      wide
       eyebrow={t("auth.registerEyebrow")}
       title={t("auth.registerTitle")}
       description={t("auth.registerDescription")}
@@ -479,31 +586,28 @@ export function RegisterPage() {
           {t("auth.alreadyRegistered")} <Link to="/login">{t("auth.goToLogin")}</Link>
         </p>
       }
-      postFooter={
-        successMessage ? (
-          <RegisterSuccessHelper
-            buttonLabel={t("auth.resendConfirmation")}
-            description={t("auth.nextStepsDescription")}
-            email={form.email}
-            locale={form.locale}
-            successFallback="A new confirmation email has been sent."
-            title={t("auth.nextStepsTitle")}
-          />
-        ) : null
-      }
     >
       {metadataQuery.isPending ? <LoadingBlock label={t("homePage.metadataLoading")} /> : null}
       {metadataQuery.error ? (
         <ErrorBlock error={metadataQuery.error} title={t("auth.registrationDataError")} />
       ) : null}
 
-      <form className="content-stack auth-form-shell auth-form-shell-centered auth-form-shell-narrow auth-primary-form" onSubmit={handleSubmit}>
+      <div className="auth-register-workspace">
+      <form className="content-stack auth-form-shell auth-form-shell-centered auth-form-shell-narrow auth-primary-form" onSubmit={handleSubmit} noValidate>
         <Field
           error={fieldErrors.email}
           label={t("auth.email")}
           name="email"
           type="email"
           value={form.email}
+          onBlur={() => {
+            if (form.email.trim() && !isValidEmailAddress(form.email)) {
+              setFieldErrors((current) => ({
+                ...current,
+                email: getInvalidEmailMessage(locale)
+              }));
+            }
+          }}
           onChange={(value) => {
             setForm((current) => ({ ...current, email: value }));
             setFieldErrors((current) => ({ ...current, email: "" }));
@@ -525,20 +629,25 @@ export function RegisterPage() {
           required
           showRequiredMark
         />
-        <Field
-          error={fieldErrors.password}
-          label={t("auth.password")}
-          name="password"
-          type="password"
-          value={form.password}
-          onChange={(value) => {
-            setForm((current) => ({ ...current, password: value }));
-            setFieldErrors((current) => ({ ...current, password: "" }));
-            setError(null);
-          }}
-          required
-          showRequiredMark
-        />
+        <div className="security-password-field-stack">
+          <PasswordField
+            error={fieldErrors.password}
+            label={t("auth.password")}
+            name="password"
+            value={form.password}
+            onChange={(value) => {
+              setForm((current) => ({ ...current, password: value }));
+              setFieldErrors((current) => ({ ...current, password: "" }));
+              setError(null);
+            }}
+            revealLabel={t("auth.holdToShowPassword")}
+            required
+            showRequiredMark
+          />
+          <div className="password-strength-slot">
+            <PasswordStrengthFeedback feedback={passwordFeedback} />
+          </div>
+        </div>
         <LocaleSelectField
           error={fieldErrors.locale}
           label={t("auth.locale")}
@@ -552,19 +661,53 @@ export function RegisterPage() {
           }}
           showRequiredMark
         />
-        <div className="auth-form-message-slot">
-          {successMessage ? <InlineSuccess message={successMessage} /> : null}
-          {!successMessage && error ? <InlineError error={error} /> : null}
-        </div>
-
         <button
           className="button auth-submit-button"
-          disabled={pending || Boolean(successMessage)}
+          disabled={
+            pending ||
+            Boolean(successMessage) ||
+            (Boolean(form.password) && !passwordFeedback?.canSubmit)
+          }
           type="submit"
         >
           {pending ? t("auth.creatingAccount") : t("auth.createAccount")}
         </button>
+        <div className="auth-form-message-slot">
+          {successMessage ? <InlineSuccess message={successMessage} /> : null}
+          {!successMessage && error ? <InlineError error={error} /> : null}
+        </div>
       </form>
+        <aside className="auth-register-aside">
+          <PasswordRequirementsCard
+            locale={form.locale || locale}
+            requirements={passwordRequirements}
+          />
+          {successMessage ? (
+            <RegisterSuccessHelper
+              buttonLabel={t("auth.resendConfirmation")}
+              description={t("auth.nextStepsDescription")}
+              email={form.email}
+              locale={form.locale}
+              successFallback="A new confirmation email has been sent."
+              title={t("auth.nextStepsTitle")}
+            />
+          ) : error?.errorCode === "AUTH_ACCOUNT_NOT_VERIFIED" ? (
+            <InlineEmailActionCard
+              buttonLabel={t("auth.resendConfirmation")}
+              cooldownKey="register-error-resend-confirmation"
+              cooldownHintBuilder={(seconds) => getRegisterCooldownText(form.locale, seconds)}
+              cooldownSeconds={60}
+              description={t("auth.accountNeedsConfirmationDescription")}
+              disableAfterSuccess={false}
+              endpoint="/auth/resend_confirmation_email"
+              hideEmailField
+              initialEmail={form.email}
+              successFallback="A new confirmation email has been sent."
+              title={t("auth.accountNeedsConfirmationTitle")}
+            />
+          ) : null}
+        </aside>
+      </div>
     </AuthPanel>
   );
 }
@@ -575,6 +718,7 @@ export function ForgotPasswordPage() {
   return (
     <EmailActionPage
       compact
+      cooldownKey="forgot-password-page"
       eyebrow={t("auth.resetEyebrow")}
       title={t("auth.forgotPasswordTitle")}
       description={t("auth.forgotPasswordDescription")}
@@ -583,21 +727,26 @@ export function ForgotPasswordPage() {
       cooldownHintBuilder={(seconds) => buildResetCooldownNote(locale, seconds)}
       cooldownSeconds={60}
       disableAfterSuccess={false}
+      offerConfirmationOnUnverified
       successFallback="If the account exists, password reset instructions have been sent."
     />
   );
 }
 
 export function ResendConfirmationPage() {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
 
   return (
     <EmailActionPage
+      cooldownKey="resend-confirmation-page"
       eyebrow={t("auth.verifyEyebrow")}
       title={t("auth.resendTitle")}
       description={t("auth.resendDescription")}
       endpoint="/auth/resend_confirmation_email"
       buttonLabel={t("auth.resendConfirmation")}
+      cooldownHintBuilder={(seconds) => getRegisterCooldownText(locale, seconds)}
+      cooldownSeconds={60}
+      disableAfterSuccess={false}
       successFallback="A new confirmation email has been sent."
       softSuccessActions={[{ kind: "link", label: t("auth.goToLogin"), to: "/login" }]}
       softSuccessErrorCodes={["AUTH_ACCOUNT_ALREADY_VERIFIED"]}
@@ -616,6 +765,7 @@ export function DeleteAccountRequestPage() {
   return (
     <EmailActionPage
       compact
+      cooldownKey="delete-account-request-page"
       eyebrow={t("auth.deleteEyebrow")}
       title={t("auth.requestDeleteTitle")}
       description={t("auth.requestDeleteDescription")}
@@ -630,18 +780,23 @@ export function DeleteAccountRequestPage() {
 }
 
 export function VerifyEmailPage() {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
 
   return (
     <TokenActionPage
       actionLabel={t("auth.verifyAction")}
       autoRun
-      description={t("auth.verifyDescription")}
+      description={null}
       endpointBuilder={(token) => `/auth/verify?token=${encodeURIComponent(token)}`}
       eyebrow={t("auth.verifyEyebrow")}
       method="GET"
+      validationTokenType="CONFIRM_EMAIL"
       recoveryAction={{
         buttonLabel: t("auth.sendNewConfirmation"),
+        cooldownKey: "verify-email-recovery",
+        cooldownHintBuilder: (seconds) => getRegisterCooldownText(locale, seconds),
+        cooldownSeconds: 60,
+        disableAfterSuccess: false,
         endpoint: "/auth/resend_confirmation_email",
         successFallback: "A new confirmation email has been sent.",
         softSuccessActions: [{ kind: "link", label: t("auth.goToLogin"), to: "/login" }],
@@ -651,7 +806,7 @@ export function VerifyEmailPage() {
       }}
       softSuccessErrorCodes={["AUTH_ACCOUNT_ALREADY_VERIFIED"]}
       successActions={[
-        { kind: "link", label: t("common.signIn"), to: "/login" },
+        { kind: "link", label: t("auth.signInAccount"), to: "/login" },
         { kind: "link", label: t("common.goHome"), to: "/", secondary: true }
       ]}
       successFallback={t("auth.emailConfirmed")}
@@ -662,15 +817,34 @@ export function VerifyEmailPage() {
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") ?? "";
-  const [form, setForm] = useState({ newPassword: "" });
+  const [form, setForm] = useState({ newPassword: "", confirmPassword: "" });
+  const [fieldErrors, setFieldErrors] = useState({ newPassword: "", confirmPassword: "" });
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const tokenValidation = useTokenValidation(token, "RESET_PASSWORD");
 
-  const canRecover = !token || isRecoverableTokenError(error);
+  const effectiveError = tokenValidation.error ?? error;
+  const canRecover = !token || isRecoverableTokenError(effectiveError);
+  const passwordFeedback = getPasswordFeedback(locale, "", form.newPassword);
+  const confirmPasswordError =
+    confirmPasswordTouched &&
+    form.confirmPassword &&
+    form.newPassword !== form.confirmPassword
+      ? t("auth.passwordMismatch")
+      : fieldErrors.confirmPassword;
+  const canSubmitPassword = Boolean(
+    tokenValidation.isValid &&
+      form.newPassword &&
+      form.confirmPassword &&
+      form.newPassword === form.confirmPassword &&
+      passwordFeedback?.canSubmit &&
+      !pending
+  );
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -680,18 +854,47 @@ export function ResetPasswordPage() {
       return;
     }
 
+    const missingFields = [];
+
+    if (!form.newPassword.trim()) {
+      missingFields.push("newPassword");
+    }
+
+    if (!form.confirmPassword.trim()) {
+      missingFields.push("confirmPassword");
+    }
+
+    if (missingFields.length) {
+      setFieldErrors(buildMissingFieldErrors(locale, missingFields));
+      setConfirmPasswordTouched(true);
+      setError(null);
+      return;
+    }
+
+    if (form.newPassword !== form.confirmPassword) {
+      setFieldErrors({
+        newPassword: "",
+        confirmPassword: t("auth.passwordMismatch")
+      });
+      setConfirmPasswordTouched(true);
+      setError(null);
+      return;
+    }
+
     setPending(true);
     setError(null);
     setSuccessMessage("");
+    setFieldErrors({ newPassword: "", confirmPassword: "" });
 
     try {
       const response = await apiRequest(`/auth/reset_password?token=${encodeURIComponent(token)}`, {
         method: "PATCH",
-        body: trimFormPayload(form)
+        body: trimFormPayload({ newPassword: form.newPassword })
       });
 
       setSuccessMessage(response.message || "Your password has been changed.");
-      setForm({ newPassword: "" });
+      setForm({ newPassword: "", confirmPassword: "" });
+      setConfirmPasswordTouched(false);
     } catch (nextError) {
       setError(nextError);
     } finally {
@@ -703,47 +906,88 @@ export function ResetPasswordPage() {
     <AuthPanel
       eyebrow={t("auth.resetEyebrow")}
       title={t("auth.resetTitle")}
-      description={t("auth.resetDescription")}
+      description={successMessage ? null : t("auth.resetDescription")}
     >
       {!token ? (
         <InlineError error={{ message: "Reset token was not found in the URL." }} />
       ) : null}
 
+      {tokenValidation.isPending ? <LoadingBlock /> : null}
+      {tokenValidation.error ? <InlineError error={tokenValidation.error} /> : null}
+
       {successMessage ? (
-        <div className="content-stack">
+        <div className="content-stack auth-token-success">
           <InlineSuccess message={successMessage} />
           <div className="auth-actions-row">
             <button className="button" onClick={() => navigate("/login")} type="button">
-              {t("common.signIn")}
+              {t("auth.signInAccount")}
             </button>
             <Link className="button button-secondary" to="/">
               {t("common.goHome")}
             </Link>
           </div>
         </div>
-      ) : (
-        <form className="content-stack auth-form-shell auth-form-shell-centered" onSubmit={handleSubmit}>
-          <Field
-            label={t("auth.newPassword")}
-            name="newPassword"
-            type="password"
-            value={form.newPassword}
-            onChange={(value) => setForm({ newPassword: value })}
+      ) : tokenValidation.isValid ? (
+        <form className="content-stack auth-form-shell auth-form-shell-centered auth-reset-form" onSubmit={handleSubmit}>
+          <div className="security-password-field-stack">
+            <PasswordField
+              error={fieldErrors.newPassword}
+              label={t("auth.newPassword")}
+              name="newPassword"
+              value={form.newPassword}
+              onChange={(value) => {
+                setForm((current) => ({ ...current, newPassword: value }));
+                setFieldErrors((current) => ({ ...current, newPassword: "", confirmPassword: "" }));
+                setError(null);
+              }}
+              revealLabel={t("auth.holdToShowPassword")}
+              required
+            />
+            <div className="password-strength-slot">
+              <PasswordStrengthFeedback feedback={passwordFeedback} />
+            </div>
+          </div>
+          <PasswordField
+            label={t("auth.confirmPassword")}
+            name="confirmPassword"
+            value={form.confirmPassword}
+            onBlur={() => setConfirmPasswordTouched(true)}
+            onChange={(value) => {
+              setForm((current) => ({ ...current, confirmPassword: value }));
+              setFieldErrors((current) => ({ ...current, confirmPassword: "" }));
+              setError(null);
+            }}
+            revealLabel={t("auth.holdToShowPassword")}
             required
           />
+          <div className="password-match-slot">
+            {confirmPasswordError ? (
+              <p className="password-match-message password-match-message-error">
+                {confirmPasswordError}
+              </p>
+            ) : form.confirmPassword && form.newPassword === form.confirmPassword ? (
+              <p className="password-match-message">
+                <span aria-hidden="true">✓</span>
+                {getPasswordsMatchMessage(locale)}
+              </p>
+            ) : null}
+          </div>
 
-          <div className="auth-form-message-slot">{error ? <InlineError error={error} /> : null}</div>
-
-          <button className="button auth-submit-button" disabled={pending || !token} type="submit">
+          <button className="button auth-submit-button" disabled={!canSubmitPassword} type="submit">
             {pending ? t("auth.resettingPassword") : t("auth.resetPassword")}
           </button>
+          <div className="auth-form-message-slot">{error ? <InlineError error={error} /> : null}</div>
         </form>
-      )}
+      ) : null}
 
       {canRecover && !successMessage ? (
         <InlineEmailActionCard
           buttonLabel={t("auth.sendNewReset")}
+          cooldownKey="reset-password-recovery"
+          cooldownHintBuilder={(seconds) => buildResetCooldownNote(locale, seconds)}
+          cooldownSeconds={60}
           description={t("auth.requestFreshResetDescription")}
+          disableAfterSuccess={false}
           endpoint="/auth/forgot_password"
           successFallback="If the account exists, a new reset email has been sent."
           title={t("auth.requestFreshResetTitle")}
@@ -755,7 +999,7 @@ export function ResetPasswordPage() {
 
 export function DeleteAccountTokenPage() {
   const { clearSession } = useAuth();
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
 
   return (
     <TokenActionPage
@@ -765,9 +1009,14 @@ export function DeleteAccountTokenPage() {
       endpointBuilder={(token) => `/auth/delete_account?token=${encodeURIComponent(token)}`}
       eyebrow={t("auth.deleteEyebrow")}
       method="PATCH"
+      validationTokenType="DELETE_ACCOUNT"
       onSuccess={() => clearSession()}
       recoveryAction={{
         buttonLabel: t("auth.sendNewDeletion"),
+        cooldownKey: "delete-account-confirm-recovery",
+        cooldownHintBuilder: (seconds) => buildDeleteCooldownNote(locale, seconds),
+        cooldownSeconds: 60,
+        disableAfterSuccess: false,
         endpoint: "/auth/initiate_delete_account",
         successFallback: "If the account exists, a new deletion email has been sent.",
         title: t("auth.newDeletionTitle"),
@@ -788,6 +1037,7 @@ function EmailActionPage({
   title,
   description,
   endpoint,
+  cooldownKey,
   buttonLabel,
   successFallback,
   footer,
@@ -795,6 +1045,7 @@ function EmailActionPage({
   cooldownSeconds = 0,
   cooldownHintBuilder,
   disableAfterSuccess = true,
+  offerConfirmationOnUnverified = false,
   softSuccessErrorCodes = [],
   softSuccessActions = []
 }) {
@@ -812,12 +1063,14 @@ function EmailActionPage({
     >
       <EmailActionForm
         buttonLabel={buttonLabel}
+        cooldownKey={cooldownKey}
         cooldownSeconds={cooldownSeconds}
         disableAfterSuccess={disableAfterSuccess}
         endpoint={endpoint}
         initialEmail={initialEmail}
         locale={locale}
         cooldownHintBuilder={cooldownHintBuilder}
+        offerConfirmationOnUnverified={offerConfirmationOnUnverified}
         softSuccessActions={softSuccessActions}
         softSuccessErrorCodes={softSuccessErrorCodes}
         successFallback={successFallback}
@@ -839,6 +1092,7 @@ function TokenActionPage({
   successActions = [],
   recoveryAction = null,
   softSuccessErrorCodes = [],
+  validationTokenType = null,
   onSuccess
 }) {
   const [searchParams] = useSearchParams();
@@ -848,28 +1102,45 @@ function TokenActionPage({
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const hasAutoRun = useRef(false);
+  const tokenValidation = useTokenValidation(token, validationTokenType);
 
   const hasToken = Boolean(token);
-  const isSoftSuccess = Boolean(error?.errorCode && softSuccessErrorCodes.includes(error.errorCode));
-  const effectiveSuccessMessage = successMessage || (isSoftSuccess ? error?.message : "");
+  const effectiveError = tokenValidation.error ?? error;
+  const isSoftSuccess = Boolean(
+    effectiveError?.errorCode && softSuccessErrorCodes.includes(effectiveError.errorCode)
+  );
+  const effectiveSuccessMessage = successMessage || (isSoftSuccess ? effectiveError?.message : "");
   const shouldOfferRecovery =
     recoveryAction &&
     !effectiveSuccessMessage &&
-    (!hasToken || isRecoverableTokenError(error));
-  const shouldShowActionButton = !effectiveSuccessMessage && !autoRun;
+    (!hasToken || isRecoverableTokenError(effectiveError));
+  const shouldShowActionButton =
+    !effectiveSuccessMessage &&
+    !autoRun &&
+    tokenValidation.isValid;
 
   useEffect(() => {
-    if (!autoRun || !hasToken || hasAutoRun.current || effectiveSuccessMessage) {
+    if (
+      !autoRun ||
+      !hasToken ||
+      !tokenValidation.isValid ||
+      hasAutoRun.current ||
+      effectiveSuccessMessage
+    ) {
       return;
     }
 
     hasAutoRun.current = true;
     void handleRequest();
-  }, [autoRun, effectiveSuccessMessage, hasToken]);
+  }, [autoRun, effectiveSuccessMessage, hasToken, tokenValidation.isValid]);
 
   async function handleRequest() {
     if (!token) {
       setError(new Error("Token is missing from the URL."));
+      return;
+    }
+
+    if (!tokenValidation.isValid) {
       return;
     }
 
@@ -889,12 +1160,13 @@ function TokenActionPage({
   }
 
   return (
-    <AuthPanel eyebrow={eyebrow} title={title} description={description}>
-      <div className="content-stack auth-form-shell auth-form-shell-centered">
-        <div className="auth-form-message-slot">
-          {effectiveSuccessMessage ? <InlineSuccess message={effectiveSuccessMessage} /> : null}
-          {!effectiveSuccessMessage && error ? <InlineError error={error} /> : null}
-        </div>
+    <AuthPanel
+      eyebrow={eyebrow}
+      title={title}
+      description={effectiveSuccessMessage ? null : description}
+    >
+      <div className="content-stack auth-form-shell auth-form-shell-centered auth-token-action">
+        {tokenValidation.isPending || pending ? <LoadingBlock /> : null}
 
         {shouldShowActionButton ? (
           <button
@@ -907,12 +1179,21 @@ function TokenActionPage({
           </button>
         ) : null}
 
+        <div className="auth-form-message-slot">
+          {effectiveSuccessMessage ? <InlineSuccess message={effectiveSuccessMessage} /> : null}
+          {!effectiveSuccessMessage && effectiveError ? <InlineError error={effectiveError} /> : null}
+        </div>
+
         {effectiveSuccessMessage ? <ActionLinksRow actions={successActions} /> : null}
 
         {shouldOfferRecovery ? (
           <InlineEmailActionCard
             buttonLabel={recoveryAction.buttonLabel ?? "Send email"}
+            cooldownKey={recoveryAction.cooldownKey}
+            cooldownHintBuilder={recoveryAction.cooldownHintBuilder}
+            cooldownSeconds={recoveryAction.cooldownSeconds}
             description={recoveryAction.description}
+            disableAfterSuccess={recoveryAction.disableAfterSuccess}
             endpoint={recoveryAction.endpoint}
             softSuccessActions={recoveryAction.softSuccessActions}
             softSuccessErrorCodes={recoveryAction.softSuccessErrorCodes}
@@ -927,9 +1208,11 @@ function TokenActionPage({
 
 function EmailActionForm({
   endpoint,
+  cooldownKey,
   buttonLabel,
   successFallback,
   initialEmail = "",
+  alwaysShowInboxLink = false,
   compact = false,
   hideEmailField = false,
   locale,
@@ -937,21 +1220,25 @@ function EmailActionForm({
   initialCooldownActive = false,
   disableAfterSuccess = true,
   cooldownHintBuilder,
+  offerConfirmationOnUnverified = false,
+  showSuccessMessage = true,
   softSuccessErrorCodes = [],
   softSuccessActions = []
 }) {
   const { t } = useLocale();
+  const metadataQuery = useMetadataQuery();
+  const demoEmailSandboxEnabled =
+    metadataQuery.data?.features?.demoEmailSandboxEnabled === true;
+  const actionCooldownKey = cooldownKey || endpoint;
   const [email, setEmail] = useState(() => initialEmail || readRememberedEmail(endpoint));
   const [fieldError, setFieldError] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [softSuccessMessage, setSoftSuccessMessage] = useState("");
+  const [softSuccessCode, setSoftSuccessCode] = useState("");
   const [cooldownRemaining, setCooldownRemaining] = useState(() => {
-    const storedCooldown = readEmailActionCooldown(
-      endpoint,
-      initialEmail || readRememberedEmail(endpoint)
-    );
+    const storedCooldown = readEmailActionCooldown(actionCooldownKey);
 
     if (storedCooldown > 0) {
       return storedCooldown;
@@ -965,7 +1252,7 @@ function EmailActionForm({
   }, [endpoint, initialEmail]);
 
   useEffect(() => {
-    const storedCooldown = readEmailActionCooldown(endpoint, email || initialEmail);
+    const storedCooldown = readEmailActionCooldown(actionCooldownKey);
 
     if (storedCooldown > 0) {
       setCooldownRemaining(storedCooldown);
@@ -974,8 +1261,9 @@ function EmailActionForm({
 
     if (initialCooldownActive) {
       setCooldownRemaining(cooldownSeconds);
+      writeEmailActionCooldown(actionCooldownKey, cooldownSeconds);
     }
-  }, [cooldownSeconds, email, endpoint, initialCooldownActive, initialEmail]);
+  }, [actionCooldownKey, cooldownSeconds, initialCooldownActive]);
 
   useEffect(() => {
     if (cooldownRemaining <= 0) {
@@ -983,11 +1271,11 @@ function EmailActionForm({
     }
 
     const timer = window.setTimeout(() => {
-      setCooldownRemaining((current) => Math.max(0, current - 1));
+      setCooldownRemaining(readEmailActionCooldown(actionCooldownKey));
     }, 1000);
 
     return () => window.clearTimeout(timer);
-  }, [cooldownRemaining]);
+  }, [actionCooldownKey, cooldownRemaining]);
 
   function handleEmailChange(nextValue) {
     setEmail(nextValue);
@@ -995,6 +1283,7 @@ function EmailActionForm({
     setError(null);
     setSuccessMessage("");
     setSoftSuccessMessage("");
+    setSoftSuccessCode("");
   }
 
   async function handleSubmit(event) {
@@ -1006,12 +1295,26 @@ function EmailActionForm({
       return;
     }
 
+    if (!isValidEmailAddress(email)) {
+      setFieldError(getInvalidEmailMessage(locale));
+      setError(null);
+      return;
+    }
+
     setPending(true);
     setFieldError("");
     setError(null);
     setSuccessMessage("");
+    setSoftSuccessMessage("");
+    setSoftSuccessCode("");
+
+    if (cooldownSeconds > 0) {
+      setCooldownRemaining(cooldownSeconds);
+      writeEmailActionCooldown(actionCooldownKey, cooldownSeconds);
+    }
 
     try {
+      await activateDemoEmailSandboxForEmail(email, locale);
       const response = await apiRequest(endpoint, {
         method: "PATCH",
         body: trimFormPayload({ email }),
@@ -1019,75 +1322,109 @@ function EmailActionForm({
       });
 
       setSuccessMessage(response.message || successFallback);
-      if (cooldownSeconds > 0) {
-        setCooldownRemaining(cooldownSeconds);
-        writeEmailActionCooldown(endpoint, email, cooldownSeconds);
-      }
       writeRememberedEmail(endpoint, email);
     } catch (nextError) {
-      if (softSuccessErrorCodes.includes(nextError?.errorCode)) {
-        setSoftSuccessMessage(nextError.message || successFallback);
-        if (cooldownSeconds > 0) {
-          setCooldownRemaining(cooldownSeconds);
-          writeEmailActionCooldown(endpoint, email, cooldownSeconds);
+      const emailError = interpolateEmailError(nextError, email);
+
+      if (softSuccessErrorCodes.includes(emailError?.errorCode)) {
+        setSoftSuccessMessage(emailError.message || successFallback);
+        setSoftSuccessCode(emailError.errorCode ?? "");
+        if (emailError.errorCode === "AUTH_ACCOUNT_ALREADY_VERIFIED") {
+          setCooldownRemaining(0);
+          clearEmailActionCooldown(actionCooldownKey);
+        } else if (cooldownSeconds > 0) {
+          setCooldownRemaining((current) => current || cooldownSeconds);
         }
         writeRememberedEmail(endpoint, email);
-      } else if (nextError?.status === 429 && cooldownSeconds > 0) {
-        setCooldownRemaining(cooldownSeconds);
-        writeEmailActionCooldown(endpoint, email, cooldownSeconds);
+      } else if (emailError?.status === 429 && cooldownSeconds > 0) {
+        setCooldownRemaining((current) => current || cooldownSeconds);
         writeRememberedEmail(endpoint, email);
-        setError(nextError);
+        setError(emailError);
       } else {
-        setError(nextError);
+        setError(emailError);
       }
     } finally {
       setPending(false);
     }
   }
 
-  const isCompleted = disableAfterSuccess && Boolean(successMessage || softSuccessMessage);
+  const isPermanentSoftSuccess = softSuccessCode === "AUTH_ACCOUNT_ALREADY_VERIFIED";
+  const isCompleted =
+    isPermanentSoftSuccess || (disableAfterSuccess && Boolean(successMessage || softSuccessMessage));
   const isCoolingDown = cooldownRemaining > 0;
+  const emailSuccessActions =
+    alwaysShowInboxLink || successMessage || softSuccessMessage
+      ? isPermanentSoftSuccess
+        ? softSuccessActions
+        : [
+            ...(demoEmailSandboxEnabled
+              ? [{ kind: "link", label: t("auth.openDemoInbox"), to: "/demo-inbox", secondary: true }]
+              : []),
+            ...(softSuccessMessage ? softSuccessActions : [])
+          ]
+      : [];
+  const shouldOfferConfirmation =
+    offerConfirmationOnUnverified && error?.errorCode === "AUTH_ACCOUNT_NOT_VERIFIED";
 
   return (
-    <form
-      className={
-        compact
-          ? "content-stack auth-inline-form"
-          : "content-stack auth-form-shell auth-form-shell-centered"
-      }
-      onSubmit={handleSubmit}
-    >
-      {hideEmailField ? null : (
-        <Field
-          error={fieldError}
-          label={t("auth.email")}
-          name="email"
-          type="email"
-          value={email}
-          onChange={handleEmailChange}
-          required
-        />
-      )}
+    <>
+      <form
+        className={
+          compact
+            ? "content-stack auth-inline-form auth-email-action-form"
+            : "content-stack auth-form-shell auth-form-shell-centered auth-email-action-form"
+        }
+        noValidate
+        onSubmit={handleSubmit}
+      >
+        {hideEmailField ? null : (
+          <Field
+            error={fieldError}
+            label={t("auth.email")}
+            name="email"
+            type="email"
+            value={email}
+            onChange={handleEmailChange}
+            required
+          />
+        )}
 
-      <div className="auth-submit-row">
-        <button
-          className={compact ? "button auth-submit-button" : "button auth-submit-button"}
-          disabled={pending || isCompleted || isCoolingDown}
-          type="submit"
-        >
-          {pending ? t("auth.sending") : buttonLabel}
-        </button>
-        {cooldownHintBuilder && isCoolingDown ? (
-          <span className="auth-cooldown-note">{cooldownHintBuilder(cooldownRemaining)}</span>
-        ) : null}
-      </div>
-      <div className="auth-form-message-slot">
-        {error ? <InlineError error={error} /> : null}
-        {successMessage ? <InlineSuccess message={successMessage} /> : null}
-        {softSuccessMessage ? <InlineSuccess message={softSuccessMessage} /> : null}
-      </div>
-      {softSuccessMessage ? <ActionLinksRow actions={softSuccessActions} /> : null}
-    </form>
+        <div className="auth-submit-row">
+          <button
+            className="button auth-submit-button"
+            disabled={pending || isCompleted || isCoolingDown}
+            type="submit"
+          >
+            {pending ? t("auth.sending") : buttonLabel}
+          </button>
+          {cooldownHintBuilder && isCoolingDown && !isPermanentSoftSuccess ? (
+            <span className="auth-cooldown-note">{cooldownHintBuilder(cooldownRemaining)}</span>
+          ) : null}
+        </div>
+        <div className="auth-form-message-slot">
+          {error ? <InlineError error={error} /> : null}
+          {showSuccessMessage && successMessage ? <InlineSuccess message={successMessage} /> : null}
+          {showSuccessMessage && softSuccessMessage ? <InlineSuccess message={softSuccessMessage} /> : null}
+        </div>
+        {emailSuccessActions.length ? <ActionLinksRow actions={emailSuccessActions} /> : null}
+      </form>
+
+      {shouldOfferConfirmation ? (
+        <InlineEmailActionCard
+          buttonLabel={t("auth.resendConfirmation")}
+          cooldownKey={`${actionCooldownKey}:confirmation-recovery`}
+          cooldownHintBuilder={(seconds) => getRegisterCooldownText(locale, seconds)}
+          cooldownSeconds={60}
+          description={t("auth.accountNeedsConfirmationDescription")}
+          disableAfterSuccess={false}
+          endpoint="/auth/resend_confirmation_email"
+          hideEmailField
+          initialEmail={email}
+          successFallback="A new confirmation email has been sent."
+          title={t("auth.accountNeedsConfirmationTitle")}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -1095,11 +1432,19 @@ function InlineEmailActionCard({
   title,
   description,
   endpoint,
+  cooldownKey,
   buttonLabel,
   successFallback,
+  cooldownHintBuilder,
+  cooldownSeconds = 0,
+  disableAfterSuccess = true,
+  initialEmail = "",
+  hideEmailField = false,
   softSuccessErrorCodes = [],
   softSuccessActions = []
 }) {
+  const { locale } = useLocale();
+
   return (
     <section className="auth-helper-card auth-helper-card-soft">
       <h2>{title}</h2>
@@ -1107,7 +1452,14 @@ function InlineEmailActionCard({
       <EmailActionForm
         buttonLabel={buttonLabel}
         compact
+        cooldownKey={cooldownKey}
+        cooldownHintBuilder={cooldownHintBuilder}
+        cooldownSeconds={cooldownSeconds}
+        disableAfterSuccess={disableAfterSuccess}
         endpoint={endpoint}
+        hideEmailField={hideEmailField}
+        initialEmail={initialEmail}
+        locale={locale}
         softSuccessActions={softSuccessActions}
         softSuccessErrorCodes={softSuccessErrorCodes}
         successFallback={successFallback}
@@ -1123,6 +1475,31 @@ function AuthHelperCard({ title, description, actions = [], children }) {
       <p>{description}</p>
       {children ?? <ActionLinksRow actions={actions} />}
     </section>
+  );
+}
+
+function PasswordRequirementsCard({ locale, requirements }) {
+  const copy = PASSWORD_REQUIREMENTS_COPY[locale] ?? PASSWORD_REQUIREMENTS_COPY.en;
+
+  return (
+    <aside className="auth-password-requirements profile-password-requirements">
+      <h3>
+        <ShieldIcon />
+        {copy.title}
+      </h3>
+      <p>{copy.description}</p>
+      <ul>
+        {requirements.map((requirement) => (
+          <li
+            className={requirement.met ? "password-requirement-met" : ""}
+            key={requirement.key}
+          >
+            <span aria-hidden="true">{requirement.met ? "✓" : "○"}</span>
+            {requirement.label}
+          </li>
+        ))}
+      </ul>
+    </aside>
   );
 }
 
@@ -1149,7 +1526,8 @@ function ActionLinksRow({ actions = [] }) {
             className={action.secondary ? "button button-secondary" : "button"}
             to={action.to}
           >
-            {action.label}
+            {action.to === "/demo-inbox" ? <EnvelopeClosedIcon /> : null}
+            <span>{action.label}</span>
           </Link>
         )
       )}
@@ -1157,12 +1535,12 @@ function ActionLinksRow({ actions = [] }) {
   );
 }
 
-function AuthPanel({ eyebrow, title, description, children, footer, postFooter, compact = false }) {
+function AuthPanel({ eyebrow, title, description, children, footer, postFooter, compact = false, wide = false }) {
   return (
-    <section className="auth-shell">
+    <section className={wide ? "auth-shell auth-shell-wide" : "auth-shell"}>
       <div className={compact ? "auth-panel auth-panel-compact" : "auth-panel"}>
         <h1 className="auth-panel-title">{title}</h1>
-        <p>{description}</p>
+        {description ? <p>{description}</p> : null}
         {children}
         {footer ? <div className="auth-footer">{footer}</div> : null}
         {postFooter ? <div className="auth-panel-post-footer">{postFooter}</div> : null}
@@ -1373,6 +1751,46 @@ function isRecoverableTokenError(error) {
   return Boolean(error?.errorCode && TOKEN_RECOVERY_CODES.has(error.errorCode));
 }
 
+function useTokenValidation(token, tokenType) {
+  const [state, setState] = useState({
+    error: null,
+    isPending: Boolean(token && tokenType),
+    isValid: !tokenType
+  });
+
+  useEffect(() => {
+    if (!tokenType) {
+      setState({ error: null, isPending: false, isValid: true });
+      return undefined;
+    }
+
+    if (!token) {
+      setState({ error: null, isPending: false, isValid: false });
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setState({ error: null, isPending: true, isValid: false });
+
+    apiRequest(
+      `/auth/validate_token?token=${encodeURIComponent(token)}&tokenType=${encodeURIComponent(tokenType)}`,
+      { signal: controller.signal }
+    )
+      .then(() => {
+        setState({ error: null, isPending: false, isValid: true });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setState({ error, isPending: false, isValid: false });
+        }
+      });
+
+    return () => controller.abort();
+  }, [token, tokenType]);
+
+  return state;
+}
+
 function withEmailQuery(path, email) {
   const trimmedEmail = email?.trim();
 
@@ -1381,6 +1799,17 @@ function withEmailQuery(path, email) {
   }
 
   return `${path}?email=${encodeURIComponent(trimmedEmail)}`;
+}
+
+function interpolateEmailError(error, email) {
+  if (!error?.message || !email) {
+    return error;
+  }
+
+  return {
+    ...error,
+    message: error.message.replaceAll("{0}", email.trim())
+  };
 }
 
 function LocaleFlagIcon({ locale }) {
