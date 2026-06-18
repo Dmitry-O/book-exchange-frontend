@@ -8,7 +8,11 @@ import {
   useState
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest, configureApiAuth } from "../api/http";
+import {
+  activateDemoEmailSandboxForEmail,
+  apiRequest,
+  configureApiAuth
+} from "../api/http";
 import { useLocale } from "../i18n/LocaleContext";
 import {
   clearStoredSession,
@@ -74,6 +78,12 @@ export function AuthProvider({ children }) {
     }
   }, [meQuery.data?.locale, setLocale]);
 
+  useEffect(() => {
+    if (meQuery.data?.email) {
+      void activateDemoEmailSandboxForEmail(meQuery.data.email, meQuery.data.locale);
+    }
+  }, [meQuery.data?.email, meQuery.data?.locale]);
+
   const login = useCallback(
     async (credentials) => {
       const response = await apiRequest("/auth/login", {
@@ -81,6 +91,9 @@ export function AuthProvider({ children }) {
         body: credentials
       });
 
+      queryClient.removeQueries({ queryKey: ["auth", "me"] });
+      await activateDemoEmailSandboxForEmail(credentials.email);
+      queryClient.removeQueries({ queryKey: ["demo-email-sandbox"] });
       applySession(response.data);
       await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
 

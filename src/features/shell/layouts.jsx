@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useAdminOpenReportsSummaryQuery,
   useMetadataQuery,
@@ -8,12 +9,27 @@ import {
 import { useAuth } from "../../shared/auth/AuthContext";
 import { useLocale } from "../../shared/i18n/LocaleContext";
 import { getLocaleLabel } from "../../shared/i18n/locale";
+import {
+  DEMO_EMAIL_SANDBOX_CHANGED_EVENT,
+  DEMO_EMAIL_SANDBOX_HEADER,
+  DEMO_EMAIL_SANDBOX_MESSAGES_CHANGED_EVENT,
+  activateDemoEmailSandboxForEmail,
+  apiRequest,
+  configureDemoEmailSandbox,
+  readActiveDemoEmailAddress,
+  readDemoEmailSandboxId
+} from "../../shared/api/http";
+import {
+  DEMO_INBOX_STATE_EVENT,
+  getUnreadDemoEmailCount
+} from "../demo-email-sandbox/inboxState";
 import { UserAvatar } from "../../shared/ui/Media";
 import {
   ArrowUpIcon,
   BellIcon,
   BookIcon,
   AdminBadgeIcon,
+  EnvelopeClosedIcon,
   FlagIcon,
   HomeIcon,
   InfoIcon,
@@ -81,13 +97,33 @@ const ADMIN_MENU_LINKS = [
   { to: "/admin/exchanges", labelKey: "shell.manageExchanges", icon: SwapIcon }
 ];
 
+function useDemoEmailSandboxFeature(metadata) {
+  const queryClient = useQueryClient();
+  const enabled = metadata?.features?.demoEmailSandboxEnabled === true;
+
+  configureDemoEmailSandbox(enabled);
+
+  useEffect(() => {
+    if (!enabled) {
+      void queryClient.cancelQueries({ queryKey: ["demo-email-sandbox"] });
+      queryClient.removeQueries({ queryKey: ["demo-email-sandbox"] });
+    }
+  }, [enabled, queryClient]);
+
+  return enabled;
+}
+
 export function PublicLayout() {
   const metadataQuery = useMetadataQuery();
+  const demoEmailSandboxEnabled = useDemoEmailSandboxFeature(metadataQuery.data);
 
   return (
     <div className="app-frame">
       <ScrollBehavior />
-      <AppHeader availableLocales={metadataQuery.data?.locales} />
+      <AppHeader
+        availableLocales={metadataQuery.data?.locales}
+        demoEmailSandboxEnabled={demoEmailSandboxEnabled}
+      />
       <main className="page-container">
         <Outlet />
       </main>
@@ -99,11 +135,15 @@ export function PublicLayout() {
 
 export function AppLayout() {
   const metadataQuery = useMetadataQuery();
+  const demoEmailSandboxEnabled = useDemoEmailSandboxFeature(metadataQuery.data);
 
   return (
     <div className="app-frame">
       <ScrollBehavior />
-      <AppHeader availableLocales={metadataQuery.data?.locales} />
+      <AppHeader
+        availableLocales={metadataQuery.data?.locales}
+        demoEmailSandboxEnabled={demoEmailSandboxEnabled}
+      />
       <main className="page-container page-container-app">
         <Outlet />
       </main>
@@ -158,7 +198,7 @@ function SiteFooter() {
   );
 }
 
-function AppHeader({ availableLocales }) {
+function AppHeader({ availableLocales, demoEmailSandboxEnabled }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAdmin, isAuthenticated, isSuperAdmin, logout, updateProfile, user } = useAuth();
@@ -168,6 +208,10 @@ function AppHeader({ availableLocales }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [localeMenuOpen, setLocaleMenuOpen] = useState(false);
   const [localePending, setLocalePending] = useState(false);
+  const [activeDemoSandboxId, setActiveDemoSandboxId] = useState(() =>
+    readDemoEmailSandboxId(user?.email || readActiveDemoEmailAddress())
+  );
+  const [, setInboxStateVersion] = useState(0);
   const menuRef = useRef(null);
   const localeRef = useRef(null);
 
@@ -175,6 +219,99 @@ function AppHeader({ availableLocales }) {
   const adminOpenReportsCount = adminOpenReportsQuery.data?.totalElements ?? 0;
   const userMenuBadgeCount = unreadCount + (isAdmin ? adminOpenReportsCount : 0);
   const localeOptions = availableLocales?.length ? availableLocales : locales;
+  const currentDemoEmail = user?.email || readActiveDemoEmailAddress();
+  const currentDemoSandboxId = readDemoEmailSandboxId(currentDemoEmail);
+  const effectiveDemoSandboxId =
+    activeDemoSandboxId === currentDemoSandboxId ? activeDemoSandboxId : currentDemoSandboxId;
+  const demoInboxQuery = useQuery({
+    queryKey: ["demo-email-sandbox", "header-unread", effectiveDemoSandboxId],
+    enabled: demoEmailSandboxEnabled && Boolean(effectiveDemoSandboxId),
+    retry: false,
+    refetchInterval: 4000,
+    refetchIntervalInBackground: true,
+    queryFn: async ({ signal }) => {
+      const response = await apiRequest("/demo/email-sandbox/messages?limit=100", {
+        headers: {
+          [DEMO_EMAIL_SANDBOX_HEADER]: effectiveDemoSandboxId
+        },
+        signal
+      });
+      return response.data;
+    }
+  });
+  const headerMessages =
+    demoInboxQuery.data?.sandboxId &&
+    demoInboxQuery.data.sandboxId !== effectiveDemoSandboxId
+      ? []
+      : demoInboxQuery.data?.messages ?? [];
+  const demoInboxUnreadCount = getUnreadDemoEmailCount(
+    effectiveDemoSandboxId,
+    headerMessages
+  );
+
+  useEffect(() => {
+    function syncDemoInboxState() {
+      const activeEmail = user?.email || readActiveDemoEmailAddress();
+      setActiveDemoSandboxId(readDemoEmailSandboxId(activeEmail));
+      setInboxStateVersion((current) => current + 1);
+    }
+
+    window.addEventListener("storage", syncDemoInboxState);
+    window.addEventListener(DEMO_EMAIL_SANDBOX_CHANGED_EVENT, syncDemoInboxState);
+    window.addEventListener(DEMO_INBOX_STATE_EVENT, syncDemoInboxState);
+
+    return () => {
+      window.removeEventListener("storage", syncDemoInboxState);
+      window.removeEventListener(DEMO_EMAIL_SANDBOX_CHANGED_EVENT, syncDemoInboxState);
+      window.removeEventListener(DEMO_INBOX_STATE_EVENT, syncDemoInboxState);
+    };
+  }, [user?.email]);
+
+  useEffect(() => {
+    const activeEmail = user?.email || readActiveDemoEmailAddress();
+    setActiveDemoSandboxId(readDemoEmailSandboxId(activeEmail));
+  }, [user?.email]);
+
+  useEffect(() => {
+    if (!demoEmailSandboxEnabled || !currentDemoEmail || currentDemoSandboxId) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    void activateDemoEmailSandboxForEmail(currentDemoEmail, locale).then((sandboxId) => {
+      if (!cancelled && sandboxId) {
+        setActiveDemoSandboxId(sandboxId);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentDemoEmail, currentDemoSandboxId, demoEmailSandboxEnabled, locale]);
+
+  useEffect(() => {
+    let retryTimer = null;
+
+    function refreshDemoInbox() {
+      if (!demoEmailSandboxEnabled || !effectiveDemoSandboxId) {
+        return;
+      }
+
+      void demoInboxQuery.refetch();
+      window.clearTimeout(retryTimer);
+      retryTimer = window.setTimeout(() => {
+        void demoInboxQuery.refetch();
+      }, 1200);
+    }
+
+    window.addEventListener(DEMO_EMAIL_SANDBOX_MESSAGES_CHANGED_EVENT, refreshDemoInbox);
+
+    return () => {
+      window.removeEventListener(DEMO_EMAIL_SANDBOX_MESSAGES_CHANGED_EVENT, refreshDemoInbox);
+      window.clearTimeout(retryTimer);
+    };
+  }, [demoEmailSandboxEnabled, effectiveDemoSandboxId, demoInboxQuery.refetch]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -275,6 +412,13 @@ function AppHeader({ availableLocales }) {
       </nav>
 
       <div className="topbar-end">
+        {demoEmailSandboxEnabled ? (
+          <HeaderInboxLink
+            badgeValue={demoInboxUnreadCount}
+            label={t("common.demoInbox")}
+          />
+        ) : null}
+
         <LocalePicker
           disabled={localePending}
           locale={locale}
@@ -408,6 +552,23 @@ function TopNavLink({ children, end = false, icon: Icon, to }) {
     >
       {Icon ? <Icon /> : null}
       <span>{children}</span>
+    </NavLink>
+  );
+}
+
+function HeaderInboxLink({ badgeValue, label }) {
+  return (
+    <NavLink
+      className={({ isActive }) =>
+        isActive
+          ? "topbar-link topbar-link-active topbar-inbox-link"
+          : "topbar-link topbar-inbox-link"
+      }
+      to="/demo-inbox"
+    >
+      <EnvelopeClosedIcon />
+      <span>{label}</span>
+      {badgeValue > 0 ? <span className="topbar-inbox-badge">{badgeValue}</span> : null}
     </NavLink>
   );
 }
