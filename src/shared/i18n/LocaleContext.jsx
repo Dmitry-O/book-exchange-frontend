@@ -141,7 +141,7 @@ const messages = {
       forgotPasswordTitle: "Request a password reset email",
       forgotPasswordDescription:
         "Enter your email address and we will send you a link to set a new password.",
-      sendResetLink: "Send password reset link",
+      sendResetLink: "Reset password",
       resendTitle: "Send a new confirmation email",
       resendDescription: "Enter your email address and we will send you a new confirmation link.",
       resendConfirmation: "Resend email",
@@ -160,27 +160,29 @@ const messages = {
       goToLogin: "Go to login",
       nextStepsTitle: "What next?",
       nextStepsDescription:
-        "Open your inbox, confirm your email address, and then sign in to the app. Did not receive the email? Check spam or send it again.",
+        "Your confirmation email is ready in the demo inbox. Confirm your address to finish creating the account.",
       requestDeleteTitle: "Request an account deletion link",
       requestDeleteDescription:
         "Enter your email address and we will send you a link to confirm account deletion.",
       sendDeletionEmail: "Send account deletion link",
       verifyEyebrow: "Verify",
-      verifyTitle: "Confirm your email address",
-      verifyDescription: "Please wait while we confirm your email address.",
+      verifyTitle: "Email confirmation",
+      verifyDescription:
+        "Confirm your email to finish setting up your account and start exchanging books.",
       verifyAction: "Verify email",
       freshConfirmationTitle: "Need a fresh confirmation link?",
       freshConfirmationDescription:
         "Enter your email address and we will send you a new verification email.",
       sendNewConfirmation: "Send a new confirmation email",
-      emailConfirmed: "Your email address has been confirmed.",
+      emailConfirmed: "Your email address has been confirmed. Welcome to Book Exchange!",
       resetEyebrow: "Reset",
-      resetTitle: "Choose a new password",
+      resetTitle: "Create a new password",
       resetDescription: "Enter a new password for your account.",
       newPassword: "New password",
       confirmPassword: "Repeat new password",
       passwordMismatch: "The passwords do not match",
       holdToShowPassword: "Hold to show password",
+      signInAccount: "Sign in to account",
       resettingPassword: "Resetting password...",
       resetPassword: "Reset password",
       passwordChanged: "Your password has been changed.",
@@ -196,7 +198,7 @@ const messages = {
       newDeletionTitle: "Need a new deletion link?",
       newDeletionDescription:
         "Enter your email address and we will send you a fresh deletion confirmation email.",
-      sendNewDeletion: "Send a new deletion email",
+      sendNewDeletion: "Resend email",
       processing: "Processing...",
       sending: "Sending...",
       accountNeedsConfirmationTitle: "Your account still needs email confirmation",
@@ -207,7 +209,8 @@ const messages = {
       wrongPasswordTitle: "Forgot your password?",
       wrongPasswordDescription:
         "Send yourself a password reset email and choose a new password.",
-      requestDeletionEmail: "Request account deletion link"
+      requestDeletionEmail: "Request account deletion link",
+      openDemoInbox: "Open demo inbox"
     },
     profile: {
       eyebrow: "Profile",
@@ -380,7 +383,7 @@ const messages = {
       forgotPasswordTitle: "E-Mail zum Zurücksetzen des Passworts anfordern",
       forgotPasswordDescription:
         "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Festlegen eines neuen Passworts.",
-      sendResetLink: "Link zum Zurücksetzen des Passworts senden",
+      sendResetLink: "Passwort zurücksetzen",
       resendTitle: "Neue Bestätigungs-E-Mail senden",
       resendDescription:
         "Gib deine E-Mail-Adresse ein und wir senden dir einen neuen Bestätigungslink.",
@@ -400,27 +403,29 @@ const messages = {
       goToLogin: "Zur Anmeldung",
       nextStepsTitle: "Wie geht es weiter?",
       nextStepsDescription:
-        "Öffne dein Postfach, bestätige deine E-Mail-Adresse und melde dich dann in der App an. Keine E-Mail erhalten? Prüfe den Spam-Ordner oder sende sie erneut.",
+        "Deine Bestätigungs-E-Mail liegt im Demo-Postfach bereit. Bestätige deine Adresse, um das Konto fertig einzurichten.",
       requestDeleteTitle: "Link zur Kontolöschung anfordern",
       requestDeleteDescription:
         "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zur Bestätigung der Kontolöschung.",
       sendDeletionEmail: "Link zur Kontolöschung senden",
       verifyEyebrow: "Bestätigen",
-      verifyTitle: "E-Mail-Adresse bestätigen",
-      verifyDescription: "Bitte warte, während wir deine E-Mail-Adresse bestätigen.",
+      verifyTitle: "E-Mail-Bestätigung",
+      verifyDescription:
+        "Bestätige deine E-Mail-Adresse, um dein Konto einzurichten und Bücher zu tauschen.",
       verifyAction: "E-Mail bestätigen",
       freshConfirmationTitle: "Neuen Bestätigungslink anfordern?",
       freshConfirmationDescription:
         "Gib deine E-Mail-Adresse ein und wir senden dir eine neue Bestätigungs-E-Mail.",
       sendNewConfirmation: "Neue Bestätigungs-E-Mail senden",
-      emailConfirmed: "Deine E-Mail-Adresse wurde bestätigt.",
+      emailConfirmed: "Deine E-Mail-Adresse wurde bestätigt. Willkommen bei Book Exchange!",
       resetEyebrow: "Zurücksetzen",
-      resetTitle: "Neues Passwort festlegen",
+      resetTitle: "Neues Passwort erstellen",
       resetDescription: "Gib ein neues Passwort für dein Konto ein.",
       newPassword: "Neues Passwort",
       confirmPassword: "Neues Passwort wiederholen",
       passwordMismatch: "Die Passwörter stimmen nicht überein",
       holdToShowPassword: "Gedrückt halten, um das Passwort anzuzeigen",
+      signInAccount: "Im Konto anmelden",
       resettingPassword: "Passwort wird zurückgesetzt...",
       resetPassword: "Passwort zurücksetzen",
       passwordChanged: "Dein Passwort wurde geändert.",
@@ -436,7 +441,7 @@ const messages = {
       newDeletionTitle: "Neuen Löschungslink anfordern?",
       newDeletionDescription:
         "Gib deine E-Mail-Adresse ein und wir senden dir einen neuen Link zur Kontolöschung.",
-      sendNewDeletion: "Neue Löschungs-E-Mail senden",
+      sendNewDeletion: "E-Mail erneut senden",
       processing: "Wird verarbeitet...",
       sending: "Wird gesendet...",
       accountNeedsConfirmationTitle: "Dein Konto muss noch bestätigt werden",
@@ -447,7 +452,8 @@ const messages = {
       wrongPasswordTitle: "Passwort vergessen?",
       wrongPasswordDescription:
         "Sende dir eine E-Mail zum Zurücksetzen des Passworts und vergib ein neues Passwort.",
-      requestDeletionEmail: "Link zur Kontolöschung anfordern"
+      requestDeletionEmail: "Link zur Kontolöschung anfordern",
+      openDemoInbox: "Demo-Postfach öffnen"
     },
     profile: {
       eyebrow: "Profil",
@@ -620,7 +626,7 @@ const messages = {
       forgotPasswordTitle: "Запросить письмо для сброса пароля",
       forgotPasswordDescription:
         "Введите эл. почту, и мы отправим вам ссылку для установки нового пароля.",
-      sendResetLink: "Отправить ссылку для сброса пароля",
+      sendResetLink: "Сбросить пароль",
       resendTitle: "Отправить новое письмо подтверждения",
       resendDescription:
         "Введите эл. почту, и мы отправим вам новую ссылку для подтверждения.",
@@ -640,27 +646,29 @@ const messages = {
       goToLogin: "Перейти ко входу",
       nextStepsTitle: "Что дальше?",
       nextStepsDescription:
-        "Откройте письмо, подтвердите эл. почту и после этого войдите в приложение. Не получили письмо? Проверьте спам или отправьте письмо повторно.",
+        "Письмо с подтверждением уже ждёт в демо-почте. Подтвердите адрес, чтобы завершить создание аккаунта.",
       requestDeleteTitle: "Запросить ссылку на удаление аккаунта",
       requestDeleteDescription:
         "Введите эл. почту, и мы отправим вам ссылку для подтверждения удаления аккаунта.",
       sendDeletionEmail: "Отправить ссылку на удаление аккаунта",
       verifyEyebrow: "Подтверждение",
-      verifyTitle: "Подтвердите эл. почту",
-      verifyDescription: "Пожалуйста, подождите, пока мы подтверждаем вашу эл. почту.",
+      verifyTitle: "Подтверждение эл. почты",
+      verifyDescription:
+        "Подтвердите эл. почту, чтобы завершить настройку аккаунта и начать обмениваться книгами.",
       verifyAction: "Подтвердить эл. почту",
       freshConfirmationTitle: "Нужна новая ссылка подтверждения?",
       freshConfirmationDescription:
         "Введите эл. почту, и мы отправим вам новое письмо для подтверждения.",
       sendNewConfirmation: "Отправить новое письмо подтверждения",
-      emailConfirmed: "Ваша эл. почта успешно подтверждена.",
+      emailConfirmed: "Ваша эл. почта успешно подтверждена. Добро пожаловать в Book Exchange!",
       resetEyebrow: "Сброс",
-      resetTitle: "Выберите новый пароль",
+      resetTitle: "Придумайте новый пароль",
       resetDescription: "Введите новый пароль для вашего аккаунта.",
       newPassword: "Новый пароль",
       confirmPassword: "Повторите новый пароль",
       passwordMismatch: "Пароли не совпадают",
       holdToShowPassword: "Удерживайте, чтобы показать пароль",
+      signInAccount: "Войти в уч. запись",
       resettingPassword: "Сброс пароля...",
       resetPassword: "Сбросить пароль",
       passwordChanged: "Ваш пароль был изменён.",
@@ -676,7 +684,7 @@ const messages = {
       newDeletionTitle: "Нужна новая ссылка на удаление?",
       newDeletionDescription:
         "Введите эл. почту, и мы отправим вам новую ссылку для подтверждения удаления аккаунта.",
-      sendNewDeletion: "Отправить новое письмо на удаление",
+      sendNewDeletion: "Отправить письмо повторно",
       processing: "Обработка...",
       sending: "Отправка...",
       accountNeedsConfirmationTitle: "Аккаунт ещё не подтверждён",
@@ -687,7 +695,8 @@ const messages = {
       wrongPasswordTitle: "Забыли пароль?",
       wrongPasswordDescription:
         "Отправьте себе письмо для сброса пароля и выберите новый пароль.",
-      requestDeletionEmail: "Запросить ссылку на удаление аккаунта"
+      requestDeletionEmail: "Запросить ссылку на удаление аккаунта",
+      openDemoInbox: "Открыть демо-почту"
     },
     profile: {
       eyebrow: "Профиль",
