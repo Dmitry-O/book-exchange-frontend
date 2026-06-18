@@ -2,10 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_LIST_PAGE_SIZE } from "./config";
 import { apiRequest } from "./http";
 
+const METADATA_REFRESH_INTERVAL_MS = 5000;
+
 export function useMetadataQuery() {
   return useQuery({
     queryKey: ["metadata"],
-    staleTime: Infinity,
+    staleTime: METADATA_REFRESH_INTERVAL_MS,
+    refetchInterval: METADATA_REFRESH_INTERVAL_MS,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: "always",
     queryFn: async () => {
       const response = await apiRequest("/metadata");
       return response.data;
