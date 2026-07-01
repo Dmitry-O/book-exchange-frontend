@@ -3,6 +3,7 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "../shared/auth/AuthContext";
 import { LocaleProvider } from "../shared/i18n/LocaleContext";
+import { DemoAccessGate } from "../features/demo-access/DemoAccessGate";
 import { AppRouter } from "./AppRouter";
 
 export default function App() {
@@ -21,11 +22,13 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <LocaleProvider>
-        <AuthProvider>
-          <BrowserRouter>
-            <AppRouter />
-          </BrowserRouter>
-        </AuthProvider>
+        <DemoAccessGate>
+          <AuthProvider>
+            <BrowserRouter>
+              <AppRouter />
+            </BrowserRouter>
+          </AuthProvider>
+        </DemoAccessGate>
       </LocaleProvider>
     </QueryClientProvider>
   );
