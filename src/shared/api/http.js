@@ -15,11 +15,14 @@ let authBridge = {
 let refreshPromise = null;
 const demoEmailSandboxSessionPromises = new Map();
 let demoEmailSandboxEnabled = false;
+const API_CREDENTIALS =
+  import.meta.env.VITE_API_CREDENTIALS === "include" ? "include" : "same-origin";
 
 export const DEMO_EMAIL_SANDBOX_HEADER = "X-Demo-Email-Sandbox-Id";
 export const DEMO_EMAIL_SANDBOX_CHANGED_EVENT = "book-exchange:demo-email-sandbox-changed";
 export const DEMO_EMAIL_SANDBOX_MESSAGES_CHANGED_EVENT =
   "book-exchange:demo-email-sandbox-messages-changed";
+export const DEMO_ACCESS_REQUIRED_EVENT = "book-exchange:demo-access-required";
 
 const DEMO_EMAIL_SANDBOX_STORAGE_KEY = "book-exchange/demo-email-sandbox-id";
 const DEMO_EMAIL_SANDBOX_BY_EMAIL_STORAGE_KEY = "book-exchange/demo-email-sandbox-by-email";
@@ -280,6 +283,7 @@ async function performRequest(endpoint, options, canRefresh) {
       method: options.method,
       headers: requestHeaders,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      credentials: API_CREDENTIALS,
       signal: options.signal
     });
   } catch (error) {
@@ -338,6 +342,7 @@ async function performRequest(endpoint, options, canRefresh) {
     }
 
     const apiError = payload?.error ?? {};
+    dispatchDemoAccessRequiredIfNeeded(response.status, apiError);
 
     throw new ApiClientError({
       status: response.status,
@@ -371,6 +376,7 @@ async function refreshAccessToken(refreshToken) {
       try {
         response = await fetch(`${API_BASE_URL}/auth/refresh_token`, {
           method: "POST",
+          credentials: API_CREDENTIALS,
           headers: {
             Accept: "application/json",
             "Accept-Language": getPreferredLocale(),
@@ -509,6 +515,7 @@ async function createDemoEmailSandboxSession(locale, requestedSandboxId = "", em
   try {
     response = await fetch(`${API_BASE_URL}${sessionUrl}`, {
       method: "POST",
+      credentials: API_CREDENTIALS,
       headers
     });
   } catch {
@@ -649,6 +656,16 @@ function getDemoEmailForRequest(endpoint, body) {
 
 function isValidDemoEmailSandboxId(sandboxId) {
   return typeof sandboxId === "string" && /^[A-Za-z0-9_-]{32,128}$/.test(sandboxId);
+}
+
+function dispatchDemoAccessRequiredIfNeeded(status, apiError) {
+  if (
+    typeof window !== "undefined" &&
+    status === 401 &&
+    apiError?.error === "SYSTEM_DEMO_ACCESS_REQUIRED"
+  ) {
+    window.dispatchEvent(new Event(DEMO_ACCESS_REQUIRED_EVENT));
+  }
 }
 
 function normalizeTransportError(error) {
