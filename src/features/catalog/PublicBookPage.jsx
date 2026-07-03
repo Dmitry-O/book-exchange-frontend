@@ -121,7 +121,6 @@ export function PublicBookPage() {
                 {formatEnumLabel("CITY")}:{" "}
                 {book.city ? getCityDisplayName(book.city, locale) : rt(locale, "Not available")}
               </p>
-              {book.contactDetails ? <p>{rt(locale, "Contact details")}: {book.contactDetails}</p> : null}
             </div>
 
             <div className="book-hero-timeline">
