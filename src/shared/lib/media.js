@@ -1,8 +1,8 @@
 import { API_BASE_URL } from "../api/config";
 
 const apiOrigin = resolveApiOrigin();
-const GENERATED_PLACEHOLDER_PATTERN =
-  /(placeholder|default|mock|stub|sample|demo|no[-_]?image|book-cover-placeholder)/i;
+const GENERATED_PLACEHOLDER_PATH_PATTERN =
+  /(?:^|[/_-])(placeholder|default|mock|stub|sample|no[-_]?image|book-cover-placeholder)(?:$|[./_-])/i;
 const UPLOADED_BOOK_IMAGE_PATTERN = /\/users\/\d+\/books\/\d+_\d{10,}\.[a-z0-9]+(?:[?#].*)?$/i;
 
 export function resolveMediaUrl(photoUrl, { kind = "generic", uploadedOnly = false } = {}) {
@@ -20,7 +20,7 @@ export function resolveMediaUrl(photoUrl, { kind = "generic", uploadedOnly = fal
     return normalizedPhotoUrl;
   }
 
-  if (kind === "book" && GENERATED_PLACEHOLDER_PATTERN.test(normalizedPhotoUrl)) {
+  if (kind === "book" && isGeneratedPlaceholderImageUrl(normalizedPhotoUrl)) {
     return "";
   }
 
@@ -67,4 +67,19 @@ function resolveApiOrigin() {
 
 export function isUploadedBookImageUrl(photoUrl) {
   return /^data:image\//i.test(photoUrl) || UPLOADED_BOOK_IMAGE_PATTERN.test(photoUrl);
+}
+
+function isGeneratedPlaceholderImageUrl(photoUrl) {
+  const candidate = extractUrlPath(photoUrl);
+
+  return GENERATED_PLACEHOLDER_PATH_PATTERN.test(candidate);
+}
+
+function extractUrlPath(photoUrl) {
+  try {
+    const parsedUrl = new URL(photoUrl, apiOrigin || undefined);
+    return parsedUrl.pathname;
+  } catch {
+    return photoUrl;
+  }
 }

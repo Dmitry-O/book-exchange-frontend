@@ -393,10 +393,10 @@ export function ImageUploadField({
           role="presentation"
         >
           <section aria-modal="true" className="modal-panel" role="dialog">
-            <div className="row-between">
-              <div>
+            <div className="row-between image-crop-modal-header">
+              <div className="image-crop-modal-title">
                 <span className="eyebrow">{text.photoCrop}</span>
-                <h2>{cropState.fileName}</h2>
+                <h2 title={cropState.fileName}>{cropState.fileName}</h2>
               </div>
               <button className="modal-close" onClick={closeCropModal} type="button">
                 {text.close}
@@ -404,50 +404,43 @@ export function ImageUploadField({
             </div>
 
             <div className="image-crop-grid">
-              <div
-                className={
-                  kind === "user"
-                    ? `image-crop-preview image-crop-preview-avatar${
-                        isDragging ? " image-crop-preview-dragging" : ""
-                      }`
-                    : `image-crop-preview image-crop-preview-book${
-                        isDragging ? " image-crop-preview-dragging" : ""
-                      }`
-                }
-                onPointerCancel={handlePointerUp}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                style={{
-                  width: `${previewPreset.previewWidth}px`,
-                  height: `${previewPreset.previewHeight}px`
-                }}
-              >
-                <img
-                  alt="Crop preview"
-                  className="image-crop-preview-image"
-                  src={cropState.source}
+              <div className="image-crop-preview-column">
+                <div
+                  className={
+                    kind === "user"
+                      ? `image-crop-preview image-crop-preview-avatar${
+                          isDragging ? " image-crop-preview-dragging" : ""
+                        }`
+                      : `image-crop-preview image-crop-preview-book${
+                          isDragging ? " image-crop-preview-dragging" : ""
+                        }`
+                  }
+                  onPointerCancel={handlePointerUp}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
                   style={{
-                    width: `${previewMetrics.drawWidth}px`,
-                    height: `${previewMetrics.drawHeight}px`,
-                    left: `${previewMetrics.drawX}px`,
-                    top: `${previewMetrics.drawY}px`
+                    width: `${previewPreset.previewWidth}px`,
+                    height: `${previewPreset.previewHeight}px`
                   }}
-                />
-                <div className="image-crop-overlay" />
-              </div>
-
-              <div className="content-stack">
-                <p className="field-hint">
-                  {kind === "user"
-                    ? text.userCropHint
-                    : text.bookCropHint}
-                </p>
+                >
+                  <img
+                    alt="Crop preview"
+                    className="image-crop-preview-image"
+                    src={cropState.source}
+                    style={{
+                      width: `${previewMetrics.drawWidth}px`,
+                      height: `${previewMetrics.drawHeight}px`,
+                      left: `${previewMetrics.drawX}px`,
+                      top: `${previewMetrics.drawY}px`
+                    }}
+                  />
+                  <div className="image-crop-overlay" />
+                </div>
 
                 {kind === "user" ? (
-                  <div className="field">
-                    <span>{text.zoom}</span>
-                    <div className="zoom-stepper">
+                  <div className="image-crop-under-preview">
+                    <div className="zoom-stepper image-crop-zoom-stepper" aria-label={text.zoom}>
                       <button
                         className="button button-secondary"
                         disabled={cropState.zoom <= 1}
@@ -466,30 +459,48 @@ export function ImageUploadField({
                         +
                       </button>
                     </div>
+
+                    <div className="card-actions image-crop-actions">
+                      <button className="button" disabled={applyPending} onClick={() => void handleApplyCrop()} type="button">
+                        {applyPending ? text.uploading : text.uploadPhoto}
+                      </button>
+                      <button
+                        className="button button-secondary"
+                        disabled={applyPending}
+                        onClick={closeCropModal}
+                        type="button"
+                      >
+                        {text.cancel}
+                      </button>
+                    </div>
                   </div>
                 ) : null}
+              </div>
+
+              <div className="content-stack">
+                <p className="field-hint">
+                  {kind === "user"
+                    ? text.userCropHint
+                    : text.bookCropHint}
+                </p>
 
                 <p className="field-hint">{text.dragTip}</p>
 
-                <div className="card-actions">
-                  <button className="button" disabled={applyPending} onClick={() => void handleApplyCrop()} type="button">
-                    {applyPending
-                      ? kind === "user"
-                        ? text.uploading
-                        : text.applying
-                      : kind === "user"
-                        ? text.uploadPhoto
-                        : text.applyCrop}
-                  </button>
-                  <button
-                    className="button button-secondary"
-                    disabled={applyPending}
-                    onClick={closeCropModal}
-                    type="button"
-                  >
-                    {text.cancel}
-                  </button>
-                </div>
+                {kind !== "user" ? (
+                  <div className="card-actions">
+                    <button className="button" disabled={applyPending} onClick={() => void handleApplyCrop()} type="button">
+                      {applyPending ? text.applying : text.applyCrop}
+                    </button>
+                    <button
+                      className="button button-secondary"
+                      disabled={applyPending}
+                      onClick={closeCropModal}
+                      type="button"
+                    >
+                      {text.cancel}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           </section>

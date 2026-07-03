@@ -5759,11 +5759,54 @@ select.field-control,
   align-items: start;
 }
 
+.image-crop-modal-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+}
+
+.image-crop-modal-title {
+  min-width: 0;
+}
+
+.image-crop-modal-title h2 {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-crop-modal-header .modal-close {
+  white-space: nowrap;
+}
+
+.image-crop-preview-column {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+
+.image-crop-under-preview {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: min(100%, 300px);
+}
+
 .zoom-stepper {
   display: inline-flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.image-crop-zoom-stepper {
+  display: grid;
+  grid-template-columns: 48px minmax(58px, auto) 48px;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
 }
 
 .zoom-stepper strong {
@@ -5775,6 +5818,10 @@ select.field-control,
 .zoom-stepper .button {
   min-width: 48px;
   padding: 0;
+}
+
+.image-crop-actions {
+  justify-content: center;
 }
 
 .image-crop-preview {
