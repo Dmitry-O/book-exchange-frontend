@@ -150,6 +150,14 @@ export function ExchangesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = resolveExchangeTab(searchParams.get("tab"));
   const text = getExchangeTabsText(locale);
+  const requestsCountQuery = useExchangeCollectionQuery("requests", 0);
+  const offersCountQuery = useExchangeCollectionQuery("offers", 0);
+  const historyCountQuery = useExchangeCollectionQuery("history", 0);
+  const tabCounts = {
+    history: historyCountQuery.data?.totalElements ?? 0,
+    offers: offersCountQuery.data?.totalElements ?? 0,
+    requests: requestsCountQuery.data?.totalElements ?? 0
+  };
 
   return (
     <section className="content-stack">
@@ -174,7 +182,7 @@ export function ExchangesPage() {
                 type="button"
               >
                 <Icon />
-                <span>{resolveExchangeTabLabel(text, tab)}</span>
+                <span>{formatExchangeTabLabel(text, tab, tabCounts[tab])}</span>
               </button>
             );
           })}
@@ -964,6 +972,10 @@ function resolveExchangeTabLabel(text, tab) {
   }
 
   return text.requestsTab;
+}
+
+function formatExchangeTabLabel(text, tab, count) {
+  return `${resolveExchangeTabLabel(text, tab)} (${count ?? 0})`;
 }
 
 function ExchangeDetailsPage({
