@@ -6,9 +6,10 @@ import { useMetadataQuery } from "../../../shared/api/hooks";
 import { apiRequest } from "../../../shared/api/http";
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { useLocale } from "../../../shared/i18n/LocaleContext";
-import { rt, rtf } from "../../../shared/i18n/rawText";
+import { rt } from "../../../shared/i18n/rawText";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
 import { useInfiniteScroll } from "../../../shared/lib/useInfiniteScroll";
+import { useConfirmDialog } from "../../../shared/lib/useUnsavedChangesGuard";
 import { UserAvatar } from "../../../shared/ui/Media";
 import { ArrowLeftIcon, FilterIcon, SearchIcon, TrashIcon, UserIcon, XIcon } from "../../../shared/ui/Icons";
 import { PageTitle } from "../../../shared/ui/PageTitle";
@@ -37,6 +38,10 @@ const adminUsersText = {
     accountCreated: "Konto erstellt",
     adminActionToAdmin: "Zum Admin machen",
     adminActionToUser: "Adminrechte entziehen",
+    confirmGrantAdmin:
+      "Diesem Benutzer Adminrechte geben? Er kann danach Admin-Funktionen verwenden.",
+    confirmRevokeAdmin:
+      "Adminrechte dieses Benutzers entziehen? Er verliert danach den Zugriff auf Admin-Funktionen.",
     allLoaded: "Alle passenden Nutzer sind geladen",
     allUsers: "Alle",
     activeUsers: "Aktive",
@@ -67,6 +72,10 @@ const adminUsersText = {
     accountCreated: "Account created",
     adminActionToAdmin: "Make admin",
     adminActionToUser: "Revoke admin rights",
+    confirmGrantAdmin:
+      "Grant admin rights to this user? They will be able to use admin tools.",
+    confirmRevokeAdmin:
+      "Revoke admin rights from this user? They will lose access to admin tools.",
     allLoaded: "All matching users are loaded",
     allUsers: "All",
     activeUsers: "Active",
@@ -97,6 +106,10 @@ const adminUsersText = {
     accountCreated: "Уч. запись создана",
     adminActionToAdmin: "Сделать админом",
     adminActionToUser: "Отнять права админа",
+    confirmGrantAdmin:
+      "Выдать этому пользователю права администратора? После этого он сможет пользоваться админскими функциями.",
+    confirmRevokeAdmin:
+      "Отозвать у этого пользователя права администратора? После этого он потеряет доступ к админским функциям.",
     allLoaded: "Все подходящие пользователи уже загружены",
     allUsers: "Все",
     activeUsers: "Активные",
@@ -377,6 +390,7 @@ export function AdminUserDetailsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const confirmAction = useConfirmDialog();
   const { userId } = useParams();
   const { isSuperAdmin, user: currentUser } = useAuth();
   const [banForm, setBanForm] = useState(emptyBanForm);
@@ -454,9 +468,13 @@ export function AdminUserDetailsPage() {
 
   async function handleRoleAction() {
     setBanError("");
-    const targetLabel =
-      roleAction === "make-admin" ? text.adminActionToAdmin : text.adminActionToUser;
-    const confirmed = window.confirm(rtf(locale, "Do you want to {action} for this user?", { action: targetLabel }));
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: roleAction === "make-admin" ? text.adminActionToAdmin : text.adminActionToUser,
+      message: roleAction === "make-admin" ? text.confirmGrantAdmin : text.confirmRevokeAdmin,
+      title: roleAction === "make-admin" ? text.adminActionToAdmin : text.adminActionToUser,
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;
@@ -513,7 +531,13 @@ export function AdminUserDetailsPage() {
 
   async function handleUnban() {
     setBanError("");
-    const confirmed = window.confirm(rt(locale, "Remove the current ban from this user?"));
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: rt(locale, "Remove ban"),
+      message: rt(locale, "Remove the current ban from this user?"),
+      title: rt(locale, "Remove ban"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;
@@ -544,9 +568,13 @@ export function AdminUserDetailsPage() {
     }
 
     setBanError("");
-    const confirmed = window.confirm(
-      rt(locale, "Soft-delete this user and cascade moderation changes to their books?")
-    );
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: rt(locale, "Delete"),
+      message: rt(locale, "Soft-delete this user and cascade moderation changes to their books?"),
+      title: rt(locale, "Delete user"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;

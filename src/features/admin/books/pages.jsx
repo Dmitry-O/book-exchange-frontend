@@ -25,6 +25,7 @@ import {
 } from "../../../shared/lib/bookSearchUi";
 import { buildQueryString, formatDateTimeReadable, formatEnumLabel } from "../../../shared/lib/format";
 import { useInfiniteScroll } from "../../../shared/lib/useInfiniteScroll";
+import { useConfirmDialog } from "../../../shared/lib/useUnsavedChangesGuard";
 import { ImageUploadField } from "../../../shared/ui/ImageUploadField";
 import { DemoPrivacyNotice } from "../../../shared/ui/DemoPrivacyNotice";
 import { CityField } from "../../../shared/ui/CityField";
@@ -599,6 +600,7 @@ export function AdminBookDetailsPage() {
   const queryClient = useQueryClient();
   const { bookId } = useParams();
   const { locale } = useLocale();
+  const confirmAction = useConfirmDialog();
   const [pendingAction, setPendingAction] = useState(null);
   const [moderationError, setModerationError] = useState(null);
   const [moderationMessage, setModerationMessage] = useState("");
@@ -611,12 +613,16 @@ export function AdminBookDetailsPage() {
   });
 
   async function handleDelete() {
-    const confirmed = window.confirm(
-      rt(
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: rt(locale, "Delete"),
+      message: rt(
         locale,
         "Soft-delete this book from the moderation console? Any active exchange requests related to this book will be cancelled automatically."
-      )
-    );
+      ),
+      title: rt(locale, "Delete book"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;
@@ -648,7 +654,13 @@ export function AdminBookDetailsPage() {
   }
 
   async function handleRestore() {
-    const confirmed = window.confirm(rt(locale, "Restore this deleted book?"));
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: rt(locale, "Restore"),
+      message: rt(locale, "Restore this deleted book?"),
+      title: rt(locale, "Restore book"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;
@@ -861,6 +873,7 @@ export function AdminBookEditPage() {
   const { bookId } = useParams();
   const metadataQuery = useMetadataQuery();
   const { locale } = useLocale();
+  const confirmAction = useConfirmDialog();
   const [form, setForm] = useState(emptyBookForm);
   const [initialForm, setInitialForm] = useState(emptyBookForm);
   const [pendingAction, setPendingAction] = useState(null);
@@ -921,7 +934,13 @@ export function AdminBookEditPage() {
   }
 
   async function handleDeletePhoto() {
-    const confirmed = window.confirm(rt(locale, "Delete the saved photo for this book?"));
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: rt(locale, "Delete"),
+      message: rt(locale, "Delete the saved photo for this book?"),
+      title: rt(locale, "Delete photo"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;

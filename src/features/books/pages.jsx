@@ -11,6 +11,7 @@ import { buildBookCategoryOptions, formatBookCategoryLabel, getBookCategoryTagSt
 import { getCityDisplayName, normalizeCityQueryValue } from "../../shared/lib/cities";
 import { formatDateTimeReadable, formatEnumLabel } from "../../shared/lib/format";
 import { useInfiniteScroll } from "../../shared/lib/useInfiniteScroll";
+import { useConfirmDialog } from "../../shared/lib/useUnsavedChangesGuard";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
 import { DemoPrivacyNotice } from "../../shared/ui/DemoPrivacyNotice";
 import { CityField } from "../../shared/ui/CityField";
@@ -246,6 +247,7 @@ export function MyBookDetailsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const confirmAction = useConfirmDialog();
   const { bookId } = useParams();
   const [deletePending, setDeletePending] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -255,13 +257,17 @@ export function MyBookDetailsPage() {
 
   async function handleDelete() {
     const book = bookQuery.data;
-    const confirmed = window.confirm(
-      rtf(
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: rt(locale, "Delete"),
+      message: rtf(
         locale,
         'Delete "{name}" from your books? Any active exchange requests related to this book will be cancelled automatically.',
         { name: book.name }
-      )
-    );
+      ),
+      title: rt(locale, "Delete book"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;
@@ -423,6 +429,7 @@ export function EditBookPage() {
   const [photoPending, setPhotoPending] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [photoMessage, setPhotoMessage] = useState("");
+  const confirmAction = useConfirmDialog();
   const hasChanges = Object.keys(toUpdatePayload(form, initialForm)).length > 0;
 
   useEffect(() => {
@@ -472,7 +479,13 @@ export function EditBookPage() {
   }
 
   async function handleDeletePhoto() {
-    const confirmed = window.confirm(rt(locale, "Delete the saved photo for this book?"));
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: rt(locale, "Delete"),
+      message: rt(locale, "Delete the saved photo for this book?"),
+      title: rt(locale, "Delete photo"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;

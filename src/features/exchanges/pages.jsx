@@ -9,6 +9,7 @@ import { rt, rtf } from "../../shared/i18n/rawText";
 import { formatBookCategoryLabel, getBookCategoryTagStyle } from "../../shared/lib/bookCategory";
 import { getCityDisplayName } from "../../shared/lib/cities";
 import { formatEnumLabel } from "../../shared/lib/format";
+import { useConfirmDialog } from "../../shared/lib/useUnsavedChangesGuard";
 import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
 import { ArrowLeftIcon, GiftIcon, HistoryIcon, IncomingIcon, OutgoingIcon, RequestGiftIcon, SwapIcon } from "../../shared/ui/Icons";
 import { PageTitle } from "../../shared/ui/PageTitle";
@@ -235,6 +236,7 @@ export function RequestDetailsPage() {
   const { locale } = useLocale();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const confirmAction = useConfirmDialog();
   const { exchangeId } = useParams();
   const detailQuery = useExchangeDetails("request", exchangeId);
   const [pendingAction, setPendingAction] = useState(false);
@@ -252,7 +254,13 @@ export function RequestDetailsPage() {
 
   async function handleDecline() {
     const exchange = detailQuery.data;
-    const confirmed = window.confirm(rt(locale, "Decline this request?"));
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: rt(locale, "Decline request"),
+      message: rt(locale, "Decline this request?"),
+      title: rt(locale, "Decline request"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;
@@ -310,6 +318,7 @@ export function OfferDetailsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const confirmAction = useConfirmDialog();
   const { exchangeId } = useParams();
   const detailQuery = useExchangeDetails("offer", exchangeId);
   const [pendingAction, setPendingAction] = useState(null);
@@ -327,11 +336,16 @@ export function OfferDetailsPage() {
 
   async function handleAction(action) {
     const exchange = detailQuery.data;
-    const confirmed = window.confirm(
-      action === "approve"
-        ? rt(locale, "Accept this offer and automatically decline all other possible offers related to this book?")
-        : rt(locale, "Decline this offer?")
-    );
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: action === "approve" ? rt(locale, "Accept offer") : rt(locale, "Decline offer"),
+      message:
+        action === "approve"
+          ? rt(locale, "Accept this offer and automatically decline all other possible offers related to this book?")
+          : rt(locale, "Decline this offer?"),
+      title: action === "approve" ? rt(locale, "Accept offer") : rt(locale, "Decline offer"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;

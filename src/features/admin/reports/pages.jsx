@@ -7,6 +7,7 @@ import { apiRequest } from "../../../shared/api/http";
 import { useLocale } from "../../../shared/i18n/LocaleContext";
 import { rt } from "../../../shared/i18n/rawText";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
+import { useConfirmDialog } from "../../../shared/lib/useUnsavedChangesGuard";
 import { BookCover, UserAvatar } from "../../../shared/ui/Media";
 import { ArrowLeftIcon, CheckIcon, ExternalLinkIcon, FilterIcon, FlagIcon, SortDirectionIcon, UserIcon, XIcon } from "../../../shared/ui/Icons";
 import { PageTitle } from "../../../shared/ui/PageTitle";
@@ -247,6 +248,7 @@ export function AdminReportDetailsPage() {
   const { locale } = useLocale();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const confirmAction = useConfirmDialog();
   const { reportId } = useParams();
   const [pendingAction, setPendingAction] = useState(null);
   const [actionError, setActionError] = useState(null);
@@ -280,11 +282,16 @@ export function AdminReportDetailsPage() {
 
   async function handleAction(action) {
     const report = detailQuery.data;
-    const confirmed = window.confirm(
-      action === "resolve"
-        ? rt(locale, "Resolve this report and mark it as handled?")
-        : rt(locale, "Reject this report as not actionable?")
-    );
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: action === "resolve" ? rt(locale, "Resolve") : rt(locale, "Reject"),
+      message:
+        action === "resolve"
+          ? rt(locale, "Resolve this report and mark it as handled?")
+          : rt(locale, "Reject this report as not actionable?"),
+      title: action === "resolve" ? rt(locale, "Resolve report") : rt(locale, "Reject report"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;

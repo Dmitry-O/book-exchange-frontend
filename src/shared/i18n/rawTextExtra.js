@@ -8,6 +8,11 @@ export const EXTRA_RAW_TEXT = {
     en: "Account overview",
     de: "Kontoübersicht",
     ru: "Обзор аккаунта"
+  },,
+  "Accept offer": {
+    en: "Accept offer",
+    de: "Angebot annehmen",
+    ru: "Принять предложение"
   },
   "Add one of your own books first, then come back here to create a request.": {
     en: "Add one of your own books first, then come back here to create a request.",
@@ -304,6 +309,11 @@ export const EXTRA_RAW_TEXT = {
     de: "Gelöscht am {value}",
     ru: "Удалено: {value}"
   },
+  "Delete photo": {
+    en: "Delete photo",
+    de: "Foto löschen",
+    ru: "Удалить фото"
+  },,
   "Delete book": {
     en: "Delete book",
     de: "Buch löschen",
@@ -688,6 +698,11 @@ export const EXTRA_RAW_TEXT = {
     en: "Reject report",
     de: "Meldung ablehnen",
     ru: "Отклонить жалобу"
+  },,
+  "Reject": {
+    en: "Reject",
+    de: "Ablehnen",
+    ru: "Отклонить"
   },
   "Reject this report as not actionable?": {
     en: "Reject this report as not actionable?",
@@ -703,6 +718,11 @@ export const EXTRA_RAW_TEXT = {
     en: "Remove admin",
     de: "Admin entfernen",
     ru: "Убрать администратора"
+  },,
+  "Remove ban": {
+    en: "Remove ban",
+    de: "Sperre aufheben",
+    ru: "Снять блокировку"
   },
   "remove admin rights": {
     en: "remove admin rights",
@@ -803,6 +823,11 @@ export const EXTRA_RAW_TEXT = {
     en: "Resolve report",
     de: "Meldung abschließen",
     ru: "Обработать жалобу"
+  },,
+  "Resolve": {
+    en: "Resolve",
+    de: "Abschließen",
+    ru: "Обработать"
   },
   "Resolve this report and mark it as handled?": {
     en: "Resolve this report and mark it as handled?",
@@ -818,6 +843,11 @@ export const EXTRA_RAW_TEXT = {
     en: "Restore book",
     de: "Buch wiederherstellen",
     ru: "Восстановить книгу"
+  },,
+  "Restore": {
+    en: "Restore",
+    de: "Wiederherstellen",
+    ru: "Восстановить"
   },
   "Restore this deleted book?": {
     en: "Restore this deleted book?",
