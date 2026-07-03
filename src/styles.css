@@ -6879,13 +6879,15 @@ select.field-control,
 
 .choice-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
 }
 
 .choice-card {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
+  min-height: 200px;
   padding: 18px;
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -6895,11 +6897,29 @@ select.field-control,
 }
 
 .choice-card strong {
+  display: block;
   font-size: 1rem;
 }
 
 .choice-card span {
   color: var(--text-soft);
+}
+
+.report-choice-copy {
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.choice-card .report-choice-title {
+  color: var(--text);
+  font-weight: 400;
+}
+
+.report-choice-card-user .media-frame-avatar,
+.report-choice-card-user .media-avatar-fallback {
+  width: 68px;
+  height: 68px;
 }
 
 .choice-card .inline-message {
