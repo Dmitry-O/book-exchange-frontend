@@ -38,6 +38,7 @@ import { AdminReportDetailsPage, AdminReportsPage } from "../features/admin/repo
 import { AdminUserDetailsPage, AdminUsersPage } from "../features/admin/users/pages";
 import { AppLayout, PublicLayout } from "../features/shell/layouts";
 import { AboutPage } from "../features/shell/AboutPage";
+import { DataNoticePage } from "../features/shell/DataNoticePage";
 import { HomePage } from "../features/shell/HomePage";
 import { MyReportsPage } from "../features/profile/MyReportsPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
@@ -65,6 +66,7 @@ export function AppRouter() {
       <Route element={<PublicLayout />}>
         <Route index element={<HomePage />} />
         <Route path="about" element={<AboutPage />} />
+        <Route path="data-notice" element={<DataNoticePage />} />
         <Route path="demo-inbox" element={<DemoEmailInboxRoute />} />
         <Route path="catalog" element={<CatalogPage />} />
         <Route path="book/:bookId" element={<PublicBookPage />} />

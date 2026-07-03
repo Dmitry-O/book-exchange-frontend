@@ -26,6 +26,7 @@ import {
 import { buildQueryString, formatDateTimeReadable, formatEnumLabel } from "../../../shared/lib/format";
 import { useInfiniteScroll } from "../../../shared/lib/useInfiniteScroll";
 import { ImageUploadField } from "../../../shared/ui/ImageUploadField";
+import { DemoPrivacyNotice } from "../../../shared/ui/DemoPrivacyNotice";
 import { CityField } from "../../../shared/ui/CityField";
 import { BookCover, UserIdentityInline } from "../../../shared/ui/Media";
 import {
@@ -1089,6 +1090,7 @@ export function AdminBookEditPage() {
                   </label>
                   <label className="field editor-field-span-full editor-textarea-field">
                     <span>{rt(locale, "Contact details")}</span>
+                    <DemoPrivacyNotice compact className="field-demo-warning" />
                     <textarea
                       className="field-control"
                       onChange={(event) =>

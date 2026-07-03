@@ -24,6 +24,7 @@ import {
   getUnreadDemoEmailCount
 } from "../demo-email-sandbox/inboxState";
 import { UserAvatar } from "../../shared/ui/Media";
+import { DemoPrivacyNotice } from "../../shared/ui/DemoPrivacyNotice";
 import {
   ArrowUpIcon,
   BellIcon,
@@ -34,6 +35,7 @@ import {
   HomeIcon,
   InfoIcon,
   MenuIcon,
+  ShieldIcon,
   SignInIcon,
   SignOutIcon,
   SwapIcon,
@@ -124,6 +126,7 @@ export function PublicLayout() {
         availableLocales={metadataQuery.data?.locales}
         demoEmailSandboxEnabled={demoEmailSandboxEnabled}
       />
+      <SiteDemoBanner />
       <main className="page-container">
         <Outlet />
       </main>
@@ -144,6 +147,7 @@ export function AppLayout() {
         availableLocales={metadataQuery.data?.locales}
         demoEmailSandboxEnabled={demoEmailSandboxEnabled}
       />
+      <SiteDemoBanner />
       <main className="page-container page-container-app">
         <Outlet />
       </main>
@@ -163,6 +167,7 @@ function SiteFooter() {
       <div className="site-footer-copy">
         <strong>{text.title}</strong>
         <p>{text.description}</p>
+        <DemoPrivacyNotice compact includeReset className="site-footer-demo-notice" />
         <span>{text.stack}</span>
       </div>
 
@@ -193,8 +198,28 @@ function SiteFooter() {
         </nav>
 
         <ProjectResourceLinks compact />
+        <Link className="site-footer-data-notice-link" to="/data-notice">
+          <ShieldIcon />
+          <span>{t("common.dataNotice")}</span>
+        </Link>
       </div>
     </footer>
+  );
+}
+
+function SiteDemoBanner() {
+  const { t } = useLocale();
+
+  return (
+    <div className="site-demo-banner">
+      <div className="site-demo-banner-inner">
+        <DemoPrivacyNotice compact includeReset className="site-demo-banner-notice">
+          <Link className="site-demo-banner-link" to="/data-notice">
+            {t("common.dataNotice")}
+          </Link>
+        </DemoPrivacyNotice>
+      </div>
+    </div>
   );
 }
 
