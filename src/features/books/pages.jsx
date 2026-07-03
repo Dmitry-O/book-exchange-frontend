@@ -25,6 +25,10 @@ import { PageTitle } from "../../shared/ui/PageTitle";
 import { Pagination } from "../../shared/ui/Pagination";
 import { PrettySelect } from "../../shared/ui/PrettySelect";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
+import {
+  buildDemoBookPresetOptions,
+  findDemoBookPreset
+} from "./demoBookPresets";
 
 const emptyBookForm = {
   name: "",
@@ -57,13 +61,22 @@ const infiniteBooksText = {
 const bookFormText = {
   de: {
     cityRequired: "Wähle eine Stadt aus der Liste aus.",
+    demoPresetError: "Die Demo-Buchdaten wurden eingefügt, aber das Cover konnte nicht geladen werden.",
+    demoPresetHint: "Für die Demo kannst du ein vorbereitetes Buch einfügen oder eigene Testdaten eingeben.",
+    demoPresetLabel: "Demo-Vorlage",
     fillRequired: "Fülle zuerst alle Pflichtfelder aus."
   },
   en: {
+    demoPresetError: "The demo book data was inserted, but the cover could not be loaded.",
+    demoPresetHint: "For the demo, pick a prepared book or enter your own test data.",
+    demoPresetLabel: "Demo preset",
     cityRequired: "Choose a city from the list.",
     fillRequired: "Fill in all required fields first."
   },
   ru: {
+    demoPresetError: "Данные демо-книги подставлены, но обложку не удалось загрузить.",
+    demoPresetHint: "Для демо можно выбрать готовую книгу или ввести свои тестовые данные.",
+    demoPresetLabel: "Демо-книга",
     cityRequired: "Выберите город из списка.",
     fillRequired: "Сначала заполните все обязательные поля."
   }
@@ -724,26 +737,75 @@ function BookForm({
   const navigate = useNavigate();
   const confirmNavigation = useUnsavedChangesPrompt();
   const text = bookFormText[locale] ?? bookFormText.en;
+  const [demoPresetId, setDemoPresetId] = useState("");
+  const [demoPresetPending, setDemoPresetPending] = useState(false);
+  const [demoPresetError, setDemoPresetError] = useState("");
+  const demoBookPresetsEnabled = isDemoBookPresetFeatureEnabled(metadataQuery.data);
   const categoryOptions = buildBookCategoryOptions(
     metadataQuery.data?.bookCategories ?? [],
     locale,
     rt(locale, "Select category"),
     form.category
   );
+  const demoPresetOptions = buildDemoBookPresetOptions(locale);
   const createRequiredComplete = mode !== "create" || isRequiredBookFormComplete(form);
   const disabledReason = !createRequiredComplete ? text.fillRequired : "";
   const canSave = canSubmit && createRequiredComplete;
   const canCancel = mode !== "edit" || canSubmit;
 
+  async function handleDemoPresetChange(presetId) {
+    setDemoPresetId(presetId);
+    setDemoPresetError("");
+    onPhotoSelectionPendingChange?.(false);
+
+    if (!presetId) {
+      onChange(() => ({ ...emptyBookForm }));
+      return;
+    }
+
+    const preset = findDemoBookPreset(presetId);
+
+    if (!preset) {
+      return;
+    }
+
+    setDemoPresetPending(true);
+
+    try {
+      const photoBase64 = await loadImageAsDataUrl(preset.coverPath);
+      onChange(() => demoBookPresetToForm(preset, photoBase64));
+    } catch {
+      setDemoPresetError(text.demoPresetError);
+      onChange(() => demoBookPresetToForm(preset, null));
+    } finally {
+      setDemoPresetPending(false);
+    }
+  }
+
   return (
     <section className="section-card">
       <form className="content-stack" onSubmit={onSubmit}>
-        <div className="section-card-header">
+        <div className="section-card-header book-form-header">
           <div className="section-card-header-copy">
             <h2>{mode === "create" ? rt(locale, "Add a book") : rt(locale, "Edit book")}</h2>
             <p>{rt(locale, "Update the information your readers should see in the catalog.")}</p>
           </div>
-          <div className="section-card-toolbar">
+          <div className="section-card-toolbar book-form-toolbar">
+            {demoBookPresetsEnabled ? (
+              <div className="book-demo-preset-picker">
+                <span>{text.demoPresetLabel}</span>
+                <PrettySelect
+                  ariaLabel={text.demoPresetLabel}
+                  className="book-demo-preset-select"
+                  disabled={pending || demoPresetPending}
+                  onChange={(value) => void handleDemoPresetChange(value)}
+                  options={demoPresetOptions}
+                  value={demoPresetId}
+                />
+                <small>{demoPresetPending ? rt(locale, "Loading...") : text.demoPresetHint}</small>
+                {demoPresetError ? <small className="field-feedback-error">{demoPresetError}</small> : null}
+              </div>
+            ) : null}
             <span className="button-tooltip-wrapper" title={!canSave ? disabledReason : undefined}>
               <button className="button" disabled={pending || !canSave} type="submit">
                 {pending ? rt(locale, "Saving...") : submitLabel}
@@ -898,6 +960,51 @@ function SelectField({ label, onChange, options, required = false, value }) {
       />
     </label>
   );
+}
+
+function isDemoBookPresetFeatureEnabled(metadata) {
+  const features = metadata?.features ?? {};
+
+  return (
+    features.demoBookPresetsEnabled === true ||
+    features.demoAccountsEnabled === true ||
+    features.demoAccessEnabled === true ||
+    features.demoModeEnabled === true ||
+    features.demoEmailSandboxEnabled === true
+  );
+}
+
+function demoBookPresetToForm(preset, photoBase64) {
+  return {
+    ...emptyBookForm,
+    name: preset.name,
+    description: preset.description,
+    author: preset.author,
+    category: preset.category,
+    publicationYear: preset.publicationYear,
+    photoBase64,
+    photoUrl: "",
+    city: preset.city,
+    contactDetails: preset.contactDetails,
+    isGift: preset.isGift
+  };
+}
+
+async function loadImageAsDataUrl(path) {
+  const response = await fetch(path);
+
+  if (!response.ok) {
+    throw new Error(`Image could not be loaded: ${path}`);
+  }
+
+  const blob = await response.blob();
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(reader.error));
+    reader.readAsDataURL(blob);
+  });
 }
 
 function formatRequiredLabel(label, required) {
