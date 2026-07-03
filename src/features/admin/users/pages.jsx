@@ -400,6 +400,7 @@ export function AdminUserDetailsPage() {
   const [banError, setBanError] = useState("");
   const text = adminUsersText[locale] ?? adminUsersText.en;
   const backTo = location.state?.backTo || "/admin/users";
+  const banDateTimeMin = getDatetimeLocalNowValue();
 
   const detailQuery = useQuery({
     queryKey: ["admin-user", String(userId)],
@@ -733,6 +734,7 @@ export function AdminUserDetailsPage() {
                     bannedUntil: event.target.value
                   }))
                 }
+                min={banDateTimeMin}
                 type="datetime-local"
                 value={banForm.bannedUntil}
               />
@@ -1002,6 +1004,10 @@ function toDatetimeLocalValue(value) {
   return localDate.toISOString().slice(0, 16);
 }
 
+function getDatetimeLocalNowValue() {
+  return toDatetimeLocalValue(new Date().toISOString());
+}
+
 function validateBanForm(locale, form) {
   const reason = form.banReason.trim();
 
@@ -1011,6 +1017,14 @@ function validateBanForm(locale, form) {
 
   if (!form.bannedPermanently && !form.bannedUntil) {
     return rt(locale, "Choose a ban end date or enable permanent ban.");
+  }
+
+  if (!form.bannedPermanently && form.bannedUntil) {
+    const bannedUntil = new Date(form.bannedUntil).getTime();
+
+    if (!Number.isFinite(bannedUntil) || bannedUntil <= Date.now()) {
+      return rt(locale, "Choose a future ban end date.");
+    }
   }
 
   return null;

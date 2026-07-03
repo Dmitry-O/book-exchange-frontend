@@ -269,6 +269,11 @@ export const EXTRA_RAW_TEXT = {
     de: "Wähle ein Sperr-Enddatum oder aktiviere die permanente Sperre.",
     ru: "Выберите дату окончания блокировки или включите постоянную блокировку."
   },
+  "Choose a future ban end date.": {
+    en: "Choose a future ban end date.",
+    de: "Wähle ein zukünftiges Sperr-Enddatum.",
+    ru: "Выберите будущую дату окончания блокировки."
+  },
   "Choose whether the ban is temporary or permanent and explain the reason.": {
     en: "Choose whether the ban is temporary or permanent and explain the reason.",
     de: "Wähle, ob die Sperre temporär oder dauerhaft ist, und erkläre den Grund.",
