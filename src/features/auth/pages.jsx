@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useMetadataQuery } from "../../shared/api/hooks";
 import { activateDemoEmailSandboxForEmail, apiRequest } from "../../shared/api/http";
@@ -170,6 +171,24 @@ const DEMO_DATA_POLICY_COPY = {
       "Я использую в этой демо-среде только тестовые данные и ознакомился с",
     labelLink: "политикой защиты данных",
     labelEnd: "."
+  }
+};
+
+const DEMO_ACCOUNT_PICKER_COPY = {
+  de: {
+    hint: "Wähle ein vorbereitetes Testkonto oder gib eigene Demo-Zugangsdaten ein.",
+    label: "Demo-Konto",
+    placeholder: "Demo-Konto auswählen"
+  },
+  en: {
+    hint: "Choose a prepared test account or enter your own demo credentials.",
+    label: "Demo account",
+    placeholder: "Choose a demo account"
+  },
+  ru: {
+    hint: "Выберите готовый тестовый аккаунт или введите свои demo-данные.",
+    label: "Демо-аккаунт",
+    placeholder: "Выберите демо-аккаунт"
   }
 };
 
@@ -348,6 +367,7 @@ export function LoginPage() {
   const location = useLocation();
   const { locale, t } = useLocale();
   const { login, isAuthenticated } = useAuth();
+  const metadataQuery = useMetadataQuery();
   const [postLogoutRedirect] = useState(() => hasPostLogoutRedirect());
   const [form, setForm] = useState({
     email: "",
@@ -359,6 +379,31 @@ export function LoginPage() {
   });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
+  const demoAccountsEnabled = metadataQuery.isSuccess;
+  const demoAccountsQuery = useQuery({
+    queryKey: ["demo-accounts"],
+    enabled: demoAccountsEnabled,
+    staleTime: 60_000,
+    retry: false,
+    queryFn: async () => {
+      const response = await apiRequest("/demo/accounts", { locale });
+
+      return Array.isArray(response.data) ? response.data : [];
+    }
+  });
+  const demoAccounts =
+    demoAccountsQuery.error || !Array.isArray(demoAccountsQuery.data)
+      ? []
+      : demoAccountsQuery.data;
+  const demoAccountPickerCopy = DEMO_ACCOUNT_PICKER_COPY[locale] ?? DEMO_ACCOUNT_PICKER_COPY.en;
+  const demoAccountOptions = [
+    { label: demoAccountPickerCopy.placeholder, value: "" },
+    ...demoAccounts.map((account) => ({
+      label: formatDemoAccountLabel(account),
+      value: account.email
+    }))
+  ];
+  const showDemoAccountPicker = demoAccounts.length > 0;
 
   const nextPath = postLogoutRedirect
     ? "/app/profile"
@@ -403,6 +448,24 @@ export function LoginPage() {
     }
   }
 
+  function handleDemoAccountChange(email) {
+    const selectedAccount = demoAccounts.find((account) => account.email === email);
+
+    if (!selectedAccount) {
+      setForm({ email: "", password: "" });
+      setFieldErrors({ email: "", password: "" });
+      setError(null);
+      return;
+    }
+
+    setForm({
+      email: selectedAccount.email ?? "",
+      password: selectedAccount.password ?? ""
+    });
+    setFieldErrors({ email: "", password: "" });
+    setError(null);
+  }
+
   const helperCards = buildLoginHelpers(t, error, form.email);
 
   return (
@@ -432,6 +495,18 @@ export function LoginPage() {
       }
     >
       <form className="content-stack auth-form-shell auth-form-shell-centered auth-primary-form" onSubmit={handleSubmit}>
+        {showDemoAccountPicker ? (
+          <label className="field auth-demo-account-picker">
+            <span>{demoAccountPickerCopy.label}</span>
+            <PrettySelect
+              ariaLabel={demoAccountPickerCopy.label}
+              onChange={handleDemoAccountChange}
+              options={demoAccountOptions}
+              value={demoAccounts.some((account) => account.email === form.email) ? form.email : ""}
+            />
+            <span className="field-hint">{demoAccountPickerCopy.hint}</span>
+          </label>
+        ) : null}
         <Field
           error={fieldErrors.email}
           label={t("auth.email")}
@@ -1544,6 +1619,10 @@ function AuthHelperCard({ title, description, actions = [], children }) {
       {children ?? <ActionLinksRow actions={actions} />}
     </section>
   );
+}
+
+function formatDemoAccountLabel(account) {
+  return account.email || account.label || account.nickname || "";
 }
 
 function DemoDataPolicyCheckbox({ checked, error = "", locale, onChange }) {
