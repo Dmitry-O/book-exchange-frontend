@@ -329,6 +329,11 @@ export const EXTRA_RAW_TEXT = {
     de: "Benutzer löschen",
     ru: "Удалить пользователя"
   },
+  "Deleted user": {
+    en: "Deleted user",
+    de: "Gelöschter Nutzer",
+    ru: "Удалённый пользователь"
+  },
   "Deleted": {
     en: "Deleted",
     de: "Gelöscht",
@@ -428,6 +433,16 @@ export const EXTRA_RAW_TEXT = {
     en: "Loading exchange history details",
     de: "Details des Tauschverlaufs werden geladen",
     ru: "Загрузка деталей истории обмена"
+  },
+  "Loading more exchanges...": {
+    en: "Loading more exchanges...",
+    de: "Weitere Tausche werden geladen...",
+    ru: "Подгружаем ещё обмены..."
+  },
+  "All matching exchanges are loaded": {
+    en: "All matching exchanges are loaded",
+    de: "Alle passenden Tausche sind geladen",
+    ru: "Все подходящие обмены уже загружены"
   },
   "Exchange history item": {
     en: "Exchange history item",
