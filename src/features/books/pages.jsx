@@ -11,7 +11,11 @@ import { buildBookCategoryOptions, formatBookCategoryLabel, getBookCategoryTagSt
 import { getCityDisplayName, normalizeCityQueryValue } from "../../shared/lib/cities";
 import { formatDateTimeReadable, formatEnumLabel } from "../../shared/lib/format";
 import { useInfiniteScroll } from "../../shared/lib/useInfiniteScroll";
-import { useConfirmDialog } from "../../shared/lib/useUnsavedChangesGuard";
+import {
+  useConfirmDialog,
+  useUnsavedChangesGuard,
+  useUnsavedChangesPrompt
+} from "../../shared/lib/useUnsavedChangesGuard";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
 import { DemoPrivacyNotice } from "../../shared/ui/DemoPrivacyNotice";
 import { CityField } from "../../shared/ui/CityField";
@@ -185,8 +189,12 @@ export function CreateBookPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState(emptyBookForm);
+  const [photoSelectionPending, setPhotoSelectionPending] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
+  const hasUnsavedChanges = isCreateBookFormDirty(form) || photoSelectionPending;
+
+  useUnsavedChangesGuard(hasUnsavedChanges && !pending);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -233,6 +241,7 @@ export function CreateBookPage() {
         form={form}
         mode="create"
         onChange={setForm}
+        onPhotoSelectionPendingChange={setPhotoSelectionPending}
         onSubmit={handleSubmit}
         pending={pending}
         submitLabel={rt(locale, "Create book")}
@@ -427,10 +436,13 @@ export function EditBookPage() {
   const [error, setError] = useState(null);
   const [infoMessage, setInfoMessage] = useState("");
   const [photoPending, setPhotoPending] = useState(false);
+  const [photoSelectionPending, setPhotoSelectionPending] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [photoMessage, setPhotoMessage] = useState("");
   const confirmAction = useConfirmDialog();
   const hasChanges = Object.keys(toUpdatePayload(form, initialForm)).length > 0;
+
+  useUnsavedChangesGuard((hasChanges || photoSelectionPending) && !pending && !photoPending);
 
   useEffect(() => {
     if (!bookQuery.data) {
@@ -561,6 +573,7 @@ export function EditBookPage() {
         mode="edit"
         onChange={setForm}
         onDeletePhoto={handleDeletePhoto}
+        onPhotoSelectionPendingChange={setPhotoSelectionPending}
         onSubmit={handleSubmit}
         pending={pending}
         photoError={photoError}
@@ -674,6 +687,21 @@ function isRequiredBookFormComplete(form) {
   );
 }
 
+function isCreateBookFormDirty(form) {
+  return Boolean(
+    form.name?.trim() ||
+      form.description?.trim() ||
+      form.author?.trim() ||
+      form.category ||
+      String(form.publicationYear ?? "").trim() ||
+      form.photoBase64 ||
+      form.photoUrl ||
+      form.city?.trim() ||
+      form.contactDetails?.trim() ||
+      form.isGift
+  );
+}
+
 function BookForm({
   canSubmit = true,
   cancelTo = "/app/my-books",
@@ -683,6 +711,7 @@ function BookForm({
   mode,
   onChange,
   onDeletePhoto,
+  onPhotoSelectionPendingChange,
   onSubmit,
   pending,
   photoError,
@@ -693,6 +722,7 @@ function BookForm({
   const metadataQuery = useMetadataQuery();
   const { locale } = useLocale();
   const navigate = useNavigate();
+  const confirmNavigation = useUnsavedChangesPrompt();
   const text = bookFormText[locale] ?? bookFormText.en;
   const categoryOptions = buildBookCategoryOptions(
     metadataQuery.data?.bookCategories ?? [],
@@ -722,7 +752,15 @@ function BookForm({
             <button
               className="button button-secondary"
               disabled={pending || !canCancel}
-              onClick={() => navigate(cancelTo)}
+              onClick={() => {
+                void confirmNavigation().then((confirmed) => {
+                  if (!confirmed) {
+                    return;
+                  }
+
+                  navigate(cancelTo);
+                });
+              }}
               type="button"
             >
               {rt(locale, "Cancel")}
@@ -740,6 +778,7 @@ function BookForm({
               message={photoMessage}
               onChange={(value) => onChange((current) => ({ ...current, photoBase64: value }))}
               onRemove={onDeletePhoto}
+              onSelectionPendingChange={onPhotoSelectionPendingChange}
               photoBase64={form.photoBase64}
               photoUrl={form.photoUrl}
               removePending={photoPending}

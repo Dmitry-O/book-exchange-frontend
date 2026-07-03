@@ -4,7 +4,11 @@ import { useAuth } from "../../shared/auth/AuthContext";
 import { useLocale } from "../../shared/i18n/LocaleContext";
 import { rt } from "../../shared/i18n/rawText";
 import { trimFormPayload } from "../../shared/lib/format";
-import { useConfirmDialog } from "../../shared/lib/useUnsavedChangesGuard";
+import {
+  useConfirmDialog,
+  useUnsavedChangesGuard,
+  useUnsavedChangesPrompt
+} from "../../shared/lib/useUnsavedChangesGuard";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
 import { ArrowLeftIcon, ShieldIcon, UserIcon } from "../../shared/ui/Icons";
 import { PageTitle } from "../../shared/ui/PageTitle";
@@ -16,6 +20,7 @@ export function ProfilePage() {
   const { locale, t } = useLocale();
   const { deleteProfilePhoto, isLoadingUser, refetchUser, updateProfile, user, userError } = useAuth();
   const confirmAction = useConfirmDialog();
+  const confirmNavigation = useUnsavedChangesPrompt();
   const [form, setForm] = useState({
     nickname: "",
     photoUrl: ""
@@ -25,6 +30,7 @@ export function ProfilePage() {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [photoPending, setPhotoPending] = useState(false);
+  const [photoSelectionPending, setPhotoSelectionPending] = useState(false);
   const privacyText =
     locale === "ru"
       ? "Мы никогда не передаём ваши данные третьим лицам."
@@ -33,6 +39,12 @@ export function ProfilePage() {
         : "We never share your data with third parties.";
   const [photoError, setPhotoError] = useState("");
   const [photoMessage, setPhotoMessage] = useState("");
+  const hasUnsavedProfileChanges =
+    Boolean(user) &&
+    (String(form.nickname ?? "").trim() !== String(user.nickname ?? "").trim() ||
+      photoSelectionPending);
+
+  useUnsavedChangesGuard(hasUnsavedProfileChanges && !pending && !photoPending);
 
   useEffect(() => {
     if (!user) {
@@ -165,7 +177,15 @@ export function ProfilePage() {
         <button
           aria-label={locale === "ru" ? "Назад" : locale === "de" ? "Zurück" : "Back"}
           className="icon-button profile-back-button"
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            void confirmNavigation().then((confirmed) => {
+              if (!confirmed) {
+                return;
+              }
+
+              navigate(-1);
+            });
+          }}
           type="button"
         >
           <ArrowLeftIcon />
@@ -194,6 +214,7 @@ export function ProfilePage() {
               message={photoMessage}
               onChange={handlePhotoUpload}
               onRemove={handleDeletePhoto}
+              onSelectionPendingChange={setPhotoSelectionPending}
               photoBase64={null}
               photoUrl={form.photoUrl}
               removePending={photoPending}

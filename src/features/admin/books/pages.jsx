@@ -25,7 +25,7 @@ import {
 } from "../../../shared/lib/bookSearchUi";
 import { buildQueryString, formatDateTimeReadable, formatEnumLabel } from "../../../shared/lib/format";
 import { useInfiniteScroll } from "../../../shared/lib/useInfiniteScroll";
-import { useConfirmDialog } from "../../../shared/lib/useUnsavedChangesGuard";
+import { useConfirmDialog, useUnsavedChangesGuard } from "../../../shared/lib/useUnsavedChangesGuard";
 import { ImageUploadField } from "../../../shared/ui/ImageUploadField";
 import { DemoPrivacyNotice } from "../../../shared/ui/DemoPrivacyNotice";
 import { CityField } from "../../../shared/ui/CityField";
@@ -879,6 +879,7 @@ export function AdminBookEditPage() {
   const [pendingAction, setPendingAction] = useState(null);
   const [editError, setEditError] = useState(null);
   const [photoPending, setPhotoPending] = useState(false);
+  const [photoSelectionPending, setPhotoSelectionPending] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [photoMessage, setPhotoMessage] = useState("");
 
@@ -887,6 +888,12 @@ export function AdminBookEditPage() {
     enabled: Boolean(bookId),
     queryFn: () => fetchAdminBook(bookId)
   });
+  const hasChanges = Object.keys(toUpdatePayload(form, initialForm)).length > 0;
+  const editLocked = Boolean(detailQuery.data?.editLocked);
+
+  useUnsavedChangesGuard(
+    (hasChanges || photoSelectionPending) && pendingAction === null && !photoPending && !editLocked
+  );
 
   useEffect(() => {
     if (!detailQuery.data) {
@@ -998,8 +1005,6 @@ export function AdminBookEditPage() {
     getBookCategoryUiLabel("select", locale),
     form.category
   );
-  const hasChanges = Object.keys(toUpdatePayload(form, initialForm)).length > 0;
-  const editLocked = Boolean(detailQuery.data?.editLocked);
   const editLockedReason = rt(
     locale,
     "This book cannot be edited because it already participates in an exchange or is in exchange history."
@@ -1049,6 +1054,7 @@ export function AdminBookEditPage() {
                 message={photoMessage}
                 onChange={(value) => setForm((current) => ({ ...current, photoBase64: value }))}
                 onRemove={handleDeletePhoto}
+                onSelectionPendingChange={setPhotoSelectionPending}
                 photoBase64={form.photoBase64}
                 photoUrl={form.photoUrl}
                 removePending={photoPending}
