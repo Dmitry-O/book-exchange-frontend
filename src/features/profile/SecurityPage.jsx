@@ -6,6 +6,8 @@ import {
   getPasswordRequirements
 } from "../../shared/auth/passwordFeedback";
 import { useLocale } from "../../shared/i18n/LocaleContext";
+import { rt } from "../../shared/i18n/rawText";
+import { useConfirmDialog } from "../../shared/lib/useUnsavedChangesGuard";
 import {
   AlertTriangleIcon,
   LockIcon,
@@ -53,6 +55,7 @@ export function SecuritySettingsPanel() {
   const navigate = useNavigate();
   const { locale, t } = useLocale();
   const { deleteOwnAccount, changePassword, logout, user } = useAuth();
+  const confirmAction = useConfirmDialog();
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -128,7 +131,13 @@ export function SecuritySettingsPanel() {
   }
 
   async function handleDeleteAccount() {
-    const confirmed = window.confirm(t("security.deleteConfirm"));
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: t("security.deleteAccount"),
+      message: t("security.deleteConfirm"),
+      title: t("security.deleteAccount"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;

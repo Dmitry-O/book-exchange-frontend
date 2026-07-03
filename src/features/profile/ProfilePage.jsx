@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../shared/auth/AuthContext";
 import { useLocale } from "../../shared/i18n/LocaleContext";
+import { rt } from "../../shared/i18n/rawText";
 import { trimFormPayload } from "../../shared/lib/format";
+import { useConfirmDialog } from "../../shared/lib/useUnsavedChangesGuard";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
 import { ArrowLeftIcon, ShieldIcon, UserIcon } from "../../shared/ui/Icons";
 import { PageTitle } from "../../shared/ui/PageTitle";
@@ -13,6 +15,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const { locale, t } = useLocale();
   const { deleteProfilePhoto, isLoadingUser, refetchUser, updateProfile, user, userError } = useAuth();
+  const confirmAction = useConfirmDialog();
   const [form, setForm] = useState({
     nickname: "",
     photoUrl: ""
@@ -120,7 +123,13 @@ export function ProfilePage() {
   }
 
   async function handleDeletePhoto() {
-    const confirmed = window.confirm(t("profile.deletePhotoConfirm"));
+    const confirmed = await confirmAction({
+      cancelLabel: rt(locale, "Cancel"),
+      confirmLabel: rt(locale, "Delete"),
+      message: t("profile.deletePhotoConfirm"),
+      title: rt(locale, "Delete photo"),
+      variant: "warning"
+    });
 
     if (!confirmed) {
       return;
