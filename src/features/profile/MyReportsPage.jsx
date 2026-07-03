@@ -175,7 +175,7 @@ export function MyReportsPage() {
 
                 <div className="report-comment-field">
                   <span>{text.commentLabel}</span>
-                  <div className="field-control report-comment-value">
+                  <div className="report-comment-value">
                     {report.comment || text.noComment}
                   </div>
                 </div>
