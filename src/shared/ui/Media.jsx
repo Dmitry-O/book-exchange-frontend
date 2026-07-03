@@ -119,7 +119,7 @@ function MediaFrame({
     };
   }, [detectLegacyMockImage, shape, src]);
 
-  if (!src && shape === "avatar") {
+  if (!effectiveSrc && shape === "avatar") {
     return (
       <div aria-label={alt} className={avatarFallbackClasses}>
         <strong>{label}</strong>
