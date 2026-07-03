@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { DEFAULT_LIST_PAGE_SIZE } from "../../../shared/api/config";
 import { useMetadataQuery } from "../../../shared/api/hooks";
@@ -9,6 +9,7 @@ import { rt } from "../../../shared/i18n/rawText";
 import { formatBookCategoryLabel, getBookCategoryTagStyle } from "../../../shared/lib/bookCategory";
 import { getCityDisplayName } from "../../../shared/lib/cities";
 import { buildQueryString, formatDateTime, formatEnumLabel } from "../../../shared/lib/format";
+import { useInfiniteScroll } from "../../../shared/lib/useInfiniteScroll";
 import { BookCover, UserIdentityInline } from "../../../shared/ui/Media";
 import {
   ArrowLeftIcon,
@@ -22,7 +23,6 @@ import {
   XIcon
 } from "../../../shared/ui/Icons";
 import { PageTitle } from "../../../shared/ui/PageTitle";
-import { Pagination } from "../../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../../shared/ui/StateBlocks";
 
 const defaultFilters = {
@@ -87,7 +87,6 @@ const adminExchangeText = {
 
 export function AdminExchangesPage() {
   const metadataQuery = useMetadataQuery();
-  const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState(defaultFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const filtersRef = useRef(null);
@@ -116,22 +115,24 @@ export function AdminExchangesPage() {
     };
   }, []);
 
-  const exchangesQuery = useQuery({
-    queryKey: ["admin-exchanges", pageIndex, filters],
-    queryFn: async () => {
+  const exchangesQuery = useInfiniteQuery({
+    queryKey: ["admin-exchanges", filters],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
       const query = buildQueryString({
-        pageIndex,
+        pageIndex: pageParam,
         pageSize: DEFAULT_LIST_PAGE_SIZE,
         exchangeStatuses: filters.exchangeStatuses
       });
       const response = await apiRequest(`/admin/exchanges?${query}`, { auth: true });
 
       return response.data;
-    }
+    },
+    getNextPageParam: (lastPage, pages) =>
+      pages.length < (lastPage?.totalPages ?? 0) ? pages.length : undefined
   });
 
   function toggleStatus(status) {
-    setPageIndex(0);
     setFilters((current) => ({
       ...current,
       exchangeStatuses: current.exchangeStatuses.includes(status)
@@ -140,7 +141,17 @@ export function AdminExchangesPage() {
     }));
   }
 
-  const exchanges = exchangesQuery.data?.content ?? [];
+  const exchanges = useMemo(
+    () => (exchangesQuery.data?.pages ?? []).flatMap((page) => page.content ?? []),
+    [exchangesQuery.data?.pages]
+  );
+  const totalElements = exchangesQuery.data?.pages?.[0]?.totalElements ?? 0;
+  const loadMoreRef = useInfiniteScroll({
+    enabled: !exchangesQuery.isPending && !exchangesQuery.error,
+    hasNextPage: exchangesQuery.hasNextPage,
+    isFetchingNextPage: exchangesQuery.isFetchingNextPage,
+    onLoadMore: () => void exchangesQuery.fetchNextPage()
+  });
 
   return (
     <section className="content-stack">
@@ -160,7 +171,7 @@ export function AdminExchangesPage() {
 
       {!exchangesQuery.isPending && !exchangesQuery.error ? (
         <div className="catalog-results-toolbar admin-exchange-results-toolbar">
-          <p className="catalog-results-count">{text.exchangeFound}: {exchangesQuery.data?.totalElements ?? 0}</p>
+          <p className="catalog-results-count">{text.exchangeFound}: {totalElements}</p>
           <div className="admin-filter-toolbar-actions">
             <div className="admin-filter-dropdown-wrap" ref={filtersRef}>
               <button
@@ -203,19 +214,21 @@ export function AdminExchangesPage() {
       ) : null}
 
       {exchanges.length > 0 ? (
-        <section className="admin-exchange-grid">
-          {exchanges.map((exchange) => (
-            <AdminExchangeCard exchange={exchange} key={exchange.id} locale={locale} text={text} />
-          ))}
-        </section>
-      ) : null}
+        <>
+          <section className="admin-exchange-grid">
+            {exchanges.map((exchange) => (
+              <AdminExchangeCard exchange={exchange} key={exchange.id} locale={locale} text={text} />
+            ))}
+          </section>
 
-      {!exchangesQuery.isPending && !exchangesQuery.error && (exchangesQuery.data?.totalPages ?? 0) > 1 ? (
-        <Pagination
-          onChange={setPageIndex}
-          page={pageIndex}
-          totalPages={exchangesQuery.data.totalPages}
-        />
+          <div className="infinite-scroll-status" ref={loadMoreRef}>
+            {exchangesQuery.isFetchingNextPage
+              ? rt(locale, "Loading more exchanges...")
+              : exchangesQuery.hasNextPage
+                ? ""
+                : rt(locale, "All matching exchanges are loaded")}
+          </div>
+        </>
       ) : null}
     </section>
   );
@@ -248,8 +261,20 @@ export function AdminExchangeDetailsPage() {
   }
 
   const exchange = detailQuery.data;
-  const acceptedName = renderUserName(exchange.receiverUser, locale);
-  const declinedName = renderUserName(exchange.declinerUser, locale);
+  const acceptedName = renderDecisionUserName(exchange.receiverUser, locale);
+  const declinedName = renderDecisionUserName(exchange.declinerUser, locale);
+  const decisionLine =
+    exchange.status === "DECLINED" ? (
+      <p className="admin-exchange-decision-line admin-exchange-decision-danger">
+        <XIcon />
+        <strong>{formatAdminExchangeDeclinedByLabel(locale)}</strong> {declinedName}
+      </p>
+    ) : exchange.status === "APPROVED" ? (
+      <p className="admin-exchange-decision-line admin-exchange-decision-success">
+        <CheckIcon />
+        {formatAdminExchangeAcceptedLabel(locale, acceptedName)}
+      </p>
+    ) : null;
 
   return (
     <section className="content-stack">
@@ -266,24 +291,14 @@ export function AdminExchangeDetailsPage() {
           </span>
         </div>
 
-        <div className="admin-user-date-stack admin-exchange-date-stack">
-          <span>{text.created}: {formatDateTime(exchange.meta?.createdAt)}</span>
-          <span>{text.lastUpdated}: {formatDateTime(exchange.meta?.updatedAt)}</span>
+        <div className="admin-exchange-meta-row">
+          <div className="admin-user-date-stack admin-exchange-date-stack">
+            <span>{text.created}: {formatDateTime(exchange.meta?.createdAt)}</span>
+            <span>{text.lastUpdated}: {formatDateTime(exchange.meta?.updatedAt)}</span>
+          </div>
+
+          {decisionLine}
         </div>
-
-        {exchange.status === "DECLINED" ? (
-          <p className="admin-exchange-decision-line admin-exchange-decision-danger">
-            <XIcon />
-            <strong>{formatAdminExchangeDeclinedByLabel(locale)}</strong> {declinedName}
-          </p>
-        ) : null}
-
-        {exchange.status === "APPROVED" ? (
-          <p className="admin-exchange-decision-line admin-exchange-decision-success">
-            <CheckIcon />
-            {formatAdminExchangeAcceptedLabel(locale, acceptedName)}
-          </p>
-        ) : null}
       </header>
 
       <section className="admin-exchange-detail-grid">
@@ -473,6 +488,14 @@ function renderUserName(user, locale) {
   }
 
   return user.nickname || user.email || rt(locale, "Unknown user");
+}
+
+function renderDecisionUserName(user, locale) {
+  if (!user || user.deletedAt || user.deleted || user.isDeleted) {
+    return rt(locale, "Deleted user");
+  }
+
+  return renderUserName(user, locale);
 }
 
 function renderValue(locale, value) {
