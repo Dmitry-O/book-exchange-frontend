@@ -40,6 +40,7 @@ import {
   RestoreIcon,
   SearchIcon,
   SortDirectionIcon,
+  SwapIcon,
   TrashIcon,
   UserIcon,
   XIcon
@@ -475,6 +476,15 @@ export function AdminBooksPage() {
                   role="link"
                   tabIndex={0}
                 >
+                  {book.editLocked && !book.isExchanged ? (
+                    <span
+                      aria-label={rt(locale, "This book is currently participating in an exchange")}
+                      className="book-exchange-active-badge"
+                      title={rt(locale, "This book is currently participating in an exchange")}
+                    >
+                      <SwapIcon />
+                    </span>
+                  ) : null}
                   <BookCover className="book-card-cover" photoUrl={book.photoUrl} size="card" title={book.name} />
 
                   <div className="book-card-head">
