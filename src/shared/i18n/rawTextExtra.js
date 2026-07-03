@@ -229,6 +229,16 @@ export const EXTRA_RAW_TEXT = {
     de: "Zurück zum Buch",
     ru: "Вернуться к книге"
   },
+  "Back to catalog": {
+    en: "Back to catalog",
+    de: "Zurück zum Katalog",
+    ru: "Вернуться в каталог"
+  },
+  "Back to my books": {
+    en: "Back to my books",
+    de: "Zurück zu meinen Büchern",
+    ru: "Вернуться к моим книгам"
+  },
   "Book overview": {
     en: "Book overview",
     de: "Buchüberblick",
@@ -299,6 +309,11 @@ export const EXTRA_RAW_TEXT = {
     de: "Leeren",
     ru: "Очистить"
   },
+  "Clear search": {
+    en: "Clear search",
+    de: "Suche leeren",
+    ru: "Очистить поиск"
+  },
   "City": {
     en: "City",
     de: "Stadt",
@@ -368,6 +383,16 @@ export const EXTRA_RAW_TEXT = {
     en: "Exchange only",
     de: "Nur Tausch",
     ru: "Только обмен"
+  },
+  "Exchange request data could not be loaded": {
+    en: "Exchange request data could not be loaded",
+    de: "Tauschanfragen konnten nicht geladen werden",
+    ru: "Не удалось загрузить данные запросов на обмен"
+  },
+  "Exchanges": {
+    en: "Exchanges",
+    de: "Tausche",
+    ru: "Обмены"
   },
   "Descending": {
     en: "Descending",
@@ -449,6 +474,11 @@ export const EXTRA_RAW_TEXT = {
     de: "Tauschverlaufseintrag",
     ru: "История обмена"
   },
+  "Review the books that already completed an exchange.": {
+    en: "Review the books that already completed an exchange.",
+    de: "Sieh dir Bücher an, die bereits getauscht wurden.",
+    ru: "Посмотрите книги, которые уже участвовали в завершённых обменах."
+  },
   "Review the final state of this exchange, its status, and the books involved.": {
     en: "Review the final state of this exchange, its status, and the books involved.",
     de: "Hier siehst du den finalen Stand dieses Tauschs, seinen Status und die beteiligten Bücher.",
@@ -458,6 +488,16 @@ export const EXTRA_RAW_TEXT = {
     en: "No",
     de: "Nein",
     ru: "Нет"
+  },
+  "No category": {
+    en: "No category",
+    de: "Keine Kategorie",
+    ru: "Без категории"
+  },
+  "Once exchanges are completed, those books will appear here.": {
+    en: "Once exchanges are completed, those books will appear here.",
+    de: "Sobald Tausche abgeschlossen sind, erscheinen die Bücher hier.",
+    ru: "Когда обмены завершатся, книги появятся здесь."
   },
   "Loading admin book details": {
     en: "Loading admin book details",
@@ -713,6 +753,11 @@ export const EXTRA_RAW_TEXT = {
     en: "Permanent ban applied.",
     de: "Dauerhafte Sperre wurde gesetzt.",
     ru: "Постоянная блокировка применена."
+  },
+  "Preparing exchange request": {
+    en: "Preparing exchange request",
+    de: "Tauschanfrage wird vorbereitet",
+    ru: "Подготовка запроса на обмен"
   },
   "Photo URL": {
     en: "Photo URL",
@@ -1083,6 +1128,11 @@ export const EXTRA_RAW_TEXT = {
     en: "Unknown",
     de: "Unbekannt",
     ru: "Неизвестно"
+  },
+  "Unknown book": {
+    en: "Unknown book",
+    de: "Unbekanntes Buch",
+    ru: "Неизвестная книга"
   },
   "Unknown receiver book": {
     en: "Unknown receiver book",
