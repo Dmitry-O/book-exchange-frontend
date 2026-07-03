@@ -28,6 +28,7 @@ export function ImageUploadField({
   message,
   onChange,
   onRemove,
+  onSelectionPendingChange,
   photoBase64,
   photoUrl,
   removePending = false
@@ -42,6 +43,7 @@ export function ImageUploadField({
   const previewPreset = cropPresets[kind];
   const previewSource = resolvePreviewSource(photoBase64, photoUrl);
   const displayPreviewSource = cropState?.source || selectedPreviewSource || previewSource;
+  const hasPendingSelection = Boolean(cropState);
   const hasPreview = Boolean(displayPreviewSource);
   const hasSavedPhoto = Boolean(photoUrl);
   const hasPendingUpload = typeof photoBase64 === "string" && photoBase64.length > 0;
@@ -96,6 +98,18 @@ export function ImageUploadField({
     setIsDragging(false);
     setApplyPending(false);
   }, [cropState]);
+
+  useEffect(() => {
+    if (typeof onSelectionPendingChange !== "function") {
+      return undefined;
+    }
+
+    onSelectionPendingChange(hasPendingSelection);
+
+    return () => {
+      onSelectionPendingChange(false);
+    };
+  }, [hasPendingSelection, onSelectionPendingChange]);
 
   async function handleFileSelection(event) {
     const file = event.target.files?.[0];

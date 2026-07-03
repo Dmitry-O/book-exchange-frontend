@@ -8,7 +8,7 @@ export const EXTRA_RAW_TEXT = {
     en: "Account overview",
     de: "Kontoübersicht",
     ru: "Обзор аккаунта"
-  },,
+  },
   "Accept offer": {
     en: "Accept offer",
     de: "Angebot annehmen",
@@ -313,7 +313,7 @@ export const EXTRA_RAW_TEXT = {
     en: "Delete photo",
     de: "Foto löschen",
     ru: "Удалить фото"
-  },,
+  },
   "Delete book": {
     en: "Delete book",
     de: "Buch löschen",
@@ -698,7 +698,7 @@ export const EXTRA_RAW_TEXT = {
     en: "Reject report",
     de: "Meldung ablehnen",
     ru: "Отклонить жалобу"
-  },,
+  },
   "Reject": {
     en: "Reject",
     de: "Ablehnen",
@@ -718,7 +718,7 @@ export const EXTRA_RAW_TEXT = {
     en: "Remove admin",
     de: "Admin entfernen",
     ru: "Убрать администратора"
-  },,
+  },
   "Remove ban": {
     en: "Remove ban",
     de: "Sperre aufheben",
@@ -823,7 +823,7 @@ export const EXTRA_RAW_TEXT = {
     en: "Resolve report",
     de: "Meldung abschließen",
     ru: "Обработать жалобу"
-  },,
+  },
   "Resolve": {
     en: "Resolve",
     de: "Abschließen",
@@ -843,7 +843,7 @@ export const EXTRA_RAW_TEXT = {
     en: "Restore book",
     de: "Buch wiederherstellen",
     ru: "Восстановить книгу"
-  },,
+  },
   "Restore": {
     en: "Restore",
     de: "Wiederherstellen",

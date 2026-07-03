@@ -7,7 +7,11 @@ import {
 } from "../../shared/auth/passwordFeedback";
 import { useLocale } from "../../shared/i18n/LocaleContext";
 import { rt } from "../../shared/i18n/rawText";
-import { useConfirmDialog } from "../../shared/lib/useUnsavedChangesGuard";
+import {
+  useConfirmDialog,
+  useUnsavedChangesGuard,
+  useUnsavedChangesPrompt
+} from "../../shared/lib/useUnsavedChangesGuard";
 import {
   AlertTriangleIcon,
   LockIcon,
@@ -56,6 +60,7 @@ export function SecuritySettingsPanel() {
   const { locale, t } = useLocale();
   const { deleteOwnAccount, changePassword, logout, user } = useAuth();
   const confirmAction = useConfirmDialog();
+  const confirmNavigation = useUnsavedChangesPrompt();
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -91,6 +96,9 @@ export function SecuritySettingsPanel() {
       passwordFeedback?.canSubmit &&
       !passwordPending
   );
+  const hasUnsavedPasswordChanges = Object.values(passwordForm).some((value) => Boolean(value));
+
+  useUnsavedChangesGuard(hasUnsavedPasswordChanges && !passwordPending);
 
   function handlePasswordFieldChange(field, value) {
     setPasswordForm((current) => ({ ...current, [field]: value }));
@@ -131,6 +139,10 @@ export function SecuritySettingsPanel() {
   }
 
   async function handleDeleteAccount() {
+    if (!(await confirmNavigation())) {
+      return;
+    }
+
     const confirmed = await confirmAction({
       cancelLabel: rt(locale, "Cancel"),
       confirmLabel: t("security.deleteAccount"),
@@ -264,7 +276,13 @@ export function SecuritySettingsPanel() {
             <div className="profile-session-actions">
               <button
                 className="button button-secondary button-compact security-action-button profile-session-action-logout"
-                onClick={() => void logout()}
+                onClick={() => {
+                  void confirmNavigation().then((confirmed) => {
+                    if (confirmed) {
+                      void logout();
+                    }
+                  });
+                }}
                 type="button"
               >
                 <SignOutIcon />
