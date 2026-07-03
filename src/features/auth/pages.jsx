@@ -1864,7 +1864,7 @@ function InlineSuccess({ message }) {
 }
 
 function buildLoginHelpers(t, error, email) {
-  if (!error?.errorCode) {
+  if (!error?.errorCode && !error?.message) {
     return [];
   }
 
@@ -1884,7 +1884,7 @@ function buildLoginHelpers(t, error, email) {
     ];
   }
 
-  if (error.errorCode === "AUTH_WRONG_PASSWORD") {
+  if (isWrongCredentialsError(error)) {
     return [
       {
         title: t("auth.wrongPasswordTitle"),
@@ -1920,6 +1920,34 @@ function buildLoginHelpers(t, error, email) {
   }
 
   return [];
+}
+
+const WRONG_CREDENTIALS_ERROR_CODES = new Set([
+  "AUTH_INVALID_CREDENTIALS",
+  "AUTH_WRONG_PASSWORD"
+]);
+
+const WRONG_CREDENTIALS_MESSAGE_PARTS = [
+  "incorrect email address or password",
+  "e-mail-adresse oder passwort ist falsch",
+  "неверный адрес электронной почты или пароль",
+  "неверный адрес эл. почты или пароль"
+];
+
+function isWrongCredentialsError(error) {
+  if (!error) {
+    return false;
+  }
+
+  if (WRONG_CREDENTIALS_ERROR_CODES.has(error.errorCode)) {
+    return true;
+  }
+
+  const message = String(error.message ?? "")
+    .trim()
+    .toLowerCase();
+
+  return WRONG_CREDENTIALS_MESSAGE_PARTS.some((part) => message.includes(part));
 }
 
 function isRecoverableTokenError(error) {
