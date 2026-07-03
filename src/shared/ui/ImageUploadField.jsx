@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "../i18n/LocaleContext";
+import { DemoPrivacyNotice } from "./DemoPrivacyNotice";
 import { RefreshIcon, TrashIcon } from "./Icons";
 import { BookCover, UserAvatar } from "./Media";
 
@@ -290,6 +291,8 @@ export function ImageUploadField({
                 </div>
               </div>
 
+              <DemoPrivacyNotice compact className="image-upload-demo-notice" />
+
               {helperCopy ? <p className="field-hint">{helperCopy}</p> : null}
 
               {hasPendingUpload ? (
@@ -348,6 +351,8 @@ export function ImageUploadField({
                   </button>
                 ) : null}
               </div>
+
+              <DemoPrivacyNotice compact className="image-upload-demo-notice" />
 
               {helperCopy ? <p className="field-hint">{helperCopy}</p> : null}
 

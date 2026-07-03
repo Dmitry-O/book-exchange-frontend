@@ -149,6 +149,30 @@ const PASSWORD_REQUIREMENTS_COPY = {
   }
 };
 
+const DEMO_DATA_POLICY_COPY = {
+  de: {
+    error: "Bitte bestätige, dass du im Demo nur Testdaten verwendest.",
+    labelStart:
+      "Ich verwende in dieser Demo nur Testdaten und habe den",
+    labelLink: "Datenschutzhinweis",
+    labelEnd: "gelesen."
+  },
+  en: {
+    error: "Confirm that you will use test data in this demo.",
+    labelStart:
+      "I will use only test data in this demo and have read the",
+    labelLink: "data protection notice",
+    labelEnd: "."
+  },
+  ru: {
+    error: "Подтвердите, что в demo вы используете только тестовые данные.",
+    labelStart:
+      "Я использую в этой демо-среде только тестовые данные и ознакомился с",
+    labelLink: "политикой защиты данных",
+    labelEnd: "."
+  }
+};
+
 function getRequiredFieldMessage(locale) {
   if (locale === "ru") {
     return "Заполните это поле.";
@@ -485,12 +509,14 @@ export function RegisterPage() {
   const metadataQuery = useMetadataQuery();
   const { locale, locales, setLocale, t } = useLocale();
   const [form, setForm] = useState({
+    demoDataPolicyAccepted: false,
     email: "",
     password: "",
     nickname: "",
     locale
   });
   const [fieldErrors, setFieldErrors] = useState({
+    demoDataPolicyAccepted: "",
     email: "",
     nickname: "",
     password: "",
@@ -509,6 +535,26 @@ export function RegisterPage() {
       setForm((current) => ({ ...current, locale: current.locale || locale }));
     }
   }, [metadataQuery.data]);
+
+  useEffect(() => {
+    setForm((current) =>
+      current.locale === locale ? current : { ...current, locale }
+    );
+    setFieldErrors((current) => ({ ...current, locale: "" }));
+  }, [locale]);
+
+  useEffect(() => {
+    if (!fieldErrors.demoDataPolicyAccepted) {
+      return;
+    }
+
+    const nextError = (DEMO_DATA_POLICY_COPY[locale] ?? DEMO_DATA_POLICY_COPY.en).error;
+    setFieldErrors((current) =>
+      current.demoDataPolicyAccepted === nextError
+        ? current
+        : { ...current, demoDataPolicyAccepted: nextError }
+    );
+  }, [fieldErrors.demoDataPolicyAccepted, locale]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -545,10 +591,22 @@ export function RegisterPage() {
       return;
     }
 
+    if (!form.demoDataPolicyAccepted) {
+      setFieldErrors((current) => ({
+        ...current,
+        demoDataPolicyAccepted:
+          (DEMO_DATA_POLICY_COPY[locale] ?? DEMO_DATA_POLICY_COPY.en).error
+      }));
+      setError(null);
+      setSuccessMessage("");
+      return;
+    }
+
     setPending(true);
     setError(null);
     setSuccessMessage("");
     setFieldErrors({
+      demoDataPolicyAccepted: "",
       email: "",
       nickname: "",
       password: "",
@@ -660,6 +718,16 @@ export function RegisterPage() {
             setError(null);
           }}
           showRequiredMark
+        />
+        <DemoDataPolicyCheckbox
+          checked={form.demoDataPolicyAccepted}
+          error={fieldErrors.demoDataPolicyAccepted}
+          locale={locale}
+          onChange={(checked) => {
+            setForm((current) => ({ ...current, demoDataPolicyAccepted: checked }));
+            setFieldErrors((current) => ({ ...current, demoDataPolicyAccepted: "" }));
+            setError(null);
+          }}
         />
         <button
           className="button auth-submit-button"
@@ -1475,6 +1543,34 @@ function AuthHelperCard({ title, description, actions = [], children }) {
       <p>{description}</p>
       {children ?? <ActionLinksRow actions={actions} />}
     </section>
+  );
+}
+
+function DemoDataPolicyCheckbox({ checked, error = "", locale, onChange }) {
+  const copy = DEMO_DATA_POLICY_COPY[locale] ?? DEMO_DATA_POLICY_COPY.en;
+  const labelEndPrefix = copy.labelEnd.startsWith(".") ? "" : " ";
+
+  return (
+    <label className="field auth-demo-policy-field">
+      <span className="auth-demo-policy-control">
+        <input
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          type="checkbox"
+        />
+        <span>
+          {copy.labelStart}{" "}
+          <Link onClick={(event) => event.stopPropagation()} to="/data-notice">
+            {copy.labelLink}
+          </Link>
+          {labelEndPrefix}
+          {copy.labelEnd}
+        </span>
+      </span>
+      <span className="field-feedback-slot">
+        {error ? <span className="field-feedback field-feedback-error">{error}</span> : null}
+      </span>
+    </label>
   );
 }
 

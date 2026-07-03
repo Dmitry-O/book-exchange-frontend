@@ -12,6 +12,7 @@ import { getCityDisplayName, normalizeCityQueryValue } from "../../shared/lib/ci
 import { formatDateTimeReadable, formatEnumLabel } from "../../shared/lib/format";
 import { useInfiniteScroll } from "../../shared/lib/useInfiniteScroll";
 import { ImageUploadField } from "../../shared/ui/ImageUploadField";
+import { DemoPrivacyNotice } from "../../shared/ui/DemoPrivacyNotice";
 import { CityField } from "../../shared/ui/CityField";
 import { BookCover, UserIdentityInline } from "../../shared/ui/Media";
 import { ArrowLeftIcon, BookIcon, GiftIcon, PencilIcon, SwapIcon, TrashIcon } from "../../shared/ui/Icons";
@@ -793,6 +794,7 @@ function BookForm({
                 </label>
                 <label className="field editor-field-span-full editor-textarea-field">
                   {formatRequiredLabel(rt(locale, "Contact details"), mode === "create")}
+                  <DemoPrivacyNotice compact className="field-demo-warning" />
                   <textarea
                     className="field-control"
                     onChange={(event) =>
