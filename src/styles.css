@@ -2119,6 +2119,18 @@ dl {
   font-weight: 800;
 }
 
+.auth-demo-account-picker {
+  padding: 10px 0 6px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.auth-demo-account-picker .field-hint {
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
 .auth-primary-form .field-feedback-slot {
   min-height: 14px;
 }
@@ -2414,6 +2426,9 @@ select.field-control,
 .pretty-select {
   position: relative;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .pretty-select-trigger {
@@ -2422,6 +2437,8 @@ select.field-control,
   justify-content: space-between;
   gap: 12px;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   color: inherit;
   text-align: left;
 }
@@ -2474,6 +2491,8 @@ select.field-control,
   display: grid;
   gap: 6px;
   max-height: 290px;
+  min-width: 0;
+  max-width: 100%;
   overflow: auto;
   padding: 10px;
   border: 1px solid rgba(18, 32, 43, 0.1);
@@ -2487,6 +2506,8 @@ select.field-control,
   display: flex;
   align-items: center;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 42px;
   padding: 8px 12px;
   border: 1px solid transparent;
@@ -2494,6 +2515,13 @@ select.field-control,
   background: rgba(18, 32, 43, 0.04);
   color: #263746;
   text-align: left;
+}
+
+.pretty-select-option span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pretty-select-option:hover,
