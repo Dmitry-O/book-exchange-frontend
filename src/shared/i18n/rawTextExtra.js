@@ -414,6 +414,11 @@ export const EXTRA_RAW_TEXT = {
     de: "Lade",
     ru: "Загрузка"
   },
+  "Loading...": {
+    en: "Loading...",
+    de: "Wird geladen...",
+    ru: "Загрузка..."
+  },
   "Loading exchange history details": {
     en: "Loading exchange history details",
     de: "Details des Tauschverlaufs werden geladen",

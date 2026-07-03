@@ -716,6 +716,81 @@ dl {
   margin: 0;
 }
 
+.book-form-header {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  align-items: flex-start;
+  justify-content: flex-start;
+  column-gap: 20px;
+  row-gap: 16px;
+}
+
+.book-form-header .section-card-header-copy {
+  grid-column: 1;
+}
+
+.book-form-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) max-content max-content;
+  grid-template-areas: "preset spacer submit cancel";
+  align-items: flex-start;
+  column-gap: 18px;
+  row-gap: 8px;
+  grid-column: 2;
+  flex: none;
+  justify-content: space-between;
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+}
+
+.book-demo-preset-picker {
+  display: grid;
+  grid-area: preset;
+  gap: 5px;
+  width: 100%;
+  max-width: 320px;
+  margin-right: 0;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.book-demo-preset-picker > span {
+  color: var(--text-main);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.book-demo-preset-picker small {
+  line-height: 1.35;
+}
+
+.book-demo-preset-select .pretty-select-trigger {
+  min-height: 42px;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
+.book-form-toolbar .button-tooltip-wrapper {
+  grid-area: submit;
+  justify-self: end;
+  margin-top: 26px;
+}
+
+.book-form-toolbar > .button-secondary {
+  grid-area: cancel;
+  justify-self: end;
+  margin-top: 26px;
+}
+
+.book-form-toolbar .button {
+  min-width: 0;
+  width: 160px;
+  padding-inline: 20px;
+}
+
 .button-tooltip-wrapper {
   display: inline-flex;
 }
@@ -7170,6 +7245,21 @@ select.field-control,
     grid-template-columns: 1fr;
   }
 
+  .book-form-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .book-form-header .section-card-header-copy,
+  .book-form-toolbar {
+    grid-column: 1;
+  }
+
+  .book-form-toolbar {
+    width: 100%;
+    max-width: 760px;
+    margin-left: 0;
+  }
+
   .cards-grid-three,
   .meta-grid,
   .about-highlight-grid,
@@ -7266,6 +7356,24 @@ select.field-control,
   .auth-shell,
   .site-footer {
     width: min(100% - 20px, 1180px);
+  }
+
+  .book-form-toolbar {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "preset"
+      "submit"
+      "cancel";
+    max-width: 100%;
+  }
+
+  .book-demo-preset-picker {
+    max-width: 100%;
+  }
+
+  .book-form-toolbar .button-tooltip-wrapper,
+  .book-form-toolbar > .button-secondary {
+    margin-top: 0;
   }
 
   .topbar,
