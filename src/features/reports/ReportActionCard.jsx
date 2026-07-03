@@ -83,14 +83,15 @@ const reportText = {
   }
 };
 
-export function ReportActionCard({ book, variant = "icon" }) {
+export function ReportActionCard({ book, targetBook = book, targetUser = null, variant = "icon" }) {
   const { locale } = useLocale();
   const { isAuthenticated, user } = useAuth();
   const text = reportText[locale] ?? reportText.en;
-  const isOwnBook = isAuthenticated && user?.id === book.ownerUserId;
+  const resolvedTargetUser = resolveReportTargetUser(targetBook, targetUser);
+  const isOwnTarget = isAuthenticated && user?.id === resolvedTargetUser?.id;
   const [isOpen, setIsOpen] = useState(false);
 
-  if (!isAuthenticated || isOwnBook || variant !== "icon") {
+  if (!isAuthenticated || isOwnTarget || variant !== "icon" || !resolvedTargetUser?.id) {
     return null;
   }
 
@@ -106,16 +107,22 @@ export function ReportActionCard({ book, variant = "icon" }) {
         <FlagIcon />
       </button>
 
-      {isOpen ? <ReportModal book={book} onClose={() => setIsOpen(false)} /> : null}
+      {isOpen ? (
+        <ReportModal
+          onClose={() => setIsOpen(false)}
+          targetBook={targetBook}
+          targetUser={resolvedTargetUser}
+        />
+      ) : null}
     </>
   );
 }
 
-function ReportModal({ book, onClose }) {
+function ReportModal({ targetBook, targetUser, onClose }) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const metadataQuery = useMetadataQuery();
-  const [targetType, setTargetType] = useState("BOOK");
+  const [targetType, setTargetType] = useState(targetBook?.id ? "BOOK" : "USER");
   const [form, setForm] = useState(initialForm);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(null);
@@ -125,7 +132,7 @@ function ReportModal({ book, onClose }) {
   const text = reportText[locale] ?? reportText.en;
 
   const targetLocksQuery = useQuery({
-    queryKey: ["report-target-locks", book.id, book.ownerUserId],
+    queryKey: ["report-target-locks", targetBook?.id ?? null, targetUser.id],
     refetchOnMount: "always",
     queryFn: async () => {
       const content = [];
@@ -157,11 +164,13 @@ function ReportModal({ book, onClose }) {
     [targetLocksQuery.data]
   );
 
-  const bookTargetKey = `BOOK:${book.id}`;
-  const userTargetKey = `USER:${book.ownerUserId}`;
+  const bookTargetKey = targetBook?.id ? `BOOK:${targetBook.id}` : "";
+  const userTargetKey = `USER:${targetUser.id}`;
   const isBookAlreadyReported = existingTargetKeys.has(bookTargetKey);
   const isUserAlreadyReported = existingTargetKeys.has(userTargetKey);
-  const selectedTargetKey = targetType ? `${targetType}:${resolveTargetId(book, targetType)}` : "";
+  const selectedTargetKey = targetType
+    ? `${targetType}:${resolveTargetId({ targetBook, targetUser }, targetType)}`
+    : "";
   const alreadyReported = Boolean(selectedTargetKey) && existingTargetKeys.has(selectedTargetKey);
   const countdownActive = closeDeadline !== null;
   const closeSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
@@ -217,7 +226,7 @@ function ReportModal({ book, onClose }) {
     setSuccessMessage("");
 
     try {
-      const response = await apiRequest(`/report/${resolveTargetId(book, targetType)}`, {
+      const response = await apiRequest(`/report/${resolveTargetId({ targetBook, targetUser }, targetType)}`, {
         method: "POST",
         auth: true,
         body: {
@@ -227,7 +236,7 @@ function ReportModal({ book, onClose }) {
       });
 
       await queryClient.invalidateQueries({ queryKey: ["my-reports"] });
-      await queryClient.invalidateQueries({ queryKey: ["report-target-locks", book.id, book.ownerUserId] });
+      await queryClient.invalidateQueries({ queryKey: ["report-target-locks", targetBook?.id ?? null, targetUser.id] });
       setSuccessMessage(response.message || text.sent);
       setCloseDeadline(Date.now() + REPORT_CLOSE_TIMEOUT_MS);
       setRemainingMs(REPORT_CLOSE_TIMEOUT_MS);
@@ -277,25 +286,29 @@ function ReportModal({ book, onClose }) {
         <p className="muted-line">{text.helper}</p>
 
         <div className="choice-grid">
+          {targetBook?.id ? (
+            <button
+              className={targetType === "BOOK" ? "choice-card choice-card-active" : "choice-card"}
+              disabled={pending || countdownActive}
+              onClick={() => {
+                setTargetType("BOOK");
+                setError(null);
+                setSuccessMessage("");
+              }}
+              type="button"
+            >
+              <BookCover photoUrl={targetBook.photoUrl} size="sm" title={targetBook.name} />
+              <div className="report-choice-copy">
+                <span className="report-choice-title">{targetBook.name}</span>
+                <strong>{text.aboutBook}</strong>
+                {isBookAlreadyReported ? (
+                  <span className="inline-message inline-message-error">{text.alreadyBook}</span>
+                ) : null}
+              </div>
+            </button>
+          ) : null}
           <button
-            className={targetType === "BOOK" ? "choice-card choice-card-active" : "choice-card"}
-            disabled={pending || countdownActive}
-            onClick={() => {
-              setTargetType("BOOK");
-              setError(null);
-              setSuccessMessage("");
-            }}
-            type="button"
-          >
-            <BookCover photoUrl={book.photoUrl} size="sm" title={book.name} />
-            <strong>{text.aboutBook}</strong>
-            <span>{book.name}</span>
-            {isBookAlreadyReported ? (
-              <span className="inline-message inline-message-error">{text.alreadyBook}</span>
-            ) : null}
-          </button>
-          <button
-            className={targetType === "USER" ? "choice-card choice-card-active" : "choice-card"}
+            className={targetType === "USER" ? "choice-card choice-card-active report-choice-card-user" : "choice-card report-choice-card-user"}
             disabled={pending || countdownActive}
             onClick={() => {
               setTargetType("USER");
@@ -304,12 +317,14 @@ function ReportModal({ book, onClose }) {
             }}
             type="button"
           >
-            <UserAvatar name={book.ownerNickname} photoUrl={book.ownerPhotoUrl} size="sm" />
-            <strong>{text.aboutUser}</strong>
-            <span>{book.ownerNickname}</span>
-            {isUserAlreadyReported ? (
-              <span className="inline-message inline-message-error">{text.alreadyUser}</span>
-            ) : null}
+            <UserAvatar name={targetUser.nickname} photoUrl={targetUser.photoUrl} size="lg" />
+            <div className="report-choice-copy">
+              <span className="report-choice-title">{targetUser.nickname}</span>
+              <strong>{text.aboutUser}</strong>
+              {isUserAlreadyReported ? (
+                <span className="inline-message inline-message-error">{text.alreadyUser}</span>
+              ) : null}
+            </div>
           </button>
         </div>
 
@@ -415,6 +430,22 @@ function resolveErrorMessage(error, targetType, text) {
   return error?.message ?? "";
 }
 
-function resolveTargetId(book, targetType) {
-  return targetType === "USER" ? book.ownerUserId : book.id;
+function resolveReportTargetUser(targetBook, targetUser) {
+  if (targetUser?.id) {
+    return targetUser;
+  }
+
+  if (!targetBook?.ownerUserId) {
+    return null;
+  }
+
+  return {
+    id: targetBook.ownerUserId,
+    nickname: targetBook.ownerNickname,
+    photoUrl: targetBook.ownerPhotoUrl
+  };
+}
+
+function resolveTargetId({ targetBook, targetUser }, targetType) {
+  return targetType === "USER" ? targetUser.id : targetBook.id;
 }

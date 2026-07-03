@@ -15,6 +15,7 @@ import { ArrowLeftIcon, GiftIcon, HistoryIcon, IncomingIcon, OutgoingIcon, Reque
 import { PageTitle } from "../../shared/ui/PageTitle";
 import { Pagination } from "../../shared/ui/Pagination";
 import { EmptyBlock, ErrorBlock, LoadingBlock } from "../../shared/ui/StateBlocks";
+import { ReportActionCard } from "../reports/ReportActionCard";
 
 const EXCHANGE_TABS = ["requests", "offers", "history"];
 
@@ -472,11 +473,13 @@ export function HistoryDetailsPage() {
   const giftNotice = getGiftNotice(locale, currentRole, otherUserName);
   const heroMessage =
     exchange.status === "APPROVED"
-      ? formatTemplate(text.historySuccess, {
-          name: otherUserName,
-          contact: exchange.contactDetails || rt(locale, "Not provided")
-        })
+      ? renderHistorySuccessMessage(locale, text, otherUserName, exchange.contactDetails || rt(locale, "Not provided"))
       : text.historyDeclined;
+  const reportTargetUser = {
+    id: exchange.otherUserId,
+    nickname: otherUserName,
+    photoUrl: otherUserPhotoUrl
+  };
 
   return (
     <section className="content-stack">
@@ -488,9 +491,12 @@ export function HistoryDetailsPage() {
             </Link>
             <PageTitle icon={HistoryIcon}>{rt(locale, "Exchange history item")}</PageTitle>
           </div>
-          <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
-            {formatExchangeStatusLabel(locale, exchange.status)}
-          </span>
+          <div className="hero-icon-actions">
+            <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
+              {formatExchangeStatusLabel(locale, exchange.status)}
+            </span>
+            <ReportActionCard targetBook={otherBook} targetUser={reportTargetUser} variant="icon" />
+          </div>
         </div>
         <p>{rt(locale, "Review the final state of this exchange, its status, and the books involved.")}</p>
         {exchange.status === "APPROVED" ? <p className="muted-line">{heroMessage}</p> : null}
@@ -994,6 +1000,11 @@ function ExchangeDetailsPage({
   const otherUserPhotoUrl = otherBook?.ownerPhotoUrl || "";
   const isGiftExchange = !exchange.senderBook && Boolean(exchange.receiverBook?.isGift);
   const giftNotice = getGiftNotice(locale, currentRole, otherUserName);
+  const reportTargetUser = {
+    id: exchange.otherUserId,
+    nickname: otherUserName,
+    photoUrl: otherUserPhotoUrl
+  };
 
   return (
     <section className="content-stack">
@@ -1009,6 +1020,7 @@ function ExchangeDetailsPage({
             <span className={`status-pill ${getExchangeStatusClassName(exchange.status)}`}>
               {formatExchangeStatusLabel(locale, exchange.status)}
             </span>
+            <ReportActionCard targetBook={otherBook} targetUser={reportTargetUser} variant="icon" />
           </div>
         </div>
         <div className="exchange-detail-hero-row">
@@ -1222,7 +1234,7 @@ function ExchangeBookCard({ book, label, ownerName, ownerPhotoUrl, showContactDe
             <p>{rt(locale, "Publication year")}: {renderValue(locale, book.publicationYear)}</p>
             <p>{rt(locale, "City")}: {book.city ? getCityDisplayName(book.city, locale) : rt(locale, "Not available")}</p>
             {showContactDetails && book.contactDetails ? (
-              <p>{rt(locale, "Contact details")}: {book.contactDetails}</p>
+              <p>{rt(locale, "Contact details")}: <strong>{book.contactDetails}</strong></p>
             ) : null}
           </div>
         </div>
@@ -1299,6 +1311,28 @@ function getExchangeActionMessage(locale, kind) {
 
 function formatTemplate(template, params) {
   return String(template).replace(/\{(\w+)\}/g, (_, key) => String(params[key] ?? ""));
+}
+
+function renderHistorySuccessMessage(locale, text, name, contact) {
+  const copy = {
+    de: (
+      <>
+        Du kannst {name} mit diesen Kontaktdaten erreichen: <strong>{contact}</strong>
+      </>
+    ),
+    en: (
+      <>
+        You can contact {name} using these details: <strong>{contact}</strong>
+      </>
+    ),
+    ru: (
+      <>
+        Вы можете связаться с пользователем {name} по этим контактным данным: <strong>{contact}</strong>
+      </>
+    )
+  };
+
+  return copy[locale] ?? copy.en;
 }
 
 function formatExchangeWithUser(locale, userNickname) {
