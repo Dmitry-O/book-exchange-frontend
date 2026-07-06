@@ -1,6 +1,10 @@
-﻿name: Frontend Demo Deploy
+name: Frontend Demo Deploy
 
 on:
+  push:
+    branches:
+      - main
+      - master
   workflow_dispatch:
     inputs:
       invalidate_cloudfront:
@@ -13,15 +17,20 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: frontend-demo-deploy
+  cancel-in-progress: true
+
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   FRONTEND_S3_BUCKET: ${{ vars.FRONTEND_S3_BUCKET }}
   CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
   VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+  VITE_DEMO_CONTACT_EMAIL: ${{ vars.VITE_DEMO_CONTACT_EMAIL }}
 
 jobs:
   deploy:
-    name: Build and Upload to S3
+    name: Build and Deploy Frontend
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: demo
@@ -35,8 +44,8 @@ jobs:
         run: |
           test -n "$AWS_REGION" || { echo "Missing repository variable AWS_REGION"; exit 1; }
           test -n "$FRONTEND_S3_BUCKET" || { echo "Missing repository variable FRONTEND_S3_BUCKET"; exit 1; }
-          test -n "$CLOUDFRONT_DISTRIBUTION_ID" || { echo "Missing repository variable CLOUDFRONT_DISTRIBUTION_ID"; exit 1; }
           test -n "$VITE_API_BASE_URL" || { echo "Missing repository variable VITE_API_BASE_URL"; exit 1; }
+          test -n "$VITE_DEMO_CONTACT_EMAIL" || { echo "Missing repository variable VITE_DEMO_CONTACT_EMAIL"; exit 1; }
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -56,13 +65,23 @@ jobs:
           role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Upload immutable assets
+      - name: Upload hashed assets with long cache
+        shell: bash
+        run: |
+          if [ -d dist/assets ]; then
+            aws s3 sync dist/assets/ "s3://$FRONTEND_S3_BUCKET/assets/" \
+              --delete \
+              --cache-control "public,max-age=31536000,immutable"
+          fi
+
+      - name: Upload static files with short cache
         shell: bash
         run: |
           aws s3 sync dist/ "s3://$FRONTEND_S3_BUCKET/" \
             --delete \
-            --cache-control "public,max-age=31536000,immutable" \
-            --exclude "index.html"
+            --exclude "index.html" \
+            --exclude "assets/*" \
+            --cache-control "public,max-age=86400"
 
       - name: Upload entry point without long cache
         shell: bash
@@ -72,6 +91,6 @@ jobs:
             --content-type "text/html"
 
       - name: Invalidate CloudFront cache
-        if: ${{ inputs.invalidate_cloudfront }}
+        if: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID != '' && (github.event_name == 'push' || inputs.invalidate_cloudfront) }}
         shell: bash
         run: aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --paths "/*"

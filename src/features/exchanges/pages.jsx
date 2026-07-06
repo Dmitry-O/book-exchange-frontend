@@ -93,7 +93,7 @@ const exchangeUiText = {
       "Du kannst {name} mit diesen Kontaktdaten erreichen: {contact}",
     offerSubtitle:
       "Prüfe den eingehenden Tauschvorschlag und entscheide, wie es weitergeht.",
-    statusApproved: "BestГ¤tigt",
+    statusApproved: "Bestätigt",
     statusDeclined: "Abgelehnt",
     statusPending: "Ausstehend",
     requestSubtitle:
