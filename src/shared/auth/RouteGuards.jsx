@@ -2,6 +2,17 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useLocale } from "../i18n/LocaleContext";
 import { useAuth } from "./AuthContext";
 import { ErrorBlock, LoadingBlock } from "../ui/StateBlocks";
+import { NotFoundPage } from "../../pages/NotFoundPage";
+
+export function RequireGuest({ children }) {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    return <Navigate replace to="/app/profile" />;
+  }
+
+  return children;
+}
 
 export function RequireAuth({ children }) {
   const location = useLocation();
@@ -32,12 +43,11 @@ export function RequireAuth({ children }) {
 }
 
 export function RequireAdmin({ children }) {
-  const location = useLocation();
   const { t } = useLocale();
   const { isAuthenticated, isLoadingUser, isAdmin, user, userError } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate replace to="/login" state={{ from: location }} />;
+    return <NotFoundPage />;
   }
 
   if (isLoadingUser) {
@@ -57,7 +67,7 @@ export function RequireAdmin({ children }) {
   }
 
   if (!isAdmin) {
-    return <Navigate replace to="/app/profile" />;
+    return <NotFoundPage />;
   }
 
   return children;
