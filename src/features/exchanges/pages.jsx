@@ -998,6 +998,24 @@ function ExchangeDetailsPage({
   }
 
   if (detailQuery.error) {
+    if (isExchangeUnavailableError(detailQuery.error)) {
+      return (
+        <section className="content-stack">
+          <section className="section-card">
+            <EmptyBlock
+              title={rt(locale, "Exchange not found")}
+              description={rt(locale, "This exchange does not exist or is not available for your account.")}
+              actions={
+                <Link className="button button-secondary" to={backTo}>
+                  {rt(locale, "Back to exchanges")}
+                </Link>
+              }
+            />
+          </section>
+        </section>
+      );
+    }
+
     return <ErrorBlock error={detailQuery.error} title={rtf(locale, "{title} could not be loaded", { title })} />;
   }
 
@@ -1274,6 +1292,10 @@ function useExchangeDetails(kind, exchangeId) {
       };
     }
   });
+}
+
+function isExchangeUnavailableError(error) {
+  return error?.status === 403 || error?.status === 404;
 }
 
 async function invalidateExchangeCollections(queryClient) {

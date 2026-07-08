@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { RequireAdmin, RequireAuth } from "../shared/auth/RouteGuards";
+import { RequireAdmin, RequireAuth, RequireGuest } from "../shared/auth/RouteGuards";
 import { useMetadataQuery } from "../shared/api/hooks";
 import { FeaturePlaceholderPage } from "../shared/ui/FeaturePlaceholderPage";
 import { LoadingBlock } from "../shared/ui/StateBlocks";
@@ -71,7 +71,14 @@ export function AppRouter() {
         <Route path="catalog" element={<CatalogPage />} />
         <Route path="book/:bookId" element={<PublicBookPage />} />
         <Route path="login" element={<LoginPage />} />
-        <Route path="register" element={<RegisterPage />} />
+        <Route
+          path="register"
+          element={
+            <RequireGuest>
+              <RegisterPage />
+            </RequireGuest>
+          }
+        />
         <Route path="verify-email" element={<VerifyEmailPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />

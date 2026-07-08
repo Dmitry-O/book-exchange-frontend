@@ -134,6 +134,11 @@ export const EXTRA_RAW_TEXT = {
     de: "Zurück zu den Büchern",
     ru: "Назад к книгам"
   },
+  "Back to exchanges": {
+    en: "Back to exchanges",
+    de: "Zurück zu den Tauschvorgängen",
+    ru: "Назад к обменам"
+  },
   "Back to history": {
     en: "Back to history",
     de: "Zurück zum Verlauf",
@@ -413,6 +418,11 @@ export const EXTRA_RAW_TEXT = {
     en: "Exchange page data could not be loaded",
     de: "Tauschseitendaten konnten nicht geladen werden",
     ru: "Не удалось загрузить данные страницы обменов"
+  },
+  "Exchange not found": {
+    en: "Exchange not found",
+    de: "Tausch nicht gefunden",
+    ru: "Обмен не найден"
   },
   "Exchange overview": {
     en: "Exchange overview",
@@ -1098,6 +1108,11 @@ export const EXTRA_RAW_TEXT = {
     en: "This is the final read-only state of the exchange. If the exchange was approved, the contact details above are ready for follow-up between the two users.",
     de: "Dies ist der endgültige schreibgeschützte Status des Tauschs. Wenn der Tausch bestätigt wurde, können die Kontaktdaten oben für die weitere Abstimmung genutzt werden.",
     ru: "Это финальное состояние обмена только для чтения. Если обмен был подтверждён, контакты выше уже можно использовать для дальнейшей связи."
+  },
+  "This exchange does not exist or is not available for your account.": {
+    en: "This exchange does not exist or is not available for your account.",
+    de: "Dieser Tausch existiert nicht oder ist für dein Konto nicht verfügbar.",
+    ru: "Такого обмена нет или он недоступен для вашего аккаунта."
   },
   "Track the exchange requests you already sent to other users.": {
     en: "Track the exchange requests you already sent to other users.",
