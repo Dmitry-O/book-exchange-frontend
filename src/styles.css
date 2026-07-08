@@ -7496,8 +7496,13 @@ select.field-control,
   }
 
   .topbar {
-    grid-template-columns: 1fr;
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand end"
+      "nav nav";
+    align-items: center;
+    gap: 8px 10px;
+    padding: 10px 12px 12px;
   }
 
   .book-form-toolbar {
@@ -7550,33 +7555,112 @@ select.field-control,
     max-width: none;
   }
 
-  .topbar-brand-slot,
-  .topbar-nav,
-  .topbar-end {
-    width: 100%;
+  .topbar-brand-slot {
+    grid-area: brand;
+    width: auto;
     justify-content: flex-start;
+    min-width: 0;
+  }
+
+  .topbar-nav {
+    grid-area: nav;
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-width: 0;
+    padding: 4px;
+    overflow-x: auto;
+    border: 1px solid rgba(18, 32, 43, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.56);
+    scrollbar-width: none;
+  }
+
+  .topbar-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .topbar-end {
+    grid-area: end;
+    width: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-width: 0;
   }
 
   .brand {
-    width: min(260px, 100%);
+    width: clamp(92px, 30vw, 150px);
   }
 
-  .topbar-auth-actions,
-  .locale-picker-menu {
-    width: 100%;
+  .brand img {
+    max-height: 44px;
+  }
+
+  .topbar-nav .topbar-link {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 40px;
+    padding: 0 10px;
+  }
+
+  .topbar-nav .topbar-link > span,
+  .topbar-inbox-link > span:not(.topbar-inbox-badge),
+  .topbar-auth-actions .button > span,
+  .locale-picker-button-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .topbar-inbox-link,
+  .topbar-auth-actions .button {
+    justify-content: center;
+    width: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0;
+  }
+
+  .topbar-inbox-badge {
+    top: -5px;
+    right: -5px;
   }
 
   .topbar-auth-actions {
-    flex-wrap: wrap;
+    width: auto;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .locale-picker-menu {
+    width: auto;
+  }
+
+  .locale-picker-button {
+    width: auto;
+    min-width: 54px;
+    min-height: 38px;
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  .locale-picker-button-caret {
+    width: 20px;
+    height: 20px;
+    flex-basis: 20px;
   }
 
   .profile-session-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .locale-picker-button,
-  .topbar-auth-actions .button {
-    width: 100%;
   }
 
   .home-hero {
@@ -7663,13 +7747,52 @@ select.field-control,
     flex: 1 1 180px;
   }
 
-  .user-chip-button {
-    min-width: 0;
-    width: 100%;
+  .topbar .user-menu {
+    flex: 0 0 auto;
   }
 
-  .user-menu-shell {
-    width: 100%;
+  .topbar .user-menu-shell {
+    width: auto;
+    max-width: none;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+  }
+
+  .topbar .user-chip {
+    min-width: 0;
+    gap: 0;
+    padding: 0;
+    border-radius: 999px;
+  }
+
+  .topbar .user-chip-button {
+    width: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    justify-content: center;
+  }
+
+  .topbar .user-chip-copy,
+  .topbar .user-chip .status-pill {
+    display: none;
+  }
+
+  .topbar .user-chip .media-avatar-fallback,
+  .topbar .user-chip .media-frame-avatar {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+  }
+
+  .topbar .user-menu-toggle {
+    width: 38px;
+    height: 38px;
+  }
+
+  .topbar-menu {
+    right: 0;
+    width: min(320px, calc(100vw - 20px));
   }
 
   .dashboard-header {
