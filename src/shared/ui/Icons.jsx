@@ -994,6 +994,34 @@ export function EnvelopeClosedIcon() {
   );
 }
 
+export function VideoGuideIcon() {
+  return (
+    <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">
+      <rect
+        x="3.5"
+        y="6"
+        width="12.5"
+        height="12"
+        rx="2.2"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="m16 10 4.5-2.5v9L16 14"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path d="m8.5 9.8 3.5 2.2-3.5 2.2z" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function EnvelopeOpenIcon() {
   return (
     <svg aria-hidden="true" className="icon-svg" viewBox="0 0 24 24">

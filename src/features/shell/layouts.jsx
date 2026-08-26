@@ -23,6 +23,7 @@ import {
   DEMO_INBOX_STATE_EVENT,
   getUnreadDemoEmailCount
 } from "../demo-email-sandbox/inboxState";
+import { useDemoVideoGuide } from "../demo-video-guide/DemoVideoGuide";
 import { UserAvatar } from "../../shared/ui/Media";
 import { DemoPrivacyNotice } from "../../shared/ui/DemoPrivacyNotice";
 import {
@@ -40,7 +41,8 @@ import {
   SignOutIcon,
   SwapIcon,
   UserIcon,
-  UserPlusIcon
+  UserPlusIcon,
+  VideoGuideIcon
 } from "../../shared/ui/Icons";
 import { ProjectResourceLinks } from "./ProjectResourceLinks";
 
@@ -228,6 +230,7 @@ function AppHeader({ availableLocales, demoEmailSandboxEnabled }) {
   const navigate = useNavigate();
   const { isAdmin, isAuthenticated, isSuperAdmin, logout, updateProfile, user } = useAuth();
   const { locale, locales, setLocale, t } = useLocale();
+  const { hasVideoGuide, openVideoGuide, videoGuideLabel } = useDemoVideoGuide();
   const unreadQuery = useUnreadUpdatesSummaryQuery(isAuthenticated);
   const adminOpenReportsQuery = useAdminOpenReportsSummaryQuery(isAuthenticated && isAdmin);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -445,6 +448,9 @@ function AppHeader({ availableLocales, demoEmailSandboxEnabled }) {
       </nav>
 
       <div className="topbar-end">
+        {hasVideoGuide ? (
+          <HeaderVideoGuideButton label={videoGuideLabel} onOpen={openVideoGuide} />
+        ) : null}
         {demoEmailSandboxEnabled ? (
           <HeaderInboxLink
             badgeValue={demoInboxUnreadCount}
@@ -579,8 +585,10 @@ function AppHeader({ availableLocales, demoEmailSandboxEnabled }) {
 function TopNavLink({ children, end = false, icon: Icon, to }) {
   return (
     <NavLink
+      aria-label={children}
       end={end}
       to={to}
+      title={children}
       className={({ isActive }) => (isActive ? "topbar-link topbar-link-active" : "topbar-link")}
     >
       {Icon ? <Icon /> : null}
@@ -589,15 +597,32 @@ function TopNavLink({ children, end = false, icon: Icon, to }) {
   );
 }
 
+function HeaderVideoGuideButton({ label, onOpen }) {
+  return (
+    <button
+      aria-label={label}
+      className="topbar-link topbar-guide-link"
+      onClick={onOpen}
+      title={label}
+      type="button"
+    >
+      <VideoGuideIcon />
+      <span>{label}</span>
+    </button>
+  );
+}
+
 function HeaderInboxLink({ badgeValue, label }) {
   return (
     <NavLink
+      aria-label={label}
       className={({ isActive }) =>
         isActive
           ? "topbar-link topbar-link-active topbar-inbox-link"
           : "topbar-link topbar-inbox-link"
       }
       to="/demo-inbox"
+      title={label}
     >
       <EnvelopeClosedIcon />
       <span>{label}</span>
