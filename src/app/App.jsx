@@ -5,6 +5,7 @@ import { AuthProvider } from "../shared/auth/AuthContext";
 import { LocaleProvider } from "../shared/i18n/LocaleContext";
 import { UnsavedChangesProvider } from "../shared/lib/useUnsavedChangesGuard";
 import { DemoAccessGate } from "../features/demo-access/DemoAccessGate";
+import { DemoVideoGuideProvider } from "../features/demo-video-guide/DemoVideoGuide";
 import { AppRouter } from "./AppRouter";
 
 export default function App() {
@@ -26,9 +27,11 @@ export default function App() {
         <DemoAccessGate>
           <AuthProvider>
             <BrowserRouter>
-              <UnsavedChangesProvider>
-                <AppRouter />
-              </UnsavedChangesProvider>
+              <DemoVideoGuideProvider>
+                <UnsavedChangesProvider>
+                  <AppRouter />
+                </UnsavedChangesProvider>
+              </DemoVideoGuideProvider>
             </BrowserRouter>
           </AuthProvider>
         </DemoAccessGate>

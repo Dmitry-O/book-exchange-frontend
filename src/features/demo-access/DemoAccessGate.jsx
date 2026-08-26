@@ -6,6 +6,7 @@ import {
 } from "../../shared/api/http";
 import { useLocale } from "../../shared/i18n/LocaleContext";
 import { AlertTriangleIcon, LockIcon } from "../../shared/ui/Icons";
+import { requestDemoVideoGuideAutoOpen } from "../demo-video-guide/DemoVideoGuide";
 
 const ACCESS_PARAM = "access";
 const DEMO_ACCESS_STORAGE_KEY = "book-exchange/demo-access-granted";
@@ -184,6 +185,7 @@ async function bootstrapDemoAccess(locale) {
       });
 
       writeStoredDemoAccessGrant(response.data?.expiresAt ?? null);
+      requestDemoVideoGuideAutoOpen();
       return { status: "granted" };
     } catch (error) {
       clearStoredDemoAccessGrant();
