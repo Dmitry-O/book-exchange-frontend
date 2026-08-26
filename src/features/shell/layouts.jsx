@@ -397,6 +397,14 @@ function AppHeader({ availableLocales, demoEmailSandboxEnabled }) {
     }
   }
 
+  async function handleLogout() {
+    try {
+      await logout();
+    } finally {
+      navigate("/login", { replace: true });
+    }
+  }
+
   const activeMenuLinks = useMemo(() => {
     const items = USER_MENU_LINKS.map((item) => ({
       ...item,
@@ -537,7 +545,7 @@ function AppHeader({ availableLocales, demoEmailSandboxEnabled }) {
                 <div className="topbar-menu-group">
                   <button
                     className="topbar-menu-item topbar-menu-item-danger"
-                    onClick={() => void logout()}
+                    onClick={() => void handleLogout()}
                     type="button"
                   >
                     <span className="topbar-menu-item-main">
